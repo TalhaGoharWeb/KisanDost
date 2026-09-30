@@ -1,42 +1,92 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // The Flutter Gradle Plugin must be applied after the Android plugin.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val releaseStoreFile = providers.gradleProperty("KISAN_DOST_RELEASE_STORE_FILE")
+    .orElse(providers.environmentVariable("KISAN_DOST_RELEASE_STORE_FILE"))
+    .orNull
+val releaseStorePassword = providers.gradleProperty("KISAN_DOST_RELEASE_STORE_PASSWORD")
+    .orElse(providers.environmentVariable("KISAN_DOST_RELEASE_STORE_PASSWORD"))
+    .orNull
+val releaseKeyAlias = providers.gradleProperty("KISAN_DOST_RELEASE_KEY_ALIAS")
+    .orElse(providers.environmentVariable("KISAN_DOST_RELEASE_KEY_ALIAS"))
+    .orNull
+val releaseKeyPassword = providers.gradleProperty("KISAN_DOST_RELEASE_KEY_PASSWORD")
+    .orElse(providers.environmentVariable("KISAN_DOST_RELEASE_KEY_PASSWORD"))
+    .orNull
+val releaseSigningConfigured = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+val allowUnsignedRelease = providers.gradleProperty("KISAN_DOST_ALLOW_UNSIGNED_RELEASE")
+    .orElse(providers.environmentVariable("KISAN_DOST_ALLOW_UNSIGNED_RELEASE"))
+    .orNull == "true"
+val androidAppProject = project
+
+gradle.taskGraph.whenReady {
+    val includesRelease = allTasks.any {
+        it.project == androidAppProject && it.name.contains("release", ignoreCase = true)
+    }
+    if (includesRelease && !releaseSigningConfigured && !allowUnsignedRelease) {
+        throw GradleException(
+            "Release signing is not configured. Set KISAN_DOST_RELEASE_STORE_FILE, " +
+                "KISAN_DOST_RELEASE_STORE_PASSWORD, KISAN_DOST_RELEASE_KEY_ALIAS, and " +
+                "KISAN_DOST_RELEASE_KEY_PASSWORD. For local unsigned verification only, " +
+                "set KISAN_DOST_ALLOW_UNSIGNED_RELEASE=true."
+        )
+    }
 }
 
 android {
     namespace = "com.example.kisan_dost"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
-
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Keep this application ID until the Play Console owner confirms the production ID.
         applicationId = "com.example.kisan_dost"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("production") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Never sign production releases with the shared Android debug key.
+            signingConfig = if (releaseSigningConfigured) {
+                signingConfigs.getByName("production")
+            } else {
+                null
+            }
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 

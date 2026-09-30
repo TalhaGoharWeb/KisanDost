@@ -7,7 +7,8 @@ class ExpenseProvider extends ChangeNotifier {
 
   List<Expense> get expenses => _expenses;
 
-  double get totalExpenses => _expenses.fold(0.0, (sum, item) => sum + item.amount);
+  double get totalExpenses =>
+      _expenses.fold(0.0, (sum, item) => sum + item.amount);
 
   // Urdu Category Map
   final Map<String, String> expenseCategories = {
@@ -31,7 +32,10 @@ class ExpenseProvider extends ChangeNotifier {
 
   Future<void> fetchExpenses() async {
     final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> maps = await db.query('expenses', orderBy: 'id DESC');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'expenses',
+      orderBy: 'id DESC',
+    );
     _expenses = List.generate(maps.length, (i) => Expense.fromMap(maps[i]));
     notifyListeners();
   }
@@ -42,6 +46,16 @@ class ExpenseProvider extends ChangeNotifier {
     required String date,
     String? description,
   }) async {
+    if (!amount.isFinite || amount <= 0) {
+      throw ArgumentError.value(
+        amount,
+        'amount',
+        'خرچہ صفر سے زیادہ اور درست عدد ہونا چاہیے۔',
+      );
+    }
+    if (category.trim().isEmpty || date.trim().isEmpty) {
+      throw ArgumentError('خرچے کا زمرہ اور تاریخ درج کرنا ضروری ہے۔');
+    }
     final db = await DatabaseHelper.instance.database;
     final newExpense = Expense(
       category: category,
@@ -56,11 +70,7 @@ class ExpenseProvider extends ChangeNotifier {
 
   Future<void> deleteExpense(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete(
-      'expenses',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
     await fetchExpenses();
   }
 }

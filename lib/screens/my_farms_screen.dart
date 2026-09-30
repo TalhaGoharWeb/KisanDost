@@ -4,6 +4,7 @@ import '../providers/farm_provider.dart';
 import '../providers/theka_provider.dart';
 import '../models/models.dart';
 import '../widgets/empty_state_widget.dart';
+import '../utils/agricultural_units.dart';
 import 'theka_details_screen.dart';
 import 'theka_form_screen.dart';
 
@@ -35,14 +36,21 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
         onRefresh: () async {
           await farmProvider.fetchFarms();
           if (context.mounted) {
-            await Provider.of<ThekaProvider>(context, listen: false).fetchThekas();
+            await Provider.of<ThekaProvider>(
+              context,
+              listen: false,
+            ).fetchThekas();
           }
         },
-        child: farmProvider.farms.isEmpty
+        child:
+            farmProvider.farms.isEmpty
             ? SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: SizedBox(
-                  height: MediaQuery.of(context).size.height - kToolbarHeight - MediaQuery.of(context).padding.top,
+                    height:
+                        MediaQuery.of(context).size.height -
+                        kToolbarHeight -
+                        MediaQuery.of(context).padding.top,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -80,7 +88,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                       children: [
                         Text(
                           farm.name,
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
                         PopupMenuButton<String>(
                           icon: const Icon(Icons.more_vert),
@@ -88,21 +99,34 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                             if (value == 'edit') {
                               _showEditFarmDialog(context, farm);
                             } else if (value == 'delete') {
-                              _showDeleteConfirmDialog(context, isFarm: true, id: farm.id!, name: farm.name);
+                                  _showDeleteConfirmDialog(
+                                    context,
+                                    isFarm: true,
+                                    id: farm.id!,
+                                    name: farm.name,
+                                  );
                             }
                           },
-                          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              itemBuilder:
+                                  (BuildContext context) =>
+                                      <PopupMenuEntry<String>>[
                             const PopupMenuItem<String>(
                               value: 'edit',
                               child: ListTile(
-                                leading: Icon(Icons.edit, color: Colors.blue),
+                                            leading: Icon(
+                                              Icons.edit,
+                                              color: Colors.blue,
+                                            ),
                                 title: Text('ترمیم کریں'),
                               ),
                             ),
                             const PopupMenuItem<String>(
                               value: 'delete',
                               child: ListTile(
-                                leading: Icon(Icons.delete, color: Colors.red),
+                                            leading: Icon(
+                                              Icons.delete,
+                                              color: Colors.red,
+                                            ),
                                 title: Text('حذف کریں'),
                               ),
                             ),
@@ -112,11 +136,19 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                     ),
                     subtitle: Text(
                       'کل رقبہ: ${farm.totalArea} ایکڑ',
-                      style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
                     ),
                     leading: CircleAvatar(
-                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      child: Icon(Icons.landscape, color: theme.colorScheme.primary),
+                          backgroundColor: theme.colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
+                          child: Icon(
+                            Icons.landscape,
+                            color: theme.colorScheme.primary,
+                          ),
                     ),
                     children: [
                       const Divider(),
@@ -127,7 +159,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: Text(
                             'اس زمین میں کوئی کھیت موجود نہیں ہے',
-                            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey.shade600,
+                                ),
                           ),
                         )
                       else
@@ -140,34 +175,54 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                             return ListTile(
                               title: Text(
                                 field.name,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                               subtitle: Text(
                                 'سائز: ${field.sizeAcres} ایکڑ | نہری پانی: ${field.canalWaterAvailable == 1 ? 'ہاں' : 'ناں'} | ٹیوب ویل: ${field.tubeWellAvailable == 1 ? 'ہاں' : 'ناں'}',
                                 style: const TextStyle(fontSize: 14),
                               ),
-                              leading: const Icon(Icons.grid_on, color: Colors.green),
+                                  leading: const Icon(
+                                    Icons.grid_on,
+                                    color: Colors.green,
+                                  ),
                               trailing: PopupMenuButton<String>(
                                 icon: const Icon(Icons.more_vert),
                                 onSelected: (value) {
                                   if (value == 'edit') {
                                     _showEditFieldDialog(context, field);
                                   } else if (value == 'delete') {
-                                    _showDeleteConfirmDialog(context, isFarm: false, id: field.id!, name: field.name, parentId: farm.id);
+                                        _showDeleteConfirmDialog(
+                                          context,
+                                          isFarm: false,
+                                          id: field.id!,
+                                          name: field.name,
+                                          parentId: farm.id,
+                                        );
                                   }
                                 },
-                                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                    itemBuilder:
+                                        (BuildContext context) =>
+                                            <PopupMenuEntry<String>>[
                                   const PopupMenuItem<String>(
                                     value: 'edit',
                                     child: ListTile(
-                                      leading: Icon(Icons.edit, color: Colors.blue),
+                                                  leading: Icon(
+                                                    Icons.edit,
+                                                    color: Colors.blue,
+                                                  ),
                                       title: Text('ترمیم کریں'),
                                     ),
                                   ),
                                   const PopupMenuItem<String>(
                                     value: 'delete',
                                     child: ListTile(
-                                      leading: Icon(Icons.delete, color: Colors.red),
+                                                  leading: Icon(
+                                                    Icons.delete,
+                                                    color: Colors.red,
+                                                  ),
                                       title: Text('حذف کریں'),
                                     ),
                                   ),
@@ -179,7 +234,8 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                       Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: OutlinedButton.icon(
-                          onPressed: () => _showAddFieldDialog(context, farm.id!),
+                              onPressed:
+                                  () => _showAddFieldDialog(context, farm.id!),
                           icon: const Icon(Icons.add),
                           label: const Text('نیا کھیت شامل کریں'),
                           style: OutlinedButton.styleFrom(
@@ -203,6 +259,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
     final nameController = TextEditingController();
     final areaController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    String selectedAreaUnit = 'acre';
 
     showDialog(
       context: context,
@@ -220,19 +277,43 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                     labelText: 'زمین کا نام (مثال: طلحہ فارم)',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => value!.isEmpty ? 'براہ کرم زمین کا نام درج کریں' : null,
+                  validator:
+                      (value) =>
+                          value!.isEmpty
+                              ? 'براہ کرم زمین کا نام درج کریں'
+                              : null,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedAreaUnit,
+                  decoration: const InputDecoration(
+                    labelText: 'رقبے کی اکائی',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'acre', child: Text('ایکڑ')),
+                    DropdownMenuItem(value: 'kanal', child: Text('کنال')),
+                    DropdownMenuItem(value: 'marla', child: Text('مرلہ')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) selectedAreaUnit = value;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: areaController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
-                    labelText: 'کل رقبہ (ایکڑ)',
+                    labelText: 'کل رقبہ',
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value!.isEmpty) return 'براہ کرم رقبہ درج کریں';
-                    if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                    final area = double.tryParse(value ?? '');
+                    if (area == null || !area.isFinite || area <= 0) {
+                      return 'صفر سے زیادہ درست رقبہ درج کریں';
+                    }
                     return null;
                   },
                 ),
@@ -249,7 +330,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                 if (formKey.currentState!.validate()) {
                   Provider.of<FarmProvider>(context, listen: false).addFarm(
                     nameController.text,
+                    AgriculturalUnits.areaToAcres(
                     double.parse(areaController.text),
+                      selectedAreaUnit,
+                    ),
                   );
                   Navigator.pop(ctx);
                 }
@@ -264,8 +348,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
 
   void _showEditFarmDialog(BuildContext context, Farm farm) {
     final nameController = TextEditingController(text: farm.name);
-    final areaController = TextEditingController(text: farm.totalArea.toString());
+    final areaController = TextEditingController(
+      text: farm.totalArea.toString(),
+    );
     final formKey = GlobalKey<FormState>();
+    String selectedAreaUnit = 'acre';
 
     showDialog(
       context: context,
@@ -283,19 +370,53 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                     labelText: 'زمین کا نام',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                  validator:
+                      (value) =>
+                          value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedAreaUnit,
+                  decoration: const InputDecoration(
+                    labelText: 'رقبے کی اکائی',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'acre', child: Text('ایکڑ')),
+                    DropdownMenuItem(value: 'kanal', child: Text('کنال')),
+                    DropdownMenuItem(value: 'marla', child: Text('مرلہ')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    final current = double.tryParse(areaController.text);
+                    if (current != null && current.isFinite && current >= 0) {
+                      final acres = AgriculturalUnits.areaToAcres(
+                        current,
+                        selectedAreaUnit,
+                      );
+                      areaController.text = AgriculturalUnits.areaFromAcres(
+                        acres,
+                        value,
+                      ).toStringAsFixed(3);
+                    }
+                    selectedAreaUnit = value;
+                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: areaController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
-                    labelText: 'کل رقبہ (ایکڑ)',
+                    labelText: 'کل رقبہ',
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value!.isEmpty) return 'براہ کرم رقبہ درج کریں';
-                    if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                    final area = double.tryParse(value ?? '');
+                    if (area == null || !area.isFinite || area <= 0) {
+                      return 'صفر سے زیادہ درست رقبہ درج کریں';
+                    }
                     return null;
                   },
                 ),
@@ -313,7 +434,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                   Provider.of<FarmProvider>(context, listen: false).updateFarm(
                     farm.id!,
                     nameController.text,
+                    AgriculturalUnits.areaToAcres(
                     double.parse(areaController.text),
+                      selectedAreaUnit,
+                    ),
                   );
                   Navigator.pop(ctx);
                 }
@@ -332,6 +456,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
     bool canalWater = false;
     bool tubeWell = false;
     final formKey = GlobalKey<FormState>();
+    String selectedAreaUnit = 'acre';
 
     showDialog(
       context: context,
@@ -352,19 +477,41 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                           labelText: 'کھیت کا نام (مثال: کھیت نمبر 1)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                        validator:
+                            (value) =>
+                                value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedAreaUnit,
+                        decoration: const InputDecoration(
+                          labelText: 'رقبے کی اکائی',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'acre', child: Text('ایکڑ')),
+                          DropdownMenuItem(value: 'kanal', child: Text('کنال')),
+                          DropdownMenuItem(value: 'marla', child: Text('مرلہ')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) selectedAreaUnit = value;
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: sizeController,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
-                          labelText: 'سائز (ایکڑ)',
+                          labelText: 'رقبہ',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value!.isEmpty) return 'براہ کرم سائز درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          final area = double.tryParse(value ?? '');
+                          if (area == null || !area.isFinite || area <= 0) {
+                            return 'صفر سے زیادہ درست رقبہ درج کریں';
+                          }
                           return null;
                         },
                       ),
@@ -399,10 +546,16 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
-                      Provider.of<FarmProvider>(context, listen: false).addField(
+                      Provider.of<FarmProvider>(
+                        context,
+                        listen: false,
+                      ).addField(
                         farmId: farmId,
                         name: nameController.text,
-                        sizeAcres: double.parse(sizeController.text),
+                        sizeAcres: AgriculturalUnits.areaToAcres(
+                          double.parse(sizeController.text),
+                          selectedAreaUnit,
+                        ),
                         canalWaterAvailable: canalWater ? 1 : 0,
                         tubeWellAvailable: tubeWell ? 1 : 0,
                       );
@@ -421,10 +574,13 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
 
   void _showEditFieldDialog(BuildContext context, Field field) {
     final nameController = TextEditingController(text: field.name);
-    final sizeController = TextEditingController(text: field.sizeAcres.toString());
+    final sizeController = TextEditingController(
+      text: field.sizeAcres.toString(),
+    );
     bool canalWater = field.canalWaterAvailable == 1;
     bool tubeWell = field.tubeWellAvailable == 1;
     final formKey = GlobalKey<FormState>();
+    String selectedAreaUnit = 'acre';
 
     showDialog(
       context: context,
@@ -445,19 +601,56 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                           labelText: 'کھیت کا نام',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                        validator:
+                            (value) =>
+                                value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedAreaUnit,
+                        decoration: const InputDecoration(
+                          labelText: 'رقبے کی اکائی',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'acre', child: Text('ایکڑ')),
+                          DropdownMenuItem(value: 'kanal', child: Text('کنال')),
+                          DropdownMenuItem(value: 'marla', child: Text('مرلہ')),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          final current = double.tryParse(sizeController.text);
+                          if (current != null &&
+                              current.isFinite &&
+                              current >= 0) {
+                            final acres = AgriculturalUnits.areaToAcres(
+                              current,
+                              selectedAreaUnit,
+                            );
+                            sizeController
+                                .text = AgriculturalUnits.areaFromAcres(
+                              acres,
+                              value,
+                            ).toStringAsFixed(3);
+                          }
+                          selectedAreaUnit = value;
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: sizeController,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
-                          labelText: 'سائز (ایکڑ)',
+                          labelText: 'رقبہ',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value!.isEmpty) return 'براہ کرم سائز درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          final area = double.tryParse(value ?? '');
+                          if (area == null || !area.isFinite || area <= 0) {
+                            return 'صفر سے زیادہ درست رقبہ درج کریں';
+                          }
                           return null;
                         },
                       ),
@@ -492,11 +685,17 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
-                      Provider.of<FarmProvider>(context, listen: false).updateField(
+                      Provider.of<FarmProvider>(
+                        context,
+                        listen: false,
+                      ).updateField(
                         id: field.id!,
                         farmId: field.farmId,
                         name: nameController.text,
-                        sizeAcres: double.parse(sizeController.text),
+                        sizeAcres: AgriculturalUnits.areaToAcres(
+                          double.parse(sizeController.text),
+                          selectedAreaUnit,
+                        ),
                         canalWaterAvailable: canalWater ? 1 : 0,
                         tubeWellAvailable: tubeWell ? 1 : 0,
                       );
@@ -538,7 +737,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () {
-                final provider = Provider.of<FarmProvider>(context, listen: false);
+                final provider = Provider.of<FarmProvider>(
+                  context,
+                  listen: false,
+                );
                 if (isFarm) {
                   provider.deleteFarm(id);
                 } else {
@@ -546,7 +748,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                 }
                 Navigator.pop(ctx);
               },
-              child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'حذف کریں',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -556,7 +761,8 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
 
   Widget _buildThekaSection(BuildContext context, int farmId, String farmName) {
     final thekaProvider = Provider.of<ThekaProvider>(context);
-    final currentThekas = thekaProvider.thekas.where((t) => t.farmId == farmId).toList();
+    final currentThekas =
+        thekaProvider.thekas.where((t) => t.farmId == farmId).toList();
 
     if (currentThekas.isEmpty) {
       return Padding(
@@ -566,7 +772,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
           children: [
             const Text(
               'ٹھیکہ (لیز): کوئی معاہدہ نہیں ہے',
-              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
             ),
             TextButton.icon(
               onPressed: () {
@@ -576,7 +786,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                 );
               },
               icon: const Icon(Icons.add, size: 16, color: Colors.brown),
-              label: const Text('ٹھیکہ شامل کریں', style: TextStyle(color: Colors.brown, fontSize: 13)),
+              label: const Text(
+                'ٹھیکہ شامل کریں',
+                style: TextStyle(color: Colors.brown, fontSize: 13),
+              ),
             ),
           ],
         ),
@@ -601,7 +814,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
             children: [
               const Text(
                 'ٹھیکہ (لیز معاہدہ)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.brown),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.brown,
+                ),
               ),
               TextButton.icon(
                 onPressed: () {
@@ -612,8 +829,15 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.info_outline, size: 16, color: Colors.brown),
-                label: const Text('تفصیلات', style: TextStyle(color: Colors.brown, fontSize: 13)),
+                icon: const Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: Colors.brown,
+                ),
+                label: const Text(
+                  'تفصیلات',
+                  style: TextStyle(color: Colors.brown, fontSize: 13),
+                ),
               ),
             ],
           ),
@@ -621,9 +845,18 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('کل ٹھیکہ: ${theka.totalAmount.toStringAsFixed(0)} روپے', style: const TextStyle(fontSize: 13)),
-              Text('ادا شدہ: ${paidAmt.toStringAsFixed(0)} روپے', style: const TextStyle(fontSize: 13, color: Colors.green)),
-              Text('باقی: ${pendingAmt.toStringAsFixed(0)} روپے', style: const TextStyle(fontSize: 13, color: Colors.red)),
+              Text(
+                'کل ٹھیکہ: ${theka.totalAmount.toStringAsFixed(0)} روپے',
+                style: const TextStyle(fontSize: 13),
+              ),
+              Text(
+                'ادا شدہ: ${paidAmt.toStringAsFixed(0)} روپے',
+                style: const TextStyle(fontSize: 13, color: Colors.green),
+              ),
+              Text(
+                'باقی: ${pendingAmt.toStringAsFixed(0)} روپے',
+                style: const TextStyle(fontSize: 13, color: Colors.red),
+              ),
             ],
           ),
         ],
@@ -631,4 +864,3 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
     );
   }
 }
-

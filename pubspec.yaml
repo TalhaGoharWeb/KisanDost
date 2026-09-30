@@ -22,11 +22,13 @@ dependencies:
   lottie: ^3.3.1
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
+  file_picker: ^13.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  sqflite_common_ffi: ^2.4.3
 
 flutter:
   uses-material-design: true

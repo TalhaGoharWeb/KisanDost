@@ -277,7 +277,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: _selectedFarmId,
+                        initialValue: _selectedFarmId,
                         decoration: const InputDecoration(
                           labelText: 'زمین (Farm) منتخب کریں',
                           border: OutlineInputBorder(),
@@ -300,7 +300,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int?>(
                         isExpanded: true,
-                        value: _selectedFieldId,
+                        initialValue: _selectedFieldId,
                         decoration: const InputDecoration(
                           labelText: 'مخصوص کھیت (Field) - اختیاری',
                           border: OutlineInputBorder(),
@@ -330,7 +330,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: _selectedDurationType,
+                              initialValue: _selectedDurationType,
                               decoration: const InputDecoration(
                                 labelText: 'ٹھیکے کی مدت (Duration)',
                                 border: OutlineInputBorder(),
@@ -455,7 +455,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: _selectedPaymentMethod,
+                        initialValue: _selectedPaymentMethod,
                         decoration: const InputDecoration(
                           labelText: 'ادائیگی کا طریقہ (Payment Method)',
                           border: OutlineInputBorder(),

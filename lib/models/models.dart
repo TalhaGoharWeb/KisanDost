@@ -4,7 +4,12 @@ class Farm {
   final double totalArea;
   final String createdAt;
 
-  Farm({this.id, required this.name, required this.totalArea, required this.createdAt});
+  Farm({
+    this.id,
+    required this.name,
+    required this.totalArea,
+    required this.createdAt,
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -197,6 +202,7 @@ class Activity {
   final String? inventoryName;
   final String? inventoryUnit;
   final double? inventoryQuantity;
+  final bool inventoryPurchasedAndUsed;
   final bool? _isCompleted;
 
   bool get isCompleted => _isCompleted ?? false;
@@ -213,6 +219,7 @@ class Activity {
     this.inventoryName,
     this.inventoryUnit,
     this.inventoryQuantity,
+    this.inventoryPurchasedAndUsed = false,
     bool? isCompleted,
   }) : _isCompleted = isCompleted ?? false;
 
@@ -229,6 +236,7 @@ class Activity {
       'inventory_name': inventoryName,
       'inventory_unit': inventoryUnit,
       'inventory_quantity': inventoryQuantity,
+      'inventory_purchased_and_used': inventoryPurchasedAndUsed ? 1 : 0,
       'is_completed': isCompleted ? 1 : 0,
     };
   }
@@ -245,9 +253,12 @@ class Activity {
       inventoryCategory: map['inventory_category'],
       inventoryName: map['inventory_name'],
       inventoryUnit: map['inventory_unit'],
-      inventoryQuantity: map['inventory_quantity'] == null
-          ? null
-          : (map['inventory_quantity'] as num).toDouble(),
+      inventoryQuantity:
+          map['inventory_quantity'] == null
+              ? null
+              : (map['inventory_quantity'] as num).toDouble(),
+      inventoryPurchasedAndUsed:
+          (map['inventory_purchased_and_used'] ?? 0) == 1,
       isCompleted: (map['is_completed'] ?? 0) == 1,
     );
   }
@@ -326,7 +337,8 @@ class Harvest {
       date: map['date'],
       ratePerUnit: (map['rate_per_unit'] ?? 0.0 as num).toDouble(),
       grossAmount: (map['gross_amount'] ?? 0.0 as num).toDouble(),
-      transportationExpense: (map['transportation_expense'] ?? 0.0 as num).toDouble(),
+      transportationExpense:
+          (map['transportation_expense'] ?? 0.0 as num).toDouble(),
       labourExpense: (map['labour_expense'] ?? 0.0 as num).toDouble(),
       harvestingExpense: (map['harvesting_expense'] ?? 0.0 as num).toDouble(),
       commissionExpense: (map['commission_expense'] ?? 0.0 as num).toDouble(),
@@ -482,7 +494,10 @@ class ThekaInstallment {
       amount: (map['amount'] as num).toDouble(),
       dueDate: map['due_date'],
       status: map['status'],
-      paidAmount: map['paid_amount'] == null ? 0.0 : (map['paid_amount'] as num).toDouble(),
+      paidAmount:
+          map['paid_amount'] == null
+              ? 0.0
+              : (map['paid_amount'] as num).toDouble(),
       paidDate: map['paid_date'],
       expenseId: map['expense_id'],
     );
@@ -572,4 +587,3 @@ class UshrRecord {
     );
   }
 }
-

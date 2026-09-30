@@ -4,7 +4,8 @@ import '../models/models.dart';
 
 class ThekaProvider extends ChangeNotifier {
   List<Theka> _thekas = [];
-  final Map<int, List<ThekaInstallment>> _thekaInstallments = {}; // thekaId -> installments
+  final Map<int, List<ThekaInstallment>> _thekaInstallments =
+      {}; // thekaId -> installments
 
   List<Theka> get thekas => _thekas;
 
@@ -14,7 +15,10 @@ class ThekaProvider extends ChangeNotifier {
 
   Future<void> fetchThekas() async {
     final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> maps = await db.query('thekas', orderBy: 'id DESC');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'thekas',
+      orderBy: 'id DESC',
+    );
     _thekas = List.generate(maps.length, (i) => Theka.fromMap(maps[i]));
 
     for (var theka in _thekas) {
@@ -34,7 +38,10 @@ class ThekaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addTheka(Theka theka, List<ThekaInstallment> installments) async {
+  Future<void> addTheka(
+    Theka theka,
+    List<ThekaInstallment> installments,
+  ) async {
     final db = await DatabaseHelper.instance.database;
     await db.transaction((txn) async {
       final thekaId = await txn.insert('thekas', theka.toMap());
@@ -93,13 +100,30 @@ class ThekaProvider extends ChangeNotifier {
       if (maps.isEmpty) return;
 
       final currentInst = ThekaInstallment.fromMap(maps.first);
+      if (!paidAmount.isFinite || paidAmount <= 0) {
+        throw ArgumentError.value(
+          paidAmount,
+          'paidAmount',
+          'ادائیگی صفر سے زیادہ اور درست ہونی چاہیے۔',
+        );
+      }
+      if (!currentInst.amount.isFinite ||
+          currentInst.amount <= 0 ||
+          paidAmount > currentInst.amount + 1e-9) {
+        throw ArgumentError.value(
+          paidAmount,
+          'paidAmount',
+          'ادائیگی قسط کی کل رقم سے زیادہ نہیں ہو سکتی۔',
+        );
+      }
       final isFullPayment = paidAmount >= currentInst.amount;
       final newStatus = isFullPayment ? 'Paid' : 'Partially Paid';
 
       int? expenseId = currentInst.expenseId;
-      final String desc = isFullPayment
-          ? 'ٹھیکہ ادائیگی: $farmName (قسط نمبر $installmentIndex)'
-          : 'ٹھیکہ جزوی ادائیگی: $farmName (قسط نمبر $installmentIndex)';
+      final String desc =
+          isFullPayment
+              ? 'ٹھیکہ ادائیگی: $farmName (قسط نمبر $installmentIndex)'
+              : 'ٹھیکہ جزوی ادائیگی: $farmName (قسط نمبر $installmentIndex)';
 
       if (expenseId == null) {
         // Insert new expense entry
@@ -113,11 +137,7 @@ class ThekaProvider extends ChangeNotifier {
         // Update existing expense entry
         await txn.update(
           'expenses',
-          {
-            'amount': paidAmount,
-            'date': paidDate,
-            'description': desc,
-          },
+          {'amount': paidAmount, 'date': paidDate, 'description': desc},
           where: 'id = ?',
           whereArgs: [expenseId],
         );
@@ -171,7 +191,10 @@ class ThekaProvider extends ChangeNotifier {
     await fetchThekas();
   }
 
-  Future<void> updateInstallmentSchedule(int thekaId, List<ThekaInstallment> newSchedule) async {
+  Future<void> updateInstallmentSchedule(
+    int thekaId,
+    List<ThekaInstallment> newSchedule,
+  ) async {
     final db = await DatabaseHelper.instance.database;
     await db.transaction((txn) async {
       // Verify no payments are recorded yet
@@ -181,11 +204,17 @@ class ThekaProvider extends ChangeNotifier {
         whereArgs: [thekaId, 'Pending'],
       );
       if (maps.isNotEmpty) {
-        throw Exception('ادائیگیاں ریکارڈ ہونے کی وجہ سے شیڈول تبدیل نہیں کیا جا سکتا۔');
+        throw Exception(
+          'ادائیگیاں ریکارڈ ہونے کی وجہ سے شیڈول تبدیل نہیں کیا جا سکتا۔',
+        );
       }
 
       // Delete old installments
-      await txn.delete('theka_installments', where: 'theka_id = ?', whereArgs: [thekaId]);
+      await txn.delete(
+        'theka_installments',
+        where: 'theka_id = ?',
+        whereArgs: [thekaId],
+      );
 
       // Insert new installments
       for (var inst in newSchedule) {
