@@ -27,12 +27,19 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     });
   }
 
-  void _showRecordPaymentDialog(BuildContext context, ThekaInstallment inst, String farmName, int index) {
+  void _showRecordPaymentDialog(
+    BuildContext context,
+    ThekaInstallment inst,
+    String farmName,
+    int index,
+  ) {
     final formKey = GlobalKey<FormState>();
     final amountController = TextEditingController(
-      text: (inst.status == 'Pending' ? inst.amount : inst.paidAmount).toStringAsFixed(0),
+      text: (inst.status == 'Pending' ? inst.amount : inst.paidAmount)
+          .toStringAsFixed(0),
     );
-    DateTime selectedDate = inst.paidDate != null ? DateTime.parse(inst.paidDate!) : DateTime.now();
+    DateTime selectedDate =
+        inst.paidDate != null ? DateTime.parse(inst.paidDate!) : DateTime.now();
 
     showDialog(
       context: context,
@@ -40,7 +47,11 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text(inst.status == 'Pending' ? 'ادائیگی درج کریں' : 'ادائیگی میں ترمیم کریں'),
+              title: Text(
+                inst.status == 'Pending'
+                    ? 'ادائیگی درج کریں'
+                    : 'ادائیگی میں ترمیم کریں',
+              ),
               content: Form(
                 key: formKey,
                 child: Column(
@@ -48,7 +59,10 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                   children: [
                     Text(
                       'قسط رقم: ${inst.amount.toStringAsFixed(0)} روپے',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -61,14 +75,21 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                       validator: (value) {
                         if (value!.isEmpty) return 'رقم درج کریں';
                         final double? parsed = double.tryParse(value);
-                        if (parsed == null || parsed <= 0) return 'صحیح رقم درج کریں';
+                        if (parsed == null ||
+                            !parsed.isFinite ||
+                            parsed <= 0 ||
+                            parsed > inst.amount) {
+                          return 'قسط کی رقم سے زیادہ نہ ہو، درست رقم درج کریں';
+                        }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text('تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
+                      title: Text(
+                        'تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                      ),
                       trailing: const Icon(Icons.calendar_today),
                       onTap: () async {
                         final date = await showDatePicker(
@@ -95,11 +116,21 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      final double paidAmount = double.parse(amountController.text);
-                      final String dateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
+                      final double paidAmount = double.parse(
+                        amountController.text,
+                      );
+                      final String dateStr = DateFormat(
+                        'yyyy-MM-dd',
+                      ).format(selectedDate);
 
-                      final thekaProv = Provider.of<ThekaProvider>(context, listen: false);
-                      final expProv = Provider.of<ExpenseProvider>(context, listen: false);
+                      final thekaProv = Provider.of<ThekaProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final expProv = Provider.of<ExpenseProvider>(
+                        context,
+                        listen: false,
+                      );
 
                       await thekaProv.payInstallment(
                         installmentId: inst.id!,
@@ -116,7 +147,9 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('ٹھیکہ ادائیگی درج کر دی گئی ہے اور لیجر اپ ڈیٹ کر دیا گیا ہے۔'),
+                            content: Text(
+                              'ٹھیکہ ادائیگی درج کر دی گئی ہے اور لیجر اپ ڈیٹ کر دیا گیا ہے۔',
+                            ),
                             backgroundColor: Colors.green,
                           ),
                         );
@@ -133,7 +166,12 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     );
   }
 
-  void _confirmDeleteAgreement(BuildContext context, Theka theka, String farmName, bool hasPayments) {
+  void _confirmDeleteAgreement(
+    BuildContext context,
+    Theka theka,
+    String farmName,
+    bool hasPayments,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -152,8 +190,14 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () async {
-                final thekaProv = Provider.of<ThekaProvider>(context, listen: false);
-                final expProv = Provider.of<ExpenseProvider>(context, listen: false);
+                final thekaProv = Provider.of<ThekaProvider>(
+                  context,
+                  listen: false,
+                );
+                final expProv = Provider.of<ExpenseProvider>(
+                  context,
+                  listen: false,
+                );
 
                 await thekaProv.deleteTheka(theka.id!);
                 await expProv.fetchExpenses();
@@ -183,7 +227,8 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     final farmProvider = Provider.of<FarmProvider>(context);
 
     // Find current theka
-    final thekaList = thekaProvider.thekas.where((t) => t.id == widget.thekaId).toList();
+    final thekaList =
+        thekaProvider.thekas.where((t) => t.id == widget.thekaId).toList();
     if (thekaList.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('ٹھیکہ کی تفصیلات')),
@@ -202,7 +247,12 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
       final fields = farmProvider.getFieldsForFarm(theka.farmId);
       final field = fields.firstWhere(
         (f) => f.id == theka.fieldId,
-        orElse: () => Field(farmId: theka.farmId, name: 'نامعلوم کھیت', sizeAcres: 0.0),
+        orElse:
+            () => Field(
+              farmId: theka.farmId,
+              name: 'نامعلوم کھیت',
+              sizeAcres: 0.0,
+            ),
       );
       if (field.name.isNotEmpty) {
         fieldText = '${field.name} (${field.sizeAcres} ایکڑ)';
@@ -233,11 +283,14 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'ترمیم کریں',
-            onPressed: hasPayments
+            onPressed:
+                hasPayments
                 ? () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('ادائیگیاں ریکارڈ ہونے کی وجہ سے ترمیم بند ہے۔ پہلے ادائیگی کینسل کریں۔'),
+                          content: Text(
+                            'ادائیگیاں ریکارڈ ہونے کی وجہ سے ترمیم بند ہے۔ پہلے ادائیگی کینسل کریں۔',
+                          ),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -254,7 +307,13 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: 'حذف کریں',
-            onPressed: () => _confirmDeleteAgreement(context, theka, farm.name, hasPayments),
+            onPressed:
+                () => _confirmDeleteAgreement(
+                  context,
+                  theka,
+                  farm.name,
+                  hasPayments,
+                ),
           ),
         ],
       ),
@@ -266,7 +325,9 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
             // Summary Card
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -283,20 +344,39 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                   children: [
                     Text(
                       farm.name,
-                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'محدودہ: $fieldText',
-                      style: const TextStyle(color: Colors.white70, fontSize: 15),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                      ),
                     ),
                     const Divider(color: Colors.white24, height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildSummaryHeaderItem('ٹھیکہ رقم', theka.totalAmount, Colors.white),
-                        _buildSummaryHeaderItem('ادا شدہ', paidAmt, Colors.greenAccent),
-                        _buildSummaryHeaderItem('باقی واجب الادا', pendingAmt, Colors.orangeAccent),
+                        _buildSummaryHeaderItem(
+                          'ٹھیکہ رقم',
+                          theka.totalAmount,
+                          Colors.white,
+                        ),
+                        _buildSummaryHeaderItem(
+                          'ادا شدہ',
+                          paidAmt,
+                          Colors.greenAccent,
+                        ),
+                        _buildSummaryHeaderItem(
+                          'باقی واجب الادا',
+                          pendingAmt,
+                          Colors.orangeAccent,
+                        ),
                       ],
                     ),
                   ],
@@ -308,21 +388,42 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
             // Agreement Details
             const Text(
               'معاہدہ کی تفصیلات',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.brown),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.brown,
+              ),
             ),
             const SizedBox(height: 10),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
                     _buildDetailRow('ٹھیکے کی قسم', durationUrdu),
-                    if (theka.durationDetails != null && theka.durationDetails!.isNotEmpty)
-                      _buildDetailRow('تفصیل / فصل کا نام', theka.durationDetails!),
-                    _buildDetailRow('تاریخ آغاز', theka.startDate ?? 'درج نہیں'),
-                    _buildDetailRow('تاریخ اختتام', theka.endDate ?? 'درج نہیں'),
-                    _buildDetailRow('ادائیگی کی قسم', theka.paymentMethod == 'Full' ? 'ایک بارگی (Lump-sum)' : 'اقساط میں (Installments)'),
+                    if (theka.durationDetails != null &&
+                        theka.durationDetails!.isNotEmpty)
+                      _buildDetailRow(
+                        'تفصیل / فصل کا نام',
+                        theka.durationDetails!,
+                      ),
+                    _buildDetailRow(
+                      'تاریخ آغاز',
+                      theka.startDate ?? 'درج نہیں',
+                    ),
+                    _buildDetailRow(
+                      'تاریخ اختتام',
+                      theka.endDate ?? 'درج نہیں',
+                    ),
+                    _buildDetailRow(
+                      'ادائیگی کی قسم',
+                      theka.paymentMethod == 'Full'
+                          ? 'ایک بارگی (Lump-sum)'
+                          : 'اقساط میں (Installments)',
+                    ),
                   ],
                 ),
               ),
@@ -335,7 +436,11 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
               children: [
                 const Text(
                   'ادائیگی کا شیڈول (اقساط)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.brown),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown,
+                  ),
                 ),
                 if (!hasPayments && theka.paymentMethod == 'Installment')
                   TextButton.icon(
@@ -347,8 +452,15 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.edit_calendar, size: 18, color: Colors.brown),
-                    label: const Text('شیڈول بدلیں', style: TextStyle(color: Colors.brown)),
+                    icon: const Icon(
+                      Icons.edit_calendar,
+                      size: 18,
+                      color: Colors.brown,
+                    ),
+                    label: const Text(
+                      'شیڈول بدلیں',
+                      style: TextStyle(color: Colors.brown),
+                    ),
                   ),
               ],
             ),
@@ -387,17 +499,27 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                           children: [
                             Text(
                               'قسط نمبر $instIdx',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: statusColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 statusText,
-                                style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
                           ],
@@ -406,11 +528,21 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildInfoCol('رقم', '${inst.amount.toStringAsFixed(0)} روپے'),
+                            _buildInfoCol(
+                              'رقم',
+                              '${inst.amount.toStringAsFixed(0)} روپے',
+                            ),
                             _buildInfoCol('آخری تاریخ', inst.dueDate),
                             if (inst.status != 'Pending') ...[
-                              _buildInfoCol('ادا شدہ رقم', '${inst.paidAmount.toStringAsFixed(0)} روپے', color: Colors.green.shade700),
-                              _buildInfoCol('تاریخ ادائیگی', inst.paidDate ?? '-'),
+                              _buildInfoCol(
+                                'ادا شدہ رقم',
+                                '${inst.paidAmount.toStringAsFixed(0)} روپے',
+                                color: Colors.green.shade700,
+                              ),
+                              _buildInfoCol(
+                                'تاریخ ادائیگی',
+                                inst.paidDate ?? '-',
+                              ),
                             ],
                           ],
                         ),
@@ -420,37 +552,67 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                           children: [
                             if (inst.status == 'Pending')
                               ElevatedButton.icon(
-                                onPressed: () => _showRecordPaymentDialog(context, inst, farm.name, instIdx),
+                                onPressed:
+                                    () => _showRecordPaymentDialog(
+                                      context,
+                                      inst,
+                                      farm.name,
+                                      instIdx,
+                                    ),
                                 icon: const Icon(Icons.payment, size: 16),
                                 label: const Text('ادائیگی درج کریں'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.brown.shade800,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
                               )
                             else ...[
                               OutlinedButton.icon(
-                                onPressed: () => _showRecordPaymentDialog(context, inst, farm.name, instIdx),
+                                onPressed:
+                                    () => _showRecordPaymentDialog(
+                                      context,
+                                      inst,
+                                      farm.name,
+                                      instIdx,
+                                    ),
                                 icon: const Icon(Icons.edit_outlined, size: 16),
                                 label: const Text('تبدیلی'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.brown.shade800,
-                                  side: BorderSide(color: Colors.brown.shade800),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  side: BorderSide(
+                                    color: Colors.brown.shade800,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: () async {
-                                  final thekaProv = Provider.of<ThekaProvider>(context, listen: false);
-                                  final expProv = Provider.of<ExpenseProvider>(context, listen: false);
-                                  await thekaProv.markInstallmentPending(inst.id!);
+                                  final thekaProv = Provider.of<ThekaProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  final expProv = Provider.of<ExpenseProvider>(
+                                    context,
+                                    listen: false,
+                                  );
+                                  await thekaProv.markInstallmentPending(
+                                    inst.id!,
+                                  );
                                   await expProv.fetchExpenses();
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('ادائیگی منسوخ کر دی گئی ہے اور لیجر سے خرچہ حذف ہو گیا ہے۔'),
+                                        content: Text(
+                                          'ادائیگی منسوخ کر دی گئی ہے اور لیجر سے خرچہ حذف ہو گیا ہے۔',
+                                        ),
                                         backgroundColor: Colors.orange,
                                       ),
                                     );
@@ -461,7 +623,10 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.red.shade700,
                                   side: BorderSide(color: Colors.red.shade200),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
                               ),
                             ],
@@ -483,11 +648,18 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
         const SizedBox(height: 4),
         Text(
           '${amount.toStringAsFixed(0)} روپے',
-          style: TextStyle(color: textCol, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: textCol,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -499,8 +671,14 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          Text(
+            label,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
         ],
       ),
     );
@@ -510,7 +688,10 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+        ),
         const SizedBox(height: 2),
         Text(
           val,

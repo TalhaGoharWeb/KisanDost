@@ -408,7 +408,7 @@ class _UshrScreenState extends State<UshrScreen> {
                       if (existingRecord == null) ...[
                         DropdownButtonFormField<int?>(
                           isExpanded: true,
-                          value: selectedHarvestId,
+                          initialValue: selectedHarvestId,
                           decoration: const InputDecoration(
                             labelText: 'فصل کٹائی سے معلومات لیں (آٹو فل)',
                             border: OutlineInputBorder(),
@@ -444,7 +444,7 @@ class _UshrScreenState extends State<UshrScreen> {
                       ],
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: selectedCropSeasonId,
+                        initialValue: selectedCropSeasonId,
                         decoration: const InputDecoration(
                           labelText: 'فصل منتخب کریں',
                           border: OutlineInputBorder(),
@@ -518,7 +518,7 @@ class _UshrScreenState extends State<UshrScreen> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: selectedMethod,
+                        initialValue: selectedMethod,
                         decoration: const InputDecoration(
                           labelText: 'آبپاشی کا طریقہ (عشر شرح)',
                           border: OutlineInputBorder(),
@@ -561,7 +561,7 @@ class _UshrScreenState extends State<UshrScreen> {
                       // Payment Methods Redesign
                       DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: payMethod,
+                        initialValue: payMethod,
                         decoration: const InputDecoration(
                           labelText: 'ادائیگی کا طریقہ (Pay Ushr As)',
                           border: OutlineInputBorder(),

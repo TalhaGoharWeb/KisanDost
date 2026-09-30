@@ -507,7 +507,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                     children: [
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: selectedCropSeasonId,
+                        initialValue: selectedCropSeasonId,
                         decoration: const InputDecoration(
                           labelText: 'فصل منتخب کریں',
                           border: OutlineInputBorder(),
@@ -551,7 +551,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                             flex: 2,
                             child: DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: selectedUnit,
+                              initialValue: selectedUnit,
                               decoration: const InputDecoration(
                                 labelText: 'اکائی',
                                 border: OutlineInputBorder(),
@@ -586,7 +586,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: paymentStatus,
+                              initialValue: paymentStatus,
                               decoration: const InputDecoration(
                                 labelText: 'ادائیگی کا اسٹیٹس',
                                 border: OutlineInputBorder(),
@@ -850,7 +850,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                     children: [
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: selectedCropSeasonId,
+                        initialValue: selectedCropSeasonId,
                         decoration: const InputDecoration(
                           labelText: 'فصل منتخب کریں',
                           border: OutlineInputBorder(),
@@ -894,7 +894,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                             flex: 2,
                             child: DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: selectedUnit,
+                              initialValue: selectedUnit,
                               decoration: const InputDecoration(
                                 labelText: 'اکائی',
                                 border: OutlineInputBorder(),
@@ -929,7 +929,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: paymentStatus,
+                              initialValue: paymentStatus,
                               decoration: const InputDecoration(
                                 labelText: 'ادائیگی کا اسٹیٹس',
                                 border: OutlineInputBorder(),

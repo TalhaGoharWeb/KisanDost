@@ -12,7 +12,8 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  String _selectedCategoryFilter = 'All'; // 'All', 'Fertilizer', 'Seed', 'Spray', 'Medicine', 'Diesel', 'Other'
+  String _selectedCategoryFilter =
+      'All'; // 'All', 'Fertilizer', 'Seed', 'Spray', 'Medicine', 'Diesel', 'Other'
 
   // Categories map for translation
   final Map<String, String> _categories = {
@@ -25,7 +26,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
   };
 
   // Predefined Units
-  final List<String> _units = ['بوری', 'کلوگرام', 'لیٹر', 'بوتل', 'پیکٹ', 'گرام', 'ملی لیٹر', 'ٹن'];
+  final List<String> _units = [
+    'بوری',
+    'کلوگرام',
+    'لیٹر',
+    'بوتل',
+    'پیکٹ',
+    'گرام',
+    'ملی لیٹر',
+    'ٹن',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +48,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
 
     // 2. Filter Stock List
-    final filteredStock = inventoryProvider.inventoryList.where((item) {
+    final filteredStock =
+        inventoryProvider.inventoryList.where((item) {
       if (_selectedCategoryFilter == 'All') return true;
       return item.category == _selectedCategoryFilter;
     }).toList();
@@ -135,14 +146,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
           // List of inventory items
           Expanded(
-            child: filteredStock.isEmpty
+              child:
+                  filteredStock.isEmpty
                 ? SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: SizedBox(
                       height: MediaQuery.of(context).size.height * 0.5,
                       child: const EmptyStateWidget(
                         message: 'کوئی اسٹاک موجود نہیں ہے',
-                        subtitle: 'گودام میں سامان داخل کرنے کے لیے نیچے بٹن دبائیں',
+                            subtitle:
+                                'گودام میں سامان داخل کرنے کے لیے نیچے بٹن دبائیں',
                         fallbackIcon: Icons.store,
                         imageAsset: 'assets/images/wheat.png',
                       ),
@@ -153,7 +166,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     itemCount: filteredStock.length,
                     itemBuilder: (context, index) {
                       final item = filteredStock[index];
-                      final catUrdu = _categories[item.category] ?? item.category;
+                          final catUrdu =
+                              _categories[item.category] ?? item.category;
 
                       // Low stock alert indicator
                       final bool isLowStock = item.quantity <= 2;
@@ -176,7 +190,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 24,
-                                backgroundColor: stockColor.withValues(alpha: 0.1),
+                                    backgroundColor: stockColor.withValues(
+                                      alpha: 0.1,
+                                    ),
                                 child: Icon(
                                   Icons.store,
                                   color: stockColor,
@@ -186,14 +202,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       item.name,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
-                                        fontFamily: 'Jameel Noori Nastaleeq',
+                                            fontFamily:
+                                                'Jameel Noori Nastaleeq',
                                       ),
                                     ),
                                     Text(
@@ -201,15 +219,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       style: const TextStyle(
                                         fontSize: 13,
                                         color: Colors.grey,
-                                        fontFamily: 'Jameel Noori Nastaleeq',
+                                            fontFamily:
+                                                'Jameel Noori Nastaleeq',
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
                                       decoration: BoxDecoration(
-                                        color: stockColor.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(6),
+                                            color: stockColor.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                       ),
                                       child: Text(
                                         stockStatus,
@@ -217,7 +243,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                           color: stockColor,
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          fontFamily: 'Jameel Noori Nastaleeq',
+                                              fontFamily:
+                                                  'Jameel Noori Nastaleeq',
                                         ),
                                       ),
                                     ),
@@ -256,12 +283,41 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.edit_outlined, color: Colors.blueGrey, size: 20),
-                                        onPressed: () => _showEditStockDialog(context, item),
+                                            icon: const Icon(
+                                              Icons.edit_outlined,
+                                              color: Colors.blueGrey,
+                                              size: 20,
+                                            ),
+                                            onPressed:
+                                                () => _showEditStockDialog(
+                                                  context,
+                                                  item,
+                                                ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.history,
+                                              color: Colors.blueGrey,
+                                              size: 20,
+                                            ),
+                                            tooltip: 'اسٹاک کی تاریخ',
+                                            onPressed:
+                                                () => _showInventoryHistory(
+                                                  context,
+                                                  item,
+                                                ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 20),
-                                        onPressed: () => _confirmDeleteStock(context, item),
+                                            icon: const Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.grey,
+                                              size: 20,
+                                            ),
+                                            onPressed:
+                                                () => _confirmDeleteStock(
+                                                  context,
+                                                  item,
+                                                ),
                                       ),
                                     ],
                                   ),
@@ -284,6 +340,108 @@ class _InventoryScreenState extends State<InventoryScreen> {
         backgroundColor: Colors.blueGrey.shade700,
         foregroundColor: Colors.white,
       ),
+    );
+  }
+
+  Future<void> _showInventoryHistory(
+    BuildContext context,
+    Inventory item,
+  ) async {
+    final inventoryId = item.id;
+    if (inventoryId == null) return;
+    final movements = Provider.of<InventoryProvider>(
+      context,
+      listen: false,
+    ).fetchInventoryTransactions(inventoryId: inventoryId);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder:
+          (context) => SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.65,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      '${item.name} — اسٹاک کی تاریخ',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Divider(),
+                    Expanded(
+                      child: FutureBuilder<List<Map<String, dynamic>>>(
+                        future: movements,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (snapshot.hasError) {
+                            return const Center(
+                              child: Text('اسٹاک کی تاریخ لوڈ نہیں ہو سکی'),
+                            );
+                          }
+                          final rows = snapshot.data ?? [];
+                          if (rows.isEmpty) {
+                            return const Center(
+                              child: Text('ابھی کوئی لین دین درج نہیں ہے'),
+                            );
+                          }
+                          return ListView.separated(
+                            itemCount: rows.length,
+                            separatorBuilder:
+                                (_, _) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final row = rows[index];
+                              final delta =
+                                  (row['quantity_delta'] as num).toDouble();
+                              final received = delta > 0;
+                              final label = switch (row['movement_type']) {
+                                'opening' => 'ابتدائی بیلنس',
+                                'purchase' => 'خرید / اسٹاک وصول',
+                                'usage' => 'کھیت میں استعمال',
+                                'reversal' => 'واپس شامل',
+                                'adjustment' => 'اسٹاک میں تبدیلی',
+                                _ => 'اسٹاک کی حرکت',
+                              };
+                              final date =
+                                  (row['transaction_date'] as String?) ?? '';
+                              final notes = (row['notes'] as String?)?.trim();
+                              final subtitle = [
+                                if (date.isNotEmpty) date.split('T').first,
+                                if (notes != null && notes.isNotEmpty) notes,
+                              ].join(' • ');
+                              final quantity =
+                                  '${received ? '+' : '−'}${delta.abs().toStringAsFixed(2)} ${row['unit']}';
+                              return ListTile(
+                                dense: true,
+                                leading: Icon(
+                                  received
+                                      ? Icons.south_west
+                                      : Icons.north_east,
+                                  color:
+                                      received ? Colors.green : Colors.orange,
+                                ),
+                                title: Text('$label — $quantity'),
+                                subtitle:
+                                    subtitle.isEmpty ? null : Text(subtitle),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
     );
   }
 
@@ -311,7 +469,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _showAddStockDialog(BuildContext context) {
-    final inventoryProvider = Provider.of<InventoryProvider>(context, listen: false);
+    final inventoryProvider = Provider.of<InventoryProvider>(
+      context,
+      listen: false,
+    );
     final formKey = GlobalKey<FormState>();
 
     String selectedCategory = 'Fertilizer';
@@ -334,12 +495,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DropdownButtonFormField<String>(
-                        value: selectedCategory,
+                        initialValue: selectedCategory,
                         decoration: const InputDecoration(
                           labelText: 'اسٹاک کا زمرہ (Category)',
                           border: OutlineInputBorder(),
                         ),
-                        items: _categories.entries.map((e) {
+                        items:
+                            _categories.entries.map((e) {
                           return DropdownMenuItem<String>(
                             value: e.key,
                             child: Text(e.value),
@@ -367,10 +529,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       TextFormField(
                         controller: nameController,
                         decoration: const InputDecoration(
-                          labelText: 'چیز کا نام (جیسے: یوریا کھاد، ڈی اے پی، بجائی بیج)',
+                          labelText:
+                              'چیز کا نام (جیسے: یوریا کھاد، ڈی اے پی، بجائی بیج)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value!.isEmpty ? 'نام درج کریں' : null,
+                        validator:
+                            (value) => value!.isEmpty ? 'نام درج کریں' : null,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -386,7 +550,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                               validator: (value) {
                                 if (value!.isEmpty) return 'مقدار درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر';
+                                if (double.tryParse(value) == null) {
+                                  return 'صرف نمبر';
+                                }
                                 return null;
                               },
                             ),
@@ -395,13 +561,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           Expanded(
                             flex: 2,
                             child: DropdownButtonFormField<String>(
-                              value: selectedUnit,
+                              initialValue: selectedUnit,
                               decoration: const InputDecoration(
                                 labelText: 'اکائی',
                                 border: OutlineInputBorder(),
                               ),
-                              items: _units.map((u) {
-                                return DropdownMenuItem(value: u, child: Text(u));
+                              items:
+                                  _units.map((u) {
+                                    return DropdownMenuItem(
+                                      value: u,
+                                      child: Text(u),
+                                    );
                               }).toList(),
                               onChanged: (val) {
                                 setState(() {
@@ -447,7 +617,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       );
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('اسٹاک گودام میں کامیابی سے شامل ہو گیا!')),
+                        const SnackBar(
+                          content: Text(
+                            'اسٹاک گودام میں کامیابی سے شامل ہو گیا!',
+                          ),
+                        ),
                       );
                     }
                   },
@@ -464,9 +638,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _confirmDeleteStock(BuildContext context, Inventory item) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder:
+          (ctx) => AlertDialog(
         title: const Text('اسٹاک حذف کریں؟'),
-        content: Text('کیا آپ واقعی گودام سے "${item.name}" کا ریکارڈ حذف کرنا چاہتے ہیں؟'),
+            content: Text(
+              'کیا آپ واقعی گودام سے "${item.name}" کا ریکارڈ حذف کرنا چاہتے ہیں؟',
+            ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -475,13 +652,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              Provider.of<InventoryProvider>(context, listen: false).deleteInventoryItem(item.id!);
+                  Provider.of<InventoryProvider>(
+                    context,
+                    listen: false,
+                  ).deleteInventoryItem(item.id!);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('اسٹاک کامیابی سے حذف ہو گیا!')),
+                    const SnackBar(
+                      content: Text('اسٹاک کامیابی سے حذف ہو گیا!'),
+                    ),
               );
             },
-            child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+                child: const Text(
+                  'حذف کریں',
+                  style: TextStyle(color: Colors.white),
+                ),
           ),
         ],
       ),
@@ -489,14 +674,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _showEditStockDialog(BuildContext context, Inventory item) {
-    final inventoryProvider = Provider.of<InventoryProvider>(context, listen: false);
+    final inventoryProvider = Provider.of<InventoryProvider>(
+      context,
+      listen: false,
+    );
     final formKey = GlobalKey<FormState>();
 
     String selectedCategory = item.category;
     final nameController = TextEditingController(text: item.name);
     final qtyController = TextEditingController(text: item.quantity.toString());
     String selectedUnit = item.unit;
-    final priceController = TextEditingController(text: item.costPerUnit.toString());
+    final priceController = TextEditingController(
+      text: item.costPerUnit.toString(),
+    );
 
     showDialog(
       context: context,
@@ -512,12 +702,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DropdownButtonFormField<String>(
-                        value: selectedCategory,
+                        initialValue: selectedCategory,
                         decoration: const InputDecoration(
                           labelText: 'اسٹاک کا زمرہ (Category)',
                           border: OutlineInputBorder(),
                         ),
-                        items: _categories.entries.map((e) {
+                        items:
+                            _categories.entries.map((e) {
                           return DropdownMenuItem<String>(
                             value: e.key,
                             child: Text(e.value),
@@ -536,7 +727,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           labelText: 'چیز کا نام',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value!.isEmpty ? 'نام درج کریں' : null,
+                        validator:
+                            (value) => value!.isEmpty ? 'نام درج کریں' : null,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -552,7 +744,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                               validator: (value) {
                                 if (value!.isEmpty) return 'مقدار درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر';
+                                if (double.tryParse(value) == null) {
+                                  return 'صرف نمبر';
+                                }
                                 return null;
                               },
                             ),
@@ -561,13 +755,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           Expanded(
                             flex: 2,
                             child: DropdownButtonFormField<String>(
-                              value: selectedUnit,
+                              initialValue: selectedUnit,
                               decoration: const InputDecoration(
                                 labelText: 'اکائی',
                                 border: OutlineInputBorder(),
                               ),
-                              items: _units.map((u) {
-                                return DropdownMenuItem(value: u, child: Text(u));
+                              items:
+                                  _units.map((u) {
+                                    return DropdownMenuItem(
+                                      value: u,
+                                      child: Text(u),
+                                    );
                               }).toList(),
                               onChanged: (val) {
                                 setState(() {
@@ -614,7 +812,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       );
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('اسٹاک میں تبدیلی کامیابی سے محفوظ ہو گئی!')),
+                        const SnackBar(
+                          content: Text(
+                            'اسٹاک میں تبدیلی کامیابی سے محفوظ ہو گئی!',
+                          ),
+                        ),
                       );
                     }
                   },

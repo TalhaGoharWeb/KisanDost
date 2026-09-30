@@ -550,7 +550,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: selectedCropKey,
+                        initialValue: selectedCropKey,
                         decoration: const InputDecoration(
                           labelText: 'فصل کا نام',
                           border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
@@ -572,7 +572,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       const SizedBox(height: 16),
                       if (varieties.isNotEmpty) ...[
                         DropdownButtonFormField<String>(
-                          value: selectedVariety,
+                          initialValue: selectedVariety,
                           decoration: const InputDecoration(
                             labelText: 'قسم (Variety)',
                             border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
@@ -819,7 +819,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: selectedCropKey,
+                        initialValue: selectedCropKey,
                         decoration: const InputDecoration(
                           labelText: 'فصل کا نام',
                           border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
@@ -841,7 +841,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       const SizedBox(height: 16),
                       if (currentVarieties.isNotEmpty) ...[
                         DropdownButtonFormField<String>(
-                          value: selectedVariety,
+                          initialValue: selectedVariety,
                           decoration: const InputDecoration(
                             labelText: 'قسم (Variety)',
                             border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),

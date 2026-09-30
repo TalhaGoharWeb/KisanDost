@@ -1,30 +1,38 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:kisan_dost/main.dart';
+import 'package:provider/provider.dart';
+import 'package:kisan_dost/providers/farm_provider.dart';
+import 'package:kisan_dost/providers/theka_provider.dart';
+import 'package:kisan_dost/screens/my_farms_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const KisanDostApp());
+  testWidgets('farm screen shows Urdu empty state and opens area-unit entry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => FarmProvider()),
+          ChangeNotifierProvider(create: (_) => ThekaProvider()),
+        ],
+        child: const MaterialApp(home: MyFarmsScreen()),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 16));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('میری زمینیں'), findsOneWidget);
+    expect(find.text('کوئی زمین موجود نہیں ہے'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.text('نئی زمین شامل کریں').last);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('رقبے کی اکائی'), findsOneWidget);
+    expect(find.text('ایکڑ'), findsWidgets);
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('کنال'), findsOneWidget);
+    expect(find.text('مرلہ'), findsOneWidget);
   });
 }

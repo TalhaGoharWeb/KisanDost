@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class AppTheme {
   static const Color primaryColor = Color(0xFF2E7D32); // Deep Green
   static const Color accentColor = Color(0xFF81C784); // Light Green
-  static const Color backgroundColor = Color(0xFFF1F8E9); // Off-white/Light Greenish
+  static const Color backgroundColor = Color(
+    0xFFF1F8E9,
+  ); // Off-white/Light Greenish
   static const Color cardColor = Colors.white;
   static const Color errorColor = Color(0xFFD32F2F); // Red
   static const Color successColor = Color(0xFF388E3C); // Green
-  
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -32,9 +34,7 @@ class AppTheme {
         bodyMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.normal),
         bodySmall: TextStyle(fontSize: 16, fontWeight: FontWeight.normal),
         labelLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-      ).apply(
-        fontFamily: 'Jameel Noori Nastaleeq',
-      ),
+      ).apply(fontFamily: 'Jameel Noori Nastaleeq'),
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -61,12 +61,10 @@ class AppTheme {
           ),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardColor,
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(8),
       ),
     );

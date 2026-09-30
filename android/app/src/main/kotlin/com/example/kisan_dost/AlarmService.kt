@@ -73,16 +73,16 @@ class AlarmService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Intent to open the fullscreen activity
-        val fullscreenIntent = Intent(this, AlarmActivity::class.java).apply {
+        // Open the alarm screen only when the farmer taps the notification.
+        val openActivityIntent = Intent(this, AlarmActivity::class.java).apply {
             putExtra("taskId", taskId)
             putExtra("alarmId", alarmId)
             this.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
-        val fullscreenPendingIntent = PendingIntent.getActivity(
+        val openActivityPendingIntent = PendingIntent.getActivity(
             this,
             alarmId,
-            fullscreenIntent,
+            openActivityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -95,7 +95,8 @@ class AlarmService : Service() {
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setOngoing(true)
             .setAutoCancel(false)
-            .setFullScreenIntent(fullscreenPendingIntent, true)
+            .setContentIntent(openActivityPendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .addAction(android.R.drawable.ic_menu_save, "مکمل ہو گیا", completePendingIntent)
             .addAction(android.R.drawable.ic_menu_send, "سوز کریں (10 منٹ)", snoozePendingIntent)
 
@@ -165,8 +166,7 @@ class AlarmService : Service() {
                 setSound(Uri.parse("android.resource://$packageName/raw/farming_alarm"), audioAttributes)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 1000, 1000)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                setBypassDnd(true)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
 
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

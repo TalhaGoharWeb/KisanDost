@@ -179,7 +179,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       DropdownButtonFormField<String>(
-                        value: selectedCategory,
+                        initialValue: selectedCategory,
                         decoration: const InputDecoration(
                           labelText: 'خرچے کا زمرہ (Category)',
                           border: OutlineInputBorder(),
@@ -198,7 +198,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int?>(
-                        value: selectedCropSeasonId,
+                        initialValue: selectedCropSeasonId,
                         decoration: const InputDecoration(
                           labelText: 'فصل منتخب کریں (آپشنل)',
                           border: OutlineInputBorder(),

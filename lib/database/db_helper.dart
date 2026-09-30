@@ -3,26 +3,71 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 9;
+  static const _databaseVersion = 11;
+  static const _backupFormat = 'kisandost_offline_backup';
+  static const _backupTables = <String>[
+    'farms',
+    'fields',
+    'crop_seasons',
+    'crop_season_fields',
+    'expenses',
+    'inventory',
+    'inventory_transactions',
+    'activities',
+    'harvests',
+    'sales',
+    'ushr_records',
+    'tasks',
+    'thekas',
+    'theka_installments',
+  ];
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
   static Database? _database;
+  static DatabaseFactory? _databaseFactoryOverride;
+  static String? _databasePathOverride;
+
+  static Future<void> configureForTesting({
+    required DatabaseFactory factory,
+    String path = ':memory:',
+  }) async {
+    await _database?.close();
+    _database = null;
+    _databaseFactoryOverride = factory;
+    _databasePathOverride = path;
+  }
+
+  static Future<void> resetForTesting() async {
+    await _database?.close();
+    _database = null;
+    _databaseFactoryOverride = null;
+    _databasePathOverride = null;
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
   }
 
-  _initDatabase() async {
-    String path = join(await getDatabasesPath(), _databaseName);
-    return await openDatabase(
+  Future<Database> _initDatabase() async {
+    final factory = _databaseFactoryOverride ?? databaseFactory;
+    final path =
+        _databasePathOverride ??
+        join(await factory.getDatabasesPath(), _databaseName);
+    return factory.openDatabase(
       path,
-      version: _databaseVersion,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
+      options: OpenDatabaseOptions(
+        version: _databaseVersion,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      ),
     );
   }
 
@@ -92,6 +137,7 @@ class DatabaseHelper {
         cost_per_unit REAL NOT NULL
       )
     ''');
+    await _createInventoryTransactionsTable(db);
 
     await db.execute('''
       CREATE TABLE activities (
@@ -106,6 +152,7 @@ class DatabaseHelper {
         inventory_name TEXT,
         inventory_unit TEXT,
         inventory_quantity REAL,
+        inventory_purchased_and_used INTEGER NOT NULL DEFAULT 0,
         is_completed INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (crop_season_id) REFERENCES crop_seasons (id) ON DELETE CASCADE,
         FOREIGN KEY (expense_id) REFERENCES expenses (id) ON DELETE SET NULL
@@ -223,7 +270,7 @@ class DatabaseHelper {
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('''
-        CREATE TABLE tasks (
+        CREATE TABLE IF NOT EXISTS tasks (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           title TEXT NOT NULL,
           date_time TEXT NOT NULL,
@@ -233,12 +280,16 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       try {
-        await db.execute("ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'");
+        await db.execute(
+          "ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'",
+        );
       } catch (e) {
         // Column might already exist
       }
       try {
-        await db.execute("ALTER TABLE tasks ADD COLUMN reminders TEXT NOT NULL DEFAULT '0'");
+        await db.execute(
+          "ALTER TABLE tasks ADD COLUMN reminders TEXT NOT NULL DEFAULT '0'",
+        );
       } catch (e) {
         // Column might already exist
       }
@@ -378,22 +429,193 @@ class DatabaseHelper {
         } catch (_) {}
       }
     }
+    if (oldVersion < 10) {
+      final columns = await db.rawQuery('PRAGMA table_info(activities)');
+      final hasPurchaseFlag = columns.any(
+        (column) => column['name'] == 'inventory_purchased_and_used',
+      );
+      if (!hasPurchaseFlag) {
+        await db.execute(
+          'ALTER TABLE activities ADD COLUMN inventory_purchased_and_used INTEGER NOT NULL DEFAULT 0',
+        );
+      }
+    }
+    if (oldVersion < 11) {
+      await _createInventoryTransactionsTable(db);
+      await db.execute('''
+        INSERT INTO inventory_transactions (
+          inventory_id, movement_type, category, item_name,
+          quantity_delta, unit, unit_cost, transaction_date, notes
+        )
+        SELECT id, 'opening', category, name, quantity, unit, cost_per_unit,
+          DATE('now'), 'Opening balance imported during database upgrade'
+        FROM inventory
+        WHERE quantity != 0
+      ''');
+    }
+  }
+
+  Future<void> _createInventoryTransactionsTable(
+    DatabaseExecutor executor,
+  ) async {
+    await executor.execute('''
+      CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        inventory_id INTEGER,
+        movement_type TEXT NOT NULL CHECK (
+          movement_type IN ('opening', 'purchase', 'usage', 'reversal', 'adjustment')
+        ),
+        category TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        quantity_delta REAL NOT NULL CHECK (quantity_delta != 0),
+        unit TEXT NOT NULL,
+        unit_cost REAL NOT NULL DEFAULT 0 CHECK (unit_cost >= 0),
+        activity_id INTEGER,
+        transaction_date TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+    await executor.execute('''
+      CREATE INDEX IF NOT EXISTS idx_inventory_transactions_item_date
+      ON inventory_transactions (inventory_id, transaction_date DESC, id DESC)
+    ''');
+  }
+
+  Future<Map<String, dynamic>> createBackup() async {
+    final db = await database;
+    final tables = <String, List<Map<String, dynamic>>>{};
+    await db.transaction((txn) async {
+      for (final table in _backupTables) {
+        tables[table] = await txn.query(table, orderBy: 'id');
+      }
+    });
+    return {
+      'format': _backupFormat,
+      'schemaVersion': _databaseVersion,
+      'exportedAt': DateTime.now().toUtc().toIso8601String(),
+      'tables': tables,
+    };
+  }
+
+  Future<int> restoreBackup(Object? payload) async {
+    if (payload is! Map) {
+      throw const FormatException('Backup must be a JSON object.');
+    }
+    final backup = Map<String, dynamic>.from(payload);
+    if (backup['format'] != _backupFormat) {
+      throw const FormatException('This is not a Kisan Dost backup file.');
+    }
+    final schemaVersion = backup['schemaVersion'];
+    if (schemaVersion is! num ||
+        schemaVersion < 1 ||
+        schemaVersion > _databaseVersion) {
+      throw const FormatException(
+        'This backup version is not supported by this app.',
+      );
+    }
+    final rawTablesValue = backup['tables'];
+    if (rawTablesValue is! Map) {
+      throw const FormatException('Backup is missing its table data.');
+    }
+    final rawTables = Map<String, dynamic>.from(rawTablesValue);
+    final importOpeningBalances =
+        schemaVersion < 11 && !rawTables.containsKey('inventory_transactions');
+    if (importOpeningBalances) {
+      rawTables['inventory_transactions'] = <Map<String, dynamic>>[];
+    }
+    for (final table in _backupTables) {
+      if (!rawTables.containsKey(table)) {
+        throw FormatException('Backup is incomplete: missing $table.');
+      }
+    }
+
+    final rowsByTable = <String, List<Map<String, dynamic>>>{};
+    for (final entry in rawTables.entries) {
+      final table = entry.key.toString();
+      if (!_backupTables.contains(table)) {
+        throw FormatException('Backup contains an unknown table: $table.');
+      }
+      if (entry.value is! List) {
+        throw FormatException('Invalid row list for $table.');
+      }
+      final rows = <Map<String, dynamic>>[];
+      for (final row in entry.value as List) {
+        if (row is! Map) throw FormatException('Invalid row in $table.');
+        final mappedRow = Map<String, dynamic>.from(row);
+        if (!mappedRow.containsKey('id')) {
+          throw FormatException('A row in $table is missing its record ID.');
+        }
+        rows.add(mappedRow);
+      }
+      rowsByTable[table] = rows;
+    }
+
+    final db = await database;
+    var restoredCount = 0;
+    await db.transaction((txn) async {
+      final tableColumns = <String, Set<String>>{};
+      for (final table in _backupTables) {
+        final info = await txn.rawQuery('PRAGMA table_info("$table")');
+        tableColumns[table] =
+            info.map((column) => column['name'] as String).toSet();
+      }
+
+      for (final table in _backupTables.reversed) {
+        await txn.delete(table);
+      }
+      for (final table in _backupTables) {
+        final allowedColumns = tableColumns[table]!;
+        for (final row in rowsByTable[table]!) {
+          final unknownColumns = row.keys.where(
+            (key) => !allowedColumns.contains(key),
+          );
+          if (unknownColumns.isNotEmpty) {
+            throw FormatException(
+              'Backup contains unsupported columns in $table.',
+            );
+          }
+          await txn.insert(table, row);
+          restoredCount++;
+        }
+      }
+      if (importOpeningBalances) {
+        restoredCount += await txn.rawInsert('''
+          INSERT INTO inventory_transactions (
+            inventory_id, movement_type, category, item_name,
+            quantity_delta, unit, unit_cost, transaction_date, notes
+          )
+          SELECT id, 'opening', category, name, quantity, unit, cost_per_unit,
+            DATE('now'), 'Opening balance imported from an older backup'
+          FROM inventory
+          WHERE quantity != 0
+        ''');
+      }
+    });
+    return restoredCount;
   }
 
   Future<void> clearAllTables() async {
     final db = await database;
-    await db.delete('ushr_records');
-    await db.delete('theka_installments');
-    await db.delete('thekas');
-    await db.delete('farms');
-    await db.delete('fields');
-    await db.delete('crop_seasons');
-    await db.delete('crop_season_fields');
-    await db.delete('expenses');
-    await db.delete('inventory');
-    await db.delete('activities');
-    await db.delete('harvests');
-    await db.delete('sales');
-    await db.delete('tasks');
+    await db.transaction((txn) async {
+      for (final table in [
+        'sales',
+        'ushr_records',
+        'activities',
+        'harvests',
+        'theka_installments',
+        'thekas',
+        'crop_season_fields',
+        'crop_seasons',
+        'fields',
+        'farms',
+        'expenses',
+        'inventory_transactions',
+        'inventory',
+        'tasks',
+      ]) {
+        await txn.delete(table);
+      }
+    });
   }
 }
