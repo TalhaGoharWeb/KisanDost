@@ -198,6 +198,46 @@ void main() {
       expect(backfill, hasLength(1));
       await db.close();
     });
+
+    test('v12 migrates money to integer paisa, idempotently', () async {
+      final db = await openV10Db();
+      await createV10Schema(db);
+      await db.insert('inventory', {
+        'category': 'Fertilizer',
+        'name': 'یوریا',
+        'unit': 'بوری',
+        'quantity': 7.0,
+        'cost_per_unit': 2000.0,
+      });
+
+      await DatabaseHelper.migrateV10ToV11(db);
+      await DatabaseHelper.migrateV11ToV12(db);
+
+      // 2000.00 rupees -> 200000 paisa, exactly (ROUND half away from zero).
+      final item = (await db.query('inventory')).single;
+      expect(item['cost_per_unit_paisa'], 200000);
+      // The old REAL column is gone: the rebuild leaves no deprecated
+      // money columns behind, so future inserts can't hit a NOT NULL
+      // constraint on a column Dart never writes.
+      final invCols = (await db.rawQuery("PRAGMA table_info('inventory')"))
+          .map((c) => c['name'] as String)
+          .toSet();
+      expect(invCols, isNot(contains('cost_per_unit')));
+
+      // The ledger carries the paisa columns too.
+      final txColumns =
+          await db.rawQuery("PRAGMA table_info('inventory_transactions')");
+      final txNames = txColumns.map((c) => c['name'] as String).toSet();
+      expect(txNames, containsAll(['unit_price_paisa', 'total_amount_paisa']));
+
+      // A second run recomputes the same values from the untouched old
+      // columns — the backfill is idempotent.
+      await DatabaseHelper.migrateV11ToV12(db);
+      final item2 = (await db.query('inventory')).single;
+      expect(item2['cost_per_unit_paisa'], 200000);
+
+      await db.close();
+    });
   });
 
   group('inventory ledger via InventoryProvider', () {
@@ -208,6 +248,7 @@ void main() {
       db = await openV10Db();
       await createV10Schema(db);
       await DatabaseHelper.migrateV10ToV11(db);
+      await DatabaseHelper.migrateV11ToV12(db);
       provider = InventoryProvider();
     });
 
@@ -222,7 +263,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         weightPerUnitKg: 50,
         executor: db,
       );
@@ -237,8 +278,8 @@ void main() {
       expect(rows.single['type'], 'purchase');
       expect(rows.single['quantity'], 10);
       expect(rows.single['unit'], 'بوری');
-      expect(rows.single['unit_price'], 2000);
-      expect(rows.single['total_amount'], 20000);
+      expect(rows.single['unit_price_paisa'], 200000);
+      expect(rows.single['total_amount_paisa'], 2000000);
     });
 
     test('recordPurchase merges with weighted-average cost', () async {
@@ -247,7 +288,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         executor: db,
       );
       final id2 = await provider.recordPurchase(
@@ -255,15 +296,15 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 3000,
+        costPerUnitPaisa: 300000,
         executor: db,
       );
       expect(id2, id);
 
       final item = await provider.getItemById(id, executor: db);
       expect(item!.quantity, 20);
-      // (10*2000 + 10*3000) / 20 = 2500
-      expect(item.costPerUnit, 2500);
+      // (10*200000 + 10*300000) / 20 = 250000 paisa
+      expect(item.costPerUnitPaisa, 250000);
       expect(await ledgerRows(db, id), hasLength(2));
     });
 
@@ -275,7 +316,7 @@ void main() {
         'name': 'گندم بیج',
         'unit': 'کلوگرام',
         'quantity': 0.0,
-        'cost_per_unit': 100.0,
+        'cost_per_unit_paisa': 10000,
       });
 
       final mergedId = await provider.recordPurchase(
@@ -283,15 +324,15 @@ void main() {
         name: 'گندم بیج',
         unit: 'کلوگرام',
         quantity: 40,
-        costPerUnit: 120,
+        costPerUnitPaisa: 12000,
         executor: db,
       );
       expect(mergedId, id);
 
       final item = await provider.getItemById(id, executor: db);
       expect(item!.quantity, 40);
-      // No division by zero: (0*100 + 40*120) / 40.
-      expect(item.costPerUnit, 120);
+      // No division by zero: (0*10000 + 40*12000) / 40.
+      expect(item.costPerUnitPaisa, 12000);
     });
 
     test('recordUsage deducts stock and writes a negative ledger row',
@@ -301,7 +342,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         executor: db,
       );
       await provider.recordUsage(
@@ -328,7 +369,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         executor: db,
       );
       final activityId = await db.insert('activities', {
@@ -361,7 +402,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         executor: db,
       );
 
@@ -389,7 +430,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         weightPerUnitKg: 50,
         executor: db,
       );
@@ -419,7 +460,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         // No weightPerUnitKg on purpose.
         executor: db,
       );
@@ -447,7 +488,7 @@ void main() {
         name: 'گندم بیج',
         unit: 'کلوگرام',
         quantity: 40,
-        costPerUnit: 100,
+        costPerUnitPaisa: 10000,
         executor: db,
       );
       await provider.recordAdjustment(
@@ -474,7 +515,7 @@ void main() {
         name: 'گندم بیج',
         unit: 'کلوگرام',
         quantity: 40,
-        costPerUnit: 100,
+        costPerUnitPaisa: 10000,
         executor: db,
       );
 
@@ -506,7 +547,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         executor: db,
       );
       await provider.recordPurchase(
@@ -514,7 +555,7 @@ void main() {
         name: 'ڈی اے پی',
         unit: 'بوری',
         quantity: 5,
-        costPerUnit: 3000,
+        costPerUnitPaisa: 300000,
         executor: db,
       );
 
@@ -526,7 +567,7 @@ void main() {
           category: 'Fertilizer',
           name: 'ڈی اے پی',
           unit: 'بوری',
-          costPerUnit: 2000,
+          costPerUnitPaisa: 200000,
           executor: db,
         ),
         throwsA(isA<InventoryException>()),
@@ -538,13 +579,13 @@ void main() {
         category: 'Fertilizer',
         name: 'یوریا دانے دار',
         unit: 'بوری',
-        costPerUnit: 2100,
+        costPerUnitPaisa: 210000,
         weightPerUnitKg: 50,
         executor: db,
       );
       final item = await provider.getItemById(id, executor: db);
       expect(item!.name, 'یوریا دانے دار');
-      expect(item.costPerUnit, 2100);
+      expect(item.costPerUnitPaisa, 210000);
       expect(item.weightPerUnitKg, 50);
       expect(item.quantity, 10);
       // Only the original purchase row — metadata edits write no ledger.
@@ -557,7 +598,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         executor: db,
       );
       await provider.recordUsage(itemId: id, quantity: 2, executor: db);
@@ -581,7 +622,7 @@ void main() {
         name: 'یوریا',
         unit: 'بوری',
         quantity: 10,
-        costPerUnit: 2000,
+        costPerUnitPaisa: 200000,
         executor: db,
       );
       await provider.recordUsage(itemId: id, quantity: 2, executor: db);
