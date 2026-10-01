@@ -116,12 +116,22 @@ class Expense {
   final String date;
   final String? description;
 
+  /// Optional links to where the money was spent. Nullable: historical
+  /// expenses were recorded without links, and links are cleared
+  /// (SET NULL) — never cascaded — when the farm/field/crop is deleted.
+  final int? farmId;
+  final int? fieldId;
+  final int? cropSeasonId;
+
   Expense({
     this.id,
     required this.category,
     required this.amount,
     required this.date,
     this.description,
+    this.farmId,
+    this.fieldId,
+    this.cropSeasonId,
   });
 
   Map<String, dynamic> toMap() {
@@ -131,6 +141,9 @@ class Expense {
       'amount': amount,
       'date': date,
       'description': description,
+      'farm_id': farmId,
+      'field_id': fieldId,
+      'crop_season_id': cropSeasonId,
     };
   }
 
@@ -141,6 +154,9 @@ class Expense {
       amount: map['amount'],
       date: map['date'],
       description: map['description'],
+      farmId: map['farm_id'],
+      fieldId: map['field_id'],
+      cropSeasonId: map['crop_season_id'],
     );
   }
 }

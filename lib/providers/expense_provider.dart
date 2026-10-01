@@ -41,6 +41,9 @@ class ExpenseProvider extends ChangeNotifier {
     required double amount,
     required String date,
     String? description,
+    int? farmId,
+    int? fieldId,
+    int? cropSeasonId,
   }) async {
     final db = await DatabaseHelper.instance.database;
     final newExpense = Expense(
@@ -48,10 +51,42 @@ class ExpenseProvider extends ChangeNotifier {
       amount: amount,
       date: date,
       description: description,
+      farmId: farmId,
+      fieldId: fieldId,
+      cropSeasonId: cropSeasonId,
     );
     final id = await db.insert('expenses', newExpense.toMap());
     await fetchExpenses();
     return id;
+  }
+
+  Future<void> updateExpense({
+    required int id,
+    required String category,
+    required double amount,
+    required String date,
+    String? description,
+    int? farmId,
+    int? fieldId,
+    int? cropSeasonId,
+  }) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.update(
+      'expenses',
+      Expense(
+        id: id,
+        category: category,
+        amount: amount,
+        date: date,
+        description: description,
+        farmId: farmId,
+        fieldId: fieldId,
+        cropSeasonId: cropSeasonId,
+      ).toMap(),
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await fetchExpenses();
   }
 
   Future<void> deleteExpense(int id) async {

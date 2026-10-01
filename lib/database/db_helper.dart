@@ -1,9 +1,10 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 9;
+  static const _databaseVersion = 10;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -84,7 +85,10 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         amount REAL NOT NULL,
         date TEXT NOT NULL,
-        description TEXT
+        description TEXT,
+        farm_id INTEGER REFERENCES farms (id) ON DELETE SET NULL,
+        field_id INTEGER REFERENCES fields (id) ON DELETE SET NULL,
+        crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL
       )
     ''');
 
@@ -382,6 +386,58 @@ class DatabaseHelper {
         try {
           await db.execute(statement);
         } catch (_) {}
+      }
+    }
+    if (oldVersion < 10) {
+      await migrateV9ToV10(db);
+    }
+  }
+
+  /// v9 -> v10 migration, exposed for tests.
+  ///
+  /// 1. Orphan repair: deletes child rows whose parent no longer exists.
+  ///    These orphans predate FK enforcement (`PRAGMA foreign_keys = ON`
+  ///    was only enabled after v9), so `ON DELETE CASCADE` never fired for
+  ///    them. Children are deleted before parents; each statement only
+  ///    removes rows whose parent is already gone.
+  /// 2. Links expenses to farm/field/crop via new nullable columns.
+  ///    Nullable + `ON DELETE SET NULL` (never CASCADE): deleting a farm,
+  ///    field or crop must never delete financial records.
+  @visibleForTesting
+  static Future<void> migrateV9ToV10(Database db) async {
+    await db.execute(
+        'DELETE FROM theka_installments WHERE theka_id NOT IN (SELECT id FROM thekas)');
+    await db.execute(
+        'DELETE FROM ushr_records WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)');
+    await db.execute(
+        'DELETE FROM ushr_records WHERE harvest_id IS NOT NULL AND harvest_id NOT IN (SELECT id FROM harvests)');
+    await db.execute(
+        'DELETE FROM sales WHERE harvest_id NOT IN (SELECT id FROM harvests)');
+    await db.execute(
+        'DELETE FROM activities WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)');
+    await db.execute(
+        'DELETE FROM harvests WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)');
+    await db.execute(
+        'DELETE FROM crop_season_fields WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons) OR field_id NOT IN (SELECT id FROM fields)');
+    await db.execute(
+        'DELETE FROM crop_seasons WHERE field_id NOT IN (SELECT id FROM fields)');
+    await db.execute(
+        'DELETE FROM thekas WHERE farm_id NOT IN (SELECT id FROM farms)');
+    await db.execute(
+        'DELETE FROM thekas WHERE field_id IS NOT NULL AND field_id NOT IN (SELECT id FROM fields)');
+    await db.execute(
+        'DELETE FROM fields WHERE farm_id NOT IN (SELECT id FROM farms)');
+
+    final List<String> statements = [
+      'ALTER TABLE expenses ADD COLUMN farm_id INTEGER REFERENCES farms (id) ON DELETE SET NULL',
+      'ALTER TABLE expenses ADD COLUMN field_id INTEGER REFERENCES fields (id) ON DELETE SET NULL',
+      'ALTER TABLE expenses ADD COLUMN crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL',
+    ];
+    for (final statement in statements) {
+      try {
+        await db.execute(statement);
+      } catch (_) {
+        // Column might already exist on partially migrated devices.
       }
     }
   }
