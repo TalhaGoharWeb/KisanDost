@@ -21,6 +21,12 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       version: _databaseVersion,
+      // Enforce foreign keys: the schema declares ON DELETE CASCADE / SET NULL,
+      // but sqflite leaves FK enforcement OFF by default, which silently
+      // orphaned child rows on every parent delete. (Audit 2026-10-01 §7.10)
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
