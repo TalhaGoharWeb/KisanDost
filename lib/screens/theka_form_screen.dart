@@ -469,8 +469,8 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           if (value!.isEmpty) return 'براہ کرم ٹھیکہ رقم درج کریں';
                           try {
                             Money.parse(value);
-                          } on MoneyParseException {
-                            return 'صرف نمبر درج کریں';
+                          } on MoneyParseException catch (e) {
+                            return e.message;
                           }
                           return null;
                         },

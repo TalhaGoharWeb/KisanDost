@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../widgets/digit_text.dart';
 import '../providers/expense_provider.dart';
 import '../providers/crop_provider.dart';
 import '../providers/activity_provider.dart';
@@ -8,6 +9,7 @@ import '../providers/farm_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
+import '../l10n/strings.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
@@ -66,8 +68,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  Money(expenseProvider.totalExpensesPaisa).format(),
+                DigitText(Money(expenseProvider.totalExpensesPaisa).format(),
                   style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -121,8 +122,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                Money(exp.amountPaisa).format(),
+                              DigitText(Money(exp.amountPaisa).format(),
                                 style: const TextStyle(
                                   color: Colors.red,
                                   fontWeight: FontWeight.bold,
@@ -315,8 +315,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           if (value!.isEmpty) return 'رقم درج کریں';
                           try {
                             Money.parse(value);
-                          } on MoneyParseException {
-                            return 'صرف نمبر درج کریں';
+                          } on MoneyParseException catch (e) {
+                            return e.message;
                           }
                           return null;
                         },
@@ -354,7 +354,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -408,7 +408,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       }
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -427,7 +427,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل'),
+            child: const Text(Strings.cancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -435,7 +435,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
               Provider.of<ExpenseProvider>(context, listen: false).deleteExpense(id);
               Navigator.pop(ctx);
             },
-            child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

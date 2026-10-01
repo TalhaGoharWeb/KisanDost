@@ -4,9 +4,11 @@ import '../providers/farm_provider.dart';
 import '../providers/theka_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
+import '../services/quantity.dart';
 import '../widgets/empty_state_widget.dart';
 import 'theka_details_screen.dart';
 import 'theka_form_screen.dart';
+import '../l10n/strings.dart';
 
 class MyFarmsScreen extends StatefulWidget {
   const MyFarmsScreen({super.key});
@@ -104,7 +106,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                               value: 'delete',
                               child: ListTile(
                                 leading: Icon(Icons.delete, color: Colors.red),
-                                title: Text('حذف کریں'),
+                                title: Text(Strings.delete),
                               ),
                             ),
                           ],
@@ -169,7 +171,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                                     value: 'delete',
                                     child: ListTile(
                                       leading: Icon(Icons.delete, color: Colors.red),
-                                      title: Text('حذف کریں'),
+                                      title: Text(Strings.delete),
                                     ),
                                   ),
                                 ],
@@ -233,7 +235,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) return 'براہ کرم رقبہ درج کریں';
-                    if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                    try {
+                      Quantity.parsePositive(value);
+                    } on QuantityParseException catch (e) {
+                      return e.message;
+                    }
                     return null;
                   },
                 ),
@@ -243,19 +249,19 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('کینسل'),
+              child: const Text(Strings.cancel),
             ),
             ElevatedButton(
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   Provider.of<FarmProvider>(context, listen: false).addFarm(
                     nameController.text,
-                    double.parse(areaController.text),
+                    Quantity.parsePositive(areaController.text),
                   );
                   Navigator.pop(ctx);
                 }
               },
-              child: const Text('محفوظ کریں'),
+              child: const Text(Strings.save),
             ),
           ],
         );
@@ -296,7 +302,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                   ),
                   validator: (value) {
                     if (value!.isEmpty) return 'براہ کرم رقبہ درج کریں';
-                    if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                    try {
+                      Quantity.parsePositive(value);
+                    } on QuantityParseException catch (e) {
+                      return e.message;
+                    }
                     return null;
                   },
                 ),
@@ -306,7 +316,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('کینسل'),
+              child: const Text(Strings.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -314,12 +324,12 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                   Provider.of<FarmProvider>(context, listen: false).updateFarm(
                     farm.id!,
                     nameController.text,
-                    double.parse(areaController.text),
+                    Quantity.parsePositive(areaController.text),
                   );
                   Navigator.pop(ctx);
                 }
               },
-              child: const Text('محفوظ کریں'),
+              child: const Text(Strings.save),
             ),
           ],
         );
@@ -365,7 +375,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                         ),
                         validator: (value) {
                           if (value!.isEmpty) return 'براہ کرم سائز درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          try {
+                            Quantity.parsePositive(value);
+                          } on QuantityParseException catch (e) {
+                            return e.message;
+                          }
                           return null;
                         },
                       ),
@@ -395,7 +409,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -403,14 +417,14 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                       Provider.of<FarmProvider>(context, listen: false).addField(
                         farmId: farmId,
                         name: nameController.text,
-                        sizeAcres: double.parse(sizeController.text),
+                        sizeAcres: Quantity.parsePositive(sizeController.text),
                         canalWaterAvailable: canalWater ? 1 : 0,
                         tubeWellAvailable: tubeWell ? 1 : 0,
                       );
                       Navigator.pop(ctx);
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -458,7 +472,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                         ),
                         validator: (value) {
                           if (value!.isEmpty) return 'براہ کرم سائز درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          try {
+                            Quantity.parsePositive(value);
+                          } on QuantityParseException catch (e) {
+                            return e.message;
+                          }
                           return null;
                         },
                       ),
@@ -488,7 +506,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -497,14 +515,14 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                         id: field.id!,
                         farmId: field.farmId,
                         name: nameController.text,
-                        sizeAcres: double.parse(sizeController.text),
+                        sizeAcres: Quantity.parsePositive(sizeController.text),
                         canalWaterAvailable: canalWater ? 1 : 0,
                         tubeWellAvailable: tubeWell ? 1 : 0,
                       );
                       Navigator.pop(ctx);
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -534,7 +552,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('کینسل'),
+              child: const Text(Strings.cancel),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -547,7 +565,7 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                 }
                 Navigator.pop(ctx);
               },
-              child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+              child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
             ),
           ],
         );

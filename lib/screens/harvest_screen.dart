@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import '../widgets/digit_text.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/crop_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import '../services/money.dart';
+import '../services/quantity.dart';
+import '../services/unit_display.dart';
+import '../l10n/strings.dart';
 
 class HarvestScreen extends StatefulWidget {
   const HarvestScreen({super.key});
@@ -163,7 +167,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
+            child: DigitText(
               value,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
             ),
@@ -288,7 +292,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('کل فروخت', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text(Money(h.grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                  DigitText(Money(h.grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                                 ],
                               ),
                             ),
@@ -297,7 +301,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('کل اخراجات', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text(Money(h.totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  DigitText(Money(h.totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               ),
                             ),
@@ -306,8 +310,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('خالص آمدنی', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text(
-                                    Money(h.netIncomePaisa).format(),
+                                  DigitText(Money(h.netIncomePaisa).format(),
                                     style: TextStyle(fontWeight: FontWeight.bold, color: h.netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800),
                                   ),
                                 ],
@@ -437,8 +440,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              Money(s.totalAmountPaisa).format(),
+                            DigitText(Money(s.totalAmountPaisa).format(),
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                             ),
                             Text(
@@ -512,14 +514,14 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
     String paymentStatus = 'Pending';
     DateTime selectedDate = DateTime.now();
 
-    final List<String> unitsList = ['من', 'کلوگرام', 'ٹن', 'بوری', 'کسٹم'];
+    final List<String> unitsList = UnitDisplay.allUnits;
 
     showDialog(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final double qty = double.tryParse(qtyController.text) ?? 0.0;
+            final double qty = Quantity.tryParse(qtyController.text) ?? 0.0;
             final int ratePaisa = _parsePaisaOrZero(rateController.text);
             final int transPaisa = _parsePaisaOrZero(transController.text);
             final int labourPaisa = _parsePaisaOrZero(labourController.text);
@@ -544,7 +546,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         isExpanded: true,
                         value: selectedCropSeasonId,
                         decoration: const InputDecoration(
-                          labelText: 'فصل منتخب کریں',
+                          labelText: Strings.selectCrop,
                           border: OutlineInputBorder(),
                         ),
                         items: activeSeasons.map((details) {
@@ -575,8 +577,12 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                               ),
                               onChanged: (v) => setState(() {}),
                               validator: (value) {
-                                if (value == null || value.isEmpty) return 'مقدار درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                                if (value == null || value.isEmpty) return Strings.quantityRequired;
+                                try {
+                                  Quantity.parsePositive(value);
+                                } on QuantityParseException catch (e) {
+                                  return e.message;
+                                }
                                 return null;
                               },
                             ),
@@ -762,7 +768,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل آمدنی:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                  DigitText(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                                 ],
                               ),
                               const Divider(),
@@ -770,7 +776,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل اخراجات:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  DigitText(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               ),
                               const Divider(),
@@ -778,8 +784,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('خالص نفع/نقصان:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(
-                                    Money(netIncomePaisa).format(),
+                                  DigitText(Money(netIncomePaisa).format(),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800,
@@ -798,7 +803,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
@@ -823,7 +828,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       }
                       harvestProvider.addHarvest(
                         cropSeasonId: selectedCropSeasonId!,
-                        quantity: double.parse(qtyController.text),
+                        quantity: Quantity.parsePositive(qtyController.text),
                         unit: selectedUnit,
                         date: selectedDate.toIso8601String(),
                         ratePerUnitPaisa: ratePaisa,
@@ -842,7 +847,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       );
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -885,14 +890,14 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
     String paymentStatus = h.paymentStatus;
     DateTime selectedDate = DateTime.parse(h.date);
 
-    final List<String> unitsList = ['من', 'کلوگرام', 'ٹن', 'بوری', 'کسٹم'];
+    final List<String> unitsList = UnitDisplay.allUnits;
 
     showDialog(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final double qty = double.tryParse(qtyController.text) ?? 0.0;
+            final double qty = Quantity.tryParse(qtyController.text) ?? 0.0;
             final int ratePaisa = _parsePaisaOrZero(rateController.text);
             final int transPaisa = _parsePaisaOrZero(transController.text);
             final int labourPaisa = _parsePaisaOrZero(labourController.text);
@@ -917,7 +922,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         isExpanded: true,
                         value: selectedCropSeasonId,
                         decoration: const InputDecoration(
-                          labelText: 'فصل منتخب کریں',
+                          labelText: Strings.selectCrop,
                           border: OutlineInputBorder(),
                         ),
                         items: activeSeasons.map((details) {
@@ -948,8 +953,12 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                               ),
                               onChanged: (v) => setState(() {}),
                               validator: (value) {
-                                if (value == null || value.isEmpty) return 'مقدار درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                                if (value == null || value.isEmpty) return Strings.quantityRequired;
+                                try {
+                                  Quantity.parsePositive(value);
+                                } on QuantityParseException catch (e) {
+                                  return e.message;
+                                }
                                 return null;
                               },
                             ),
@@ -1134,7 +1143,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل آمدنی:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                  DigitText(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                                 ],
                               ),
                               const Divider(),
@@ -1142,7 +1151,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل اخراجات:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  DigitText(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               ),
                               const Divider(),
@@ -1150,8 +1159,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('خالص نفع/نقصان:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text(
-                                    Money(netIncomePaisa).format(),
+                                  DigitText(Money(netIncomePaisa).format(),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800,
@@ -1170,7 +1178,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
@@ -1196,7 +1204,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       harvestProvider.updateHarvest(
                         id: h.id!,
                         cropSeasonId: selectedCropSeasonId!,
-                        quantity: double.parse(qtyController.text),
+                        quantity: Quantity.parsePositive(qtyController.text),
                         unit: selectedUnit,
                         date: selectedDate.toIso8601String(),
                         ratePerUnitPaisa: ratePaisa,
@@ -1215,7 +1223,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       );
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -1256,7 +1264,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'ریٹ درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          try {
+                            Money.parse(value);
+                          } on MoneyParseException catch (e) {
+                            return e.message;
+                          }
                           return null;
                         },
                         onChanged: (val) {
@@ -1317,7 +1329,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
@@ -1340,7 +1352,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       Navigator.pop(ctx);
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -1383,7 +1395,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'ریٹ درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          try {
+                            Money.parse(value);
+                          } on MoneyParseException catch (e) {
+                            return e.message;
+                          }
                           return null;
                         },
                         onChanged: (val) {
@@ -1444,7 +1460,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -1470,7 +1486,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       );
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -1489,7 +1505,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل'),
+            child: const Text(Strings.cancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -1500,7 +1516,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                 const SnackBar(content: Text('فروخت کا ریکارڈ کامیابی سے حذف ہو گیا!')),
               );
             },
-            child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1516,7 +1532,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل'),
+            child: const Text(Strings.cancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -1527,7 +1543,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                 const SnackBar(content: Text('پیداوار کامیابی سے حذف ہو گئی!')),
               );
             },
-            child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

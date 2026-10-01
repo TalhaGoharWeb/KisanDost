@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/digit_text.dart';
 import '../providers/inventory_provider.dart';
 import '../models/models.dart';
 import '../services/unit_converter.dart';
+import '../services/unit_display.dart';
 import '../services/money.dart';
+import '../services/quantity.dart';
 import '../widgets/empty_state_widget.dart';
+import '../l10n/strings.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -27,7 +31,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   };
 
   // Predefined Units
-  final List<String> _units = ['بوری', 'کلوگرام', 'لیٹر', 'بوتل', 'پیکٹ', 'گرام', 'ملی لیٹر', 'ٹن'];
+  final List<String> _units = UnitDisplay.allUnits;
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +98,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  Money(totalStockValuePaisa).format(),
+                DigitText(Money(totalStockValuePaisa).format(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 36,
@@ -382,7 +385,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           labelText: 'چیز کا نام (جیسے: یوریا کھاد، ڈی اے پی، بجائی بیج)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value!.isEmpty ? 'نام درج کریں' : null,
+                        validator: (value) => value!.isEmpty ? Strings.nameRequired : null,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -397,8 +400,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               validator: (value) {
-                                if (value!.isEmpty) return 'مقدار درج کریں';
-                                final qty = double.tryParse(value);
+                                if (value!.isEmpty) return Strings.quantityRequired;
+                                final qty = Quantity.tryParse(value);
                                 if (qty == null) return 'صرف نمبر';
                                 if (qty <= 0) return 'مقدار صفر سے زیادہ ہونی چاہیے';
                                 return null;
@@ -439,9 +442,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) return null;
-                            final w = double.tryParse(value);
-                            if (w == null) return 'صرف نمبر';
-                            if (w <= 0) return 'صفر سے زیادہ ہونا چاہیے';
+                            try {
+                              Quantity.parsePositive(value);
+                            } on QuantityParseException catch (e) {
+                              return e.message;
+                            }
                             return null;
                           },
                         ),
@@ -471,7 +476,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -480,7 +485,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       final navigator = Navigator.of(ctx);
                       final double? weight = weightController.text.isEmpty
                           ? null
-                          : double.parse(weightController.text);
+                          : Quantity.parsePositive(weightController.text);
                       final int costPerUnitPaisa;
                       try {
                         costPerUnitPaisa = Money.parse(priceController.text).paisa;
@@ -498,7 +503,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           category: selectedCategory,
                           name: nameController.text,
                           unit: selectedUnit,
-                          quantity: double.parse(qtyController.text),
+                          quantity: Quantity.parsePositive(qtyController.text),
                           costPerUnitPaisa: costPerUnitPaisa,
                           weightPerUnitKg: weight,
                         );
@@ -517,7 +522,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       );
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -536,7 +541,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل'),
+            child: const Text(Strings.cancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -547,7 +552,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 const SnackBar(content: Text('اسٹاک کامیابی سے حذف ہو گیا!')),
               );
             },
-            child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -682,7 +687,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           labelText: 'چیز کا نام',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value!.isEmpty ? 'نام درج کریں' : null,
+                        validator: (value) => value!.isEmpty ? Strings.nameRequired : null,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -697,10 +702,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               validator: (value) {
-                                if (value!.isEmpty) return 'مقدار درج کریں';
-                                final qty = double.tryParse(value);
-                                if (qty == null) return 'صرف نمبر';
-                                if (qty < 0) return 'مقدار منفی نہیں ہو سکتی';
+                                if (value!.isEmpty) return Strings.quantityRequired;
+                                try {
+                                  Quantity.parse(value);
+                                } on QuantityParseException catch (e) {
+                                  return e.message;
+                                }
                                 return null;
                               },
                             ),
@@ -737,9 +744,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) return null;
-                            final w = double.tryParse(value);
-                            if (w == null) return 'صرف نمبر';
-                            if (w <= 0) return 'صفر سے زیادہ ہونا چاہیے';
+                            try {
+                              Quantity.parsePositive(value);
+                            } on QuantityParseException catch (e) {
+                              return e.message;
+                            }
                             return null;
                           },
                         ),
@@ -769,18 +778,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       final messenger = ScaffoldMessenger.of(context);
                       final navigator = Navigator.of(ctx);
-                      final double newQty = double.parse(qtyController.text);
+                      final double newQty = Quantity.parsePositive(qtyController.text);
                       final double delta = newQty - item.quantity;
                       final double? weight = weightController.text.isEmpty
                           ? null
-                          : double.parse(weightController.text);
+                          : Quantity.parsePositive(weightController.text);
                       final int costPerUnitPaisa;
                       try {
                         costPerUnitPaisa = Money.parse(priceController.text).paisa;
@@ -827,7 +836,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       );
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );

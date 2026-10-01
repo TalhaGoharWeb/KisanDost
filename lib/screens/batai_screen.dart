@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/quantity.dart';
 import '../models/batai.dart';
 import '../models/party.dart';
 import '../providers/batai_provider.dart';
@@ -10,6 +11,7 @@ import '../providers/harvest_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/batai_status_chip.dart';
 import 'batai_detail_screen.dart';
+import '../l10n/strings.dart';
 
 /// بٹائی (sharecropping) agreements: who splits the harvest with whom.
 class BataiScreen extends StatefulWidget {
@@ -266,10 +268,18 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
     _cultCtrl.addListener(() => _rebalance(_cultCtrl, _ownerCtrl));
   }
 
+  /// Whole percentages only: Quantity accepts Urdu digits; a fractional
+  /// share is rejected (not rounded) so the farmer's terms stay exact.
+  static int? _wholePercent(String text) {
+    final v = Quantity.tryParse(text.trim());
+    if (v == null || v != v.roundToDouble()) return null;
+    return v.toInt();
+  }
+
   void _rebalance(
       TextEditingController from, TextEditingController to) {
     if (_balancing) return;
-    final v = int.tryParse(from.text.trim());
+    final v = _wholePercent(from.text);
     if (v == null) return;
     _balancing = true;
     to.text = (100 - v).toString();
@@ -360,8 +370,8 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
 
   Future<void> _save() async {
     final provider = context.read<BataiProvider>();
-    final owner = int.tryParse(_ownerCtrl.text.trim());
-    final cult = int.tryParse(_cultCtrl.text.trim());
+    final owner = _wholePercent(_ownerCtrl.text);
+    final cult = _wholePercent(_cultCtrl.text);
     if (_partyId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('دوسرا فریق منتخب کریں۔')));
@@ -643,7 +653,7 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
                 controller: _notesCtrl,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  labelText: 'نوٹ (اختیاری)',
+                  labelText: Strings.noteOptional,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -658,7 +668,7 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
         ),
         ElevatedButton(
           onPressed: _save,
-          child: const Text('محفوظ کریں'),
+          child: const Text(Strings.save),
         ),
       ],
     );

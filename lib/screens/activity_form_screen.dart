@@ -9,7 +9,10 @@ import '../providers/harvest_provider.dart';
 import '../providers/task_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
+import '../services/quantity.dart';
 import '../services/unit_converter.dart';
+import '../services/unit_display.dart';
+import '../l10n/strings.dart';
 
 class ActivityFormScreen extends StatefulWidget {
   final String activityTitle;
@@ -50,7 +53,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
   final _priceController = TextEditingController();
 
   // Predefined Units
-  final List<String> _units = ['کلوگرام', 'گرام', 'بوری', 'لیٹر', 'ملی لیٹر', 'بوتل', 'پیکٹ', 'ٹن'];
+  final List<String> _units = UnitDisplay.allUnits;
 
   // Other activity specific
   final _genericCostController = TextEditingController();
@@ -177,7 +180,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                     DropdownButtonFormField<int>(
                       value: _selectedCropSeasonId ?? activeSeasons.first.cropSeason.id,
                       decoration: const InputDecoration(
-                        labelText: 'فصل منتخب کریں',
+                        labelText: Strings.selectCrop,
                         border: OutlineInputBorder(),
                       ),
                       items: activeSeasons.map((details) {
@@ -269,8 +272,10 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 ),
                                 validator: (value) {
                                   if (value != null && value.isNotEmpty) {
-                                    if (double.tryParse(value) == null) {
-                                      return 'صرف نمبر';
+                                    try {
+                                      Quantity.parse(value);
+                                    } on QuantityParseException catch (e) {
+                                      return e.message;
                                     }
                                   }
                                   return null;
@@ -288,14 +293,14 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                   border: OutlineInputBorder(),
                                 ),
                                 validator: (value) {
-                                  final startVal = double.tryParse(_startUnitController.text);
+                                  final startVal = Quantity.tryParse(_startUnitController.text);
                                   if (startVal != null) {
                                     if (value == null || value.isEmpty) {
                                       return 'آخری یونٹ درج کریں';
                                     }
-                                    final endVal = double.tryParse(value);
+                                    final endVal = Quantity.tryParse(value);
                                     if (endVal == null) {
-                                      return 'صرف نمبر';
+                                      return 'صرف نمبر درج کریں';
                                     }
                                     if (endVal < startVal) {
                                       return 'آخری یونٹ شروع کے یونٹ سے زیادہ یا برابر ہونا چاہیے';
@@ -310,8 +315,8 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                         ),
                         const SizedBox(height: 16),
                         () {
-                          final start = double.tryParse(_startUnitController.text);
-                          final end = double.tryParse(_endUnitController.text);
+                          final start = Quantity.tryParse(_startUnitController.text);
+                          final end = Quantity.tryParse(_endUnitController.text);
                           if (start != null && end != null && end >= start) {
                             final double consumed = end - start;
                             return Container(
@@ -378,7 +383,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             labelText: '${widget.activityTitle.replaceAll("ڈالی", "").replaceAll("کیا", "")} کا نام لکھیں',
                             border: const OutlineInputBorder(),
                           ),
-                          validator: (value) => value!.isEmpty ? 'نام درج کریں' : null,
+                          validator: (value) => value!.isEmpty ? Strings.nameRequired : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -390,8 +395,10 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                           ),
                           validator: (value) {
                             if (value!.isEmpty) return 'قیمت درج کریں';
-                            if (double.tryParse(value) == null) {
-                              return 'صرف نمبر درج کریں';
+                            try {
+                              Money.parse(value);
+                            } on MoneyParseException catch (e) {
+                              return e.message;
                             }
                             return null;
                           },
@@ -410,10 +417,13 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               validator: (value) {
-                                if (value!.isEmpty) return 'مقدار درج کریں';
-                                final double? qty = double.tryParse(value);
-                                if (qty == null) return 'صرف نمبر درج کریں';
-                                if (qty <= 0) return 'مقدار صفر سے زیادہ ہونی چاہیے';
+                                if (value!.isEmpty) return Strings.quantityRequired;
+                                final double qty;
+                                try {
+                                  qty = Quantity.parsePositive(value);
+                                } on QuantityParseException catch (e) {
+                                  return e.message;
+                                }
                                 if (!_directPurchase && _selectedInventoryItem != null) {
                                   try {
                                     final double convertedQty = UnitConverter.convert(
@@ -564,8 +574,8 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             }
                             String unitsStr = '';
                             if (_waterSource == 'ٹیوب ویل' || _waterSource == 'بورنگ') {
-                              final start = double.tryParse(_startUnitController.text);
-                              final end = double.tryParse(_endUnitController.text);
+                              final start = Quantity.tryParse(_startUnitController.text);
+                              final end = Quantity.tryParse(_endUnitController.text);
                               if (start != null && end != null) {
                                 unitsStr = ' | یونٹ: $start سے $end (استعمال شدہ: ${end - start})';
                               }
@@ -577,7 +587,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                           else if (_inventoryCategory != null) {
                             finalExpenseCategory = _inventoryCategory;
                             inventoryCategory = _inventoryCategory;
-                            final double enteredQty = double.tryParse(_qtyController.text) ?? 0.0;
+                            final double enteredQty = Quantity.tryParse(_qtyController.text) ?? 0.0;
 
                             if (_directPurchase || matchingInventoryItems.isEmpty) {
                               inventoryName = _itemNameController.text;
@@ -798,7 +808,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
                       ),
-                      child: const Text('محفوظ کریں'),
+                      child: const Text(Strings.save),
                     ),
                   ],
                 ),

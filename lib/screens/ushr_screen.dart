@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/digit_text.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/ushr_provider.dart';
@@ -7,6 +8,8 @@ import '../providers/harvest_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import '../models/models.dart';
 import '../services/money.dart';
+import '../services/quantity.dart';
+import '../l10n/strings.dart';
 
 class UshrScreen extends StatefulWidget {
   const UshrScreen({super.key});
@@ -166,8 +169,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   const Text('عشر واجب الادا', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text(
-                                    Money(u.ushrAmountPaisa).format(),
+                                  DigitText(Money(u.ushrAmountPaisa).format(),
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
                                   ),
                                 ],
@@ -198,7 +200,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text('نقد ادا شدہ:', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-                                    Text(Money(u.cashPaidPaisa).format(), style: const TextStyle(fontSize: 13)),
+                                    DigitText(Money(u.cashPaidPaisa).format(), style: const TextStyle(fontSize: 13)),
                                   ],
                                 ),
                                 const SizedBox(height: 4),
@@ -214,7 +216,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text('کل ادا شدہ قدر:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
-                                    Text(Money(paidValuePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
+                                    DigitText(Money(paidValuePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
                                   ],
                                 ),
                                 if (u.remainingBalancePaisa > 0) ...[
@@ -223,7 +225,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text('باقی واجب الادا عشر:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
-                                      Text(Money(u.remainingBalancePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
+                                      DigitText(Money(u.remainingBalancePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
                                     ],
                                   ),
                                 ],
@@ -336,7 +338,7 @@ class _UshrScreenState extends State<UshrScreen> {
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
+            child: DigitText(
               value,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
             ),
@@ -405,7 +407,7 @@ class _UshrScreenState extends State<UshrScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             // Conversions & calculations
-            final double qty = double.tryParse(qtyController.text) ?? 0.0;
+            final double qty = Quantity.tryParse(qtyController.text) ?? 0.0;
             final int ratePaisa = _parsePaisaOrZero(marketRateController.text);
             final int marketValuePaisa = (qty * ratePaisa).round();
             final String marketValueText = Money(marketValuePaisa).format();
@@ -420,7 +422,7 @@ class _UshrScreenState extends State<UshrScreen> {
             } else if (selectedMethod == 'Artificial') {
               percentage = 5.0;
             } else {
-              percentage = double.tryParse(customPercentageController.text) ?? 0.0;
+              percentage = Quantity.tryParse(customPercentageController.text) ?? 0.0;
             }
 
             final double ushrQty = (qty * percentage) / 100.0;
@@ -432,7 +434,7 @@ class _UshrScreenState extends State<UshrScreen> {
 
             // Payment Calculations
             final double qtyPaid =
-                double.tryParse(qtyPaidController.text) ?? 0.0;
+                Quantity.tryParse(qtyPaidController.text) ?? 0.0;
             final int cashPaidPaisa = _parsePaisaOrZero(cashPaidController.text);
             final int totalPaidPaisa =
                 cashPaidPaisa + (qtyPaid * ratePaisa).round();
@@ -493,7 +495,7 @@ class _UshrScreenState extends State<UshrScreen> {
                         isExpanded: true,
                         value: selectedCropSeasonId,
                         decoration: const InputDecoration(
-                          labelText: 'فصل منتخب کریں',
+                          labelText: Strings.selectCrop,
                           border: OutlineInputBorder(),
                         ),
                         items: [...cropProvider.activeCropSeasons, ...cropProvider.harvestedCropSeasons]
@@ -511,7 +513,7 @@ class _UshrScreenState extends State<UshrScreen> {
                             selectedCropSeasonId = val;
                           });
                         },
-                        validator: (v) => v == null ? 'فصل منتخب کریں' : null,
+                        validator: (v) => v == null ? Strings.selectCrop : null,
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -526,8 +528,12 @@ class _UshrScreenState extends State<UshrScreen> {
                               ),
                               onChanged: (v) => setState(() {}),
                               validator: (value) {
-                                if (value == null || value.isEmpty) return 'مقدار درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                                if (value == null || value.isEmpty) return Strings.quantityRequired;
+                                try {
+                                  Quantity.parsePositive(value);
+                                } on QuantityParseException catch (e) {
+                                  return e.message;
+                                }
                                 return null;
                               },
                             ),
@@ -595,7 +601,7 @@ class _UshrScreenState extends State<UshrScreen> {
                           onChanged: (v) => setState(() {}),
                           validator: (value) {
                             if (value == null || value.isEmpty) return 'فیصد درج کریں';
-                            final double? p = double.tryParse(value);
+                            final double? p = Quantity.tryParse(value);
                             if (p == null || p < 0 || p > 100) return 'صحیح فیصد (0-100) درج کریں';
                             return null;
                           },
@@ -720,7 +726,7 @@ class _UshrScreenState extends State<UshrScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('کل ادا شدہ قدر:', style: TextStyle(fontSize: 13, color: Colors.green.shade800)),
-                                Text(Money(totalPaidPaisa).format(), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade900)),
+                                DigitText(Money(totalPaidPaisa).format(), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade900)),
                               ],
                             ),
                             if (remainingBalancePaisa > 0)
@@ -728,7 +734,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('باقی واجب الادا:', style: TextStyle(fontSize: 13, color: Colors.red)),
-                                  Text(Money(remainingBalancePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  DigitText(Money(remainingBalancePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               )
                             else
@@ -747,7 +753,7 @@ class _UshrScreenState extends State<UshrScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade800, foregroundColor: Colors.white),
@@ -773,7 +779,7 @@ class _UshrScreenState extends State<UshrScreen> {
                         ushrProvider.addUshrRecord(
                           cropSeasonId: selectedCropSeasonId!,
                           harvestId: selectedHarvestId,
-                          harvestQty: double.parse(qtyController.text),
+                          harvestQty: Quantity.parsePositive(qtyController.text),
                           marketValuePaisa: marketValuePaisa,
                           ushrMethod: selectedMethod,
                           ushrPercentage: percentage,
@@ -791,7 +797,7 @@ class _UshrScreenState extends State<UshrScreen> {
                           id: existingRecord.id!,
                           cropSeasonId: selectedCropSeasonId!,
                           harvestId: selectedHarvestId ?? existingRecord.harvestId,
-                          harvestQty: double.parse(qtyController.text),
+                          harvestQty: Quantity.parsePositive(qtyController.text),
                           marketValuePaisa: marketValuePaisa,
                           ushrMethod: selectedMethod,
                           ushrPercentage: percentage,
@@ -811,7 +817,7 @@ class _UshrScreenState extends State<UshrScreen> {
                       );
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -830,7 +836,7 @@ class _UshrScreenState extends State<UshrScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل'),
+            child: const Text(Strings.cancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -841,7 +847,7 @@ class _UshrScreenState extends State<UshrScreen> {
                 const SnackBar(content: Text('عشر کا ریکارڈ کامیابی سے حذف ہو گیا!')),
               );
             },
-            child: const Text('حذف کریں', style: TextStyle(color: Colors.white)),
+            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
