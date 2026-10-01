@@ -75,6 +75,15 @@ class ThekaProvider extends ChangeNotifier {
     await fetchThekas();
   }
 
+  /// Records a payment against an installment.
+  ///
+  /// [paidAmount] is the INCREMENTAL amount being paid right now — it is
+  /// ADDED to the already-recorded [ThekaInstallment.paidAmount], never
+  /// replacing it. The linked 'Land Rent' expense always reflects the
+  /// cumulative total paid so far.
+  ///
+  /// Throws an [Exception] with an Urdu message if the payment would take
+  /// the total over the installment amount (overpayment is never recorded).
   Future<void> payInstallment({
     required int installmentId,
     required double paidAmount,
@@ -93,7 +102,17 @@ class ThekaProvider extends ChangeNotifier {
       if (maps.isEmpty) return;
 
       final currentInst = ThekaInstallment.fromMap(maps.first);
-      final isFullPayment = paidAmount >= currentInst.amount;
+
+      // 2. Accumulate: add this payment to what is already recorded.
+      final double newPaidTotal = currentInst.paidAmount + paidAmount;
+
+      // 3. Overpayment guard: paid can never exceed the installment total.
+      if (newPaidTotal > currentInst.amount) {
+        throw Exception(
+            'ادا شدہ رقم قسط کی کل رقم (${currentInst.amount.toStringAsFixed(0)} روپے) سے زیادہ نہیں ہو سکتی۔ بقایا رقم: ${(currentInst.amount - currentInst.paidAmount).toStringAsFixed(0)} روپے');
+      }
+
+      final isFullPayment = newPaidTotal >= currentInst.amount;
       final newStatus = isFullPayment ? 'Paid' : 'Partially Paid';
 
       int? expenseId = currentInst.expenseId;
@@ -102,19 +121,19 @@ class ThekaProvider extends ChangeNotifier {
           : 'ٹھیکہ جزوی ادائیگی: $farmName (قسط نمبر $installmentIndex)';
 
       if (expenseId == null) {
-        // Insert new expense entry
+        // Insert new expense entry (cumulative total paid so far)
         expenseId = await txn.insert('expenses', {
           'category': 'Land Rent', // standard category
-          'amount': paidAmount,
+          'amount': newPaidTotal,
           'date': paidDate,
           'description': desc,
         });
       } else {
-        // Update existing expense entry
+        // Update existing expense entry to the cumulative total
         await txn.update(
           'expenses',
           {
-            'amount': paidAmount,
+            'amount': newPaidTotal,
             'date': paidDate,
             'description': desc,
           },
@@ -128,7 +147,7 @@ class ThekaProvider extends ChangeNotifier {
         'theka_installments',
         {
           'status': newStatus,
-          'paid_amount': paidAmount,
+          'paid_amount': newPaidTotal,
           'paid_date': paidDate,
           'expense_id': expenseId,
         },

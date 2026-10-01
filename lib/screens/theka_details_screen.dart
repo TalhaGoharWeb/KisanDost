@@ -29,8 +29,11 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
 
   void _showRecordPaymentDialog(BuildContext context, ThekaInstallment inst, String farmName, int index) {
     final formKey = GlobalKey<FormState>();
+    // Incremental payment: the field is pre-filled with the REMAINING amount.
+    // payInstallment ADDS this to the already-recorded paid amount.
+    final double remaining = inst.amount - inst.paidAmount;
     final amountController = TextEditingController(
-      text: (inst.status == 'Pending' ? inst.amount : inst.paidAmount).toStringAsFixed(0),
+      text: remaining.toStringAsFixed(0),
     );
     DateTime selectedDate = inst.paidDate != null ? DateTime.parse(inst.paidDate!) : DateTime.now();
 
@@ -40,7 +43,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text(inst.status == 'Pending' ? 'ادائیگی درج کریں' : 'ادائیگی میں ترمیم کریں'),
+              title: Text(inst.status == 'Pending' ? 'ادائیگی درج کریں' : 'بقایا ادائیگی درج کریں'),
               content: Form(
                 key: formKey,
                 child: Column(
@@ -50,18 +53,28 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                       'قسط رقم: ${inst.amount.toStringAsFixed(0)} روپے',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
+                    if (inst.paidAmount > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'ادا شدہ: ${inst.paidAmount.toStringAsFixed(0)} روپے | بقایا: ${remaining.toStringAsFixed(0)} روپے',
+                        style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: amountController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'ادا شدہ رقم (روپے)',
+                        labelText: 'اس بار ادا کی گئی رقم (روپے)',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value!.isEmpty) return 'رقم درج کریں';
                         final double? parsed = double.tryParse(value);
                         if (parsed == null || parsed <= 0) return 'صحیح رقم درج کریں';
+                        if (parsed > remaining) {
+                          return 'رقم بقایا رقم (${remaining.toStringAsFixed(0)} روپے) سے زیادہ نہیں ہو سکتی';
+                        }
                         return null;
                       },
                     ),
@@ -101,25 +114,38 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                       final thekaProv = Provider.of<ThekaProvider>(context, listen: false);
                       final expProv = Provider.of<ExpenseProvider>(context, listen: false);
 
-                      await thekaProv.payInstallment(
-                        installmentId: inst.id!,
-                        paidAmount: paidAmount,
-                        paidDate: dateStr,
-                        farmName: farmName,
-                        installmentIndex: index,
-                      );
-
-                      // Sync ledger/expenses provider
-                      await expProv.fetchExpenses();
-
-                      if (context.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('ٹھیکہ ادائیگی درج کر دی گئی ہے اور لیجر اپ ڈیٹ کر دیا گیا ہے۔'),
-                            backgroundColor: Colors.green,
-                          ),
+                      try {
+                        await thekaProv.payInstallment(
+                          installmentId: inst.id!,
+                          paidAmount: paidAmount,
+                          paidDate: dateStr,
+                          farmName: farmName,
+                          installmentIndex: index,
                         );
+
+                        // Sync ledger/expenses provider
+                        await expProv.fetchExpenses();
+
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('ٹھیکہ ادائیگی درج کر دی گئی ہے اور لیجر اپ ڈیٹ کر دیا گیا ہے۔'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        // Overpayment guard (or any payment error): show the
+                        // Urdu reason instead of crashing.
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString().replaceFirst('Exception: ', '')),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       }
                     }
                   },
@@ -430,16 +456,19 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                                 ),
                               )
                             else ...[
-                              OutlinedButton.icon(
-                                onPressed: () => _showRecordPaymentDialog(context, inst, farm.name, instIdx),
-                                icon: const Icon(Icons.edit_outlined, size: 16),
-                                label: const Text('تبدیلی'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.brown.shade800,
-                                  side: BorderSide(color: Colors.brown.shade800),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              // Record an additional payment only while a
+                              // balance remains; overpayment is rejected.
+                              if (inst.paidAmount < inst.amount)
+                                OutlinedButton.icon(
+                                  onPressed: () => _showRecordPaymentDialog(context, inst, farm.name, instIdx),
+                                  icon: const Icon(Icons.add_circle_outline, size: 16),
+                                  label: const Text('بقایا ادائیگی'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.brown.shade800,
+                                    side: BorderSide(color: Colors.brown.shade800),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
                                 ),
-                              ),
                               const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: () async {
