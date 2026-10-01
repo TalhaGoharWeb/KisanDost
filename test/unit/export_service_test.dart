@@ -37,7 +37,16 @@ void main() {
 
   group('BOM', () {
     test('every CSV starts with the UTF-8 BOM char', () {
-      expect(expensesCsv([], farmNames: {}, fieldNames: {}, cropNames: {}, categoryLabels: {}).codeUnitAt(0), 0xFEFF);
+      expect(
+        expensesCsv(
+          [],
+          farmNames: {},
+          fieldNames: {},
+          cropNames: {},
+          categoryLabels: {},
+        ).codeUnitAt(0),
+        0xFEFF,
+      );
       expect(salesCsv([]).codeUnitAt(0), 0xFEFF);
       expect(partyLedgerCsv([], {}, {}).codeUnitAt(0), 0xFEFF);
       expect(inventoryTransactionsCsv([], {}).codeUnitAt(0), 0xFEFF);
@@ -45,8 +54,13 @@ void main() {
     });
 
     test('empty inputs produce valid headers-only CSV', () {
-      final csv = expensesCsv([],
-          farmNames: {}, fieldNames: {}, cropNames: {}, categoryLabels: {});
+      final csv = expensesCsv(
+        [],
+        farmNames: {},
+        fieldNames: {},
+        cropNames: {},
+        categoryLabels: {},
+      );
       final lines = csv.trim().split('\n');
       expect(lines.length, 1);
       expect(lines.first, contains('تاریخ'));
@@ -111,7 +125,11 @@ void main() {
       final harvests = [
         HarvestWithDetails(
           harvest: Harvest(
-              cropSeasonId: 1, quantity: 40, unit: 'من', date: '2026-05-01'),
+            cropSeasonId: 1,
+            quantity: 40,
+            unit: 'من',
+            date: '2026-05-01',
+          ),
           cropName: 'گندم',
           fieldName: 'کھیت',
           fieldSize: 5,
@@ -127,7 +145,11 @@ void main() {
         ),
         HarvestWithDetails(
           harvest: Harvest(
-              cropSeasonId: 1, quantity: 10, unit: 'من', date: '2026-05-02'),
+            cropSeasonId: 1,
+            quantity: 10,
+            unit: 'من',
+            date: '2026-05-02',
+          ),
           cropName: 'گندم',
           fieldName: 'کھیت',
           fieldSize: 5,
@@ -249,19 +271,19 @@ void main() {
 
   group('computeFarmPnl', () {
     CropSeasonWithDetails season(int id) => CropSeasonWithDetails(
-          cropSeason: CropSeason(
-            id: id,
-            fieldId: 1,
-            cropName: 'Wheat',
-            variety: 'Faisalabad-08',
-            status: 'harvested',
-            startDate: '2025-11-01',
-          ),
-          fields: const [],
-          fieldNames: const ['f'],
-          farmNames: const ['farm'],
-          totalArea: 5,
-        );
+      cropSeason: CropSeason(
+        id: id,
+        fieldId: 1,
+        cropName: 'Wheat',
+        variety: 'Faisalabad-08',
+        status: 'harvested',
+        startDate: '2025-11-01',
+      ),
+      fields: const [],
+      fieldNames: const ['f'],
+      farmNames: const ['farm'],
+      totalArea: 5,
+    );
 
     test('matches the P&L screen math exactly, in integer paisa', () {
       // One season: activity-linked expense 1000 + direct expense 250
@@ -269,27 +291,34 @@ void main() {
       // 5000 with 300 harvest expenses, ushr 200.
       final expenses = [
         Expense(
-            id: 1,
-            category: 'Fertilizer',
-            amountPaisa: 100000,
-            date: '2026-01-01',
-            cropSeasonId: 10),
+          id: 1,
+          category: 'Fertilizer',
+          amountPaisa: 100000,
+          date: '2026-01-01',
+          cropSeasonId: 10,
+        ),
         Expense(
-            id: 2,
-            category: 'Seed',
-            amountPaisa: 25000,
-            date: '2026-01-02',
-            cropSeasonId: 10),
+          id: 2,
+          category: 'Seed',
+          amountPaisa: 25000,
+          date: '2026-01-02',
+          cropSeasonId: 10,
+        ),
         Expense(
-            id: 3,
-            category: 'Other',
-            amountPaisa: 50000,
-            date: '2026-01-03'), // unlinked — overall only
+          id: 3,
+          category: 'Other',
+          amountPaisa: 50000,
+          date: '2026-01-03',
+        ), // unlinked — overall only
       ];
       final activities = [
         ActivityWithDetails(
           activity: Activity(
-              cropSeasonId: 10, activityType: 'sowing', date: '2026-01-01', expenseId: 1),
+            cropSeasonId: 10,
+            activityType: 'sowing',
+            date: '2026-01-01',
+            expenseId: 1,
+          ),
           expenseAmountPaisa: 100000,
           cropName: 'Wheat',
           fieldNames: const ['f'],
@@ -361,7 +390,11 @@ void main() {
         harvests: [
           HarvestWithDetails(
             harvest: Harvest(
-                cropSeasonId: 5, quantity: 10, unit: 'من', date: '2026-05-01'),
+              cropSeasonId: 5,
+              quantity: 10,
+              unit: 'من',
+              date: '2026-05-01',
+            ),
             cropName: 'Wheat',
             fieldName: 'f',
             fieldSize: 5,

@@ -23,12 +23,12 @@ const String _font = 'Jameel Noori Nastaleeq';
 const double _reportWidth = 720.0;
 
 TextStyle _ts(double size, {FontWeight? weight, Color? color}) => TextStyle(
-      fontFamily: _font,
-      fontSize: size,
-      fontWeight: weight,
-      color: color,
-      height: 2.0,
-    );
+  fontFamily: _font,
+  fontSize: size,
+  fontWeight: weight,
+  color: color,
+  height: 2.0,
+);
 
 /// Whole-farm P&L report (فارم رپورٹ).
 class PnlReportWidget extends StatelessWidget {
@@ -50,25 +50,45 @@ class PnlReportWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('فارم رپورٹ', style: _ts(34, weight: FontWeight.bold), textAlign: TextAlign.center),
-            Text('منافع و نقصان کا حساب',
-                style: _ts(20, color: Colors.grey.shade700), textAlign: TextAlign.center),
+            Text(
+              'فارم رپورٹ',
+              style: _ts(34, weight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              'منافع و نقصان کا حساب',
+              style: _ts(20, color: Colors.grey.shade700),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            Text('رپورٹ کی تاریخ: ${data.generatedOn}',
-                style: _ts(15, color: Colors.grey.shade600), textAlign: TextAlign.center),
+            Text(
+              'رپورٹ کی تاریخ: ${data.generatedOn}',
+              style: _ts(15, color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
-            _summaryBox(pnl.totalSalesPaisa, pnl.totalExpensesPaisa, pnl.netPaisa, isProfit),
+            _summaryBox(
+              pnl.totalSalesPaisa,
+              pnl.totalExpensesPaisa,
+              pnl.netPaisa,
+              isProfit,
+            ),
             const SizedBox(height: 24),
             Text('فصل وار حساب', style: _ts(22, weight: FontWeight.bold)),
             const SizedBox(height: 8),
             if (pnl.crops.isEmpty)
-              Text('کوئی فصل درج نہیں ہے',
-                  style: _ts(16, color: Colors.grey.shade600))
+              Text(
+                'کوئی فصل درج نہیں ہے',
+                style: _ts(16, color: Colors.grey.shade600),
+              )
             else
               for (final c in pnl.crops) _cropLine(c, data.cropNameUrdu),
             const SizedBox(height: 24),
-            Text('کسان دوست سے تیار کردہ',
-                style: _ts(13, color: Colors.grey.shade500), textAlign: TextAlign.center),
+            Text(
+              'کسان دوست سے تیار کردہ',
+              style: _ts(13, color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -82,16 +102,20 @@ class PnlReportWidget extends StatelessWidget {
         color: isProfit ? Colors.green.shade50 : Colors.red.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: isProfit ? Colors.green.shade200 : Colors.red.shade200),
+          color: isProfit ? Colors.green.shade200 : Colors.red.shade200,
+        ),
       ),
       child: Column(
         children: [
           _moneyRow('کل آمدنی (فروخت)', sales, Colors.green.shade800),
           _moneyRow('کل اخراجات', expenses, Colors.red.shade800),
           const Divider(),
-          _moneyRow(isProfit ? 'خالص بچت' : 'خالص نقصان', net.abs(),
-              isProfit ? Colors.green.shade900 : Colors.red.shade900,
-              bold: true),
+          _moneyRow(
+            isProfit ? 'خالص بچت' : 'خالص نقصان',
+            net.abs(),
+            isProfit ? Colors.green.shade900 : Colors.red.shade900,
+            bold: true,
+          ),
         ],
       ),
     );
@@ -104,8 +128,10 @@ class PnlReportWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: _ts(16, color: Colors.black87)),
-          DigitText(Money(paisa).format(),
-              style: _ts(18, weight: bold ? FontWeight.bold : null, color: color)),
+          DigitText(
+            Money(paisa).format(),
+            style: _ts(18, weight: bold ? FontWeight.bold : null, color: color),
+          ),
         ],
       ),
     );
@@ -125,35 +151,44 @@ class PnlReportWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$urduName (${season.variety})',
-              style: _ts(18, weight: FontWeight.bold)),
           Text(
-              'زمین: ${c.details.farmDisplayName} — کھیت: ${c.details.fieldDisplayName}',
-              style: _ts(14, color: Colors.grey.shade700)),
+            '$urduName (${season.variety})',
+            style: _ts(18, weight: FontWeight.bold),
+          ),
+          Text(
+            'زمین: ${c.details.farmDisplayName} — کھیت: ${c.details.fieldDisplayName}',
+            style: _ts(14, color: Colors.grey.shade700),
+          ),
           const SizedBox(height: 4),
           _cropMoneyRow('آمدنی', c.incomePaisa, Colors.green.shade800),
           _cropMoneyRow('اخراجات', c.expensesPaisa, Colors.red.shade800),
           _cropMoneyRow(
-              isProfit ? 'بچت' : 'نقصان',
-              c.netPaisa.abs(),
-              isProfit ? Colors.green.shade900 : Colors.red.shade900,
-              bold: true),
+            isProfit ? 'بچت' : 'نقصان',
+            c.netPaisa.abs(),
+            isProfit ? Colors.green.shade900 : Colors.red.shade900,
+            bold: true,
+          ),
         ],
       ),
     );
   }
 
-  Widget _cropMoneyRow(String label, int paisa, Color color,
-      {bool bold = false}) {
+  Widget _cropMoneyRow(
+    String label,
+    int paisa,
+    Color color, {
+    bool bold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text('$label:', style: _ts(15, color: Colors.black87)),
-          DigitText(Money(paisa).format(),
-              style:
-                  _ts(16, weight: bold ? FontWeight.bold : null, color: color)),
+          DigitText(
+            Money(paisa).format(),
+            style: _ts(16, weight: bold ? FontWeight.bold : null, color: color),
+          ),
         ],
       ),
     );
@@ -180,8 +215,16 @@ class ReceiptWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('رسید', style: _ts(34, weight: FontWeight.bold), textAlign: TextAlign.center),
-            Text('پارٹی کھاتہ', style: _ts(20, color: Colors.grey.shade700), textAlign: TextAlign.center),
+            Text(
+              'رسید',
+              style: _ts(34, weight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              'پارٹی کھاتہ',
+              style: _ts(20, color: Colors.grey.shade700),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             _row('پارٹی', data.partyName),
             _row('قسم', typeLabel),
@@ -189,10 +232,16 @@ class ReceiptWidget extends StatelessWidget {
             _row(Strings.date, e.date),
             if (e.note != null && e.note!.isNotEmpty) _row('نوٹ', e.note!),
             const Divider(height: 28),
-            _row('اس اندراج کے بعد بیلنس', _balanceText(data.balanceAfterPaisa)),
+            _row(
+              'اس اندراج کے بعد بیلنس',
+              _balanceText(data.balanceAfterPaisa),
+            ),
             const SizedBox(height: 20),
-            Text('کسان دوست سے تیار کردہ — ${data.generatedOn}',
-                style: _ts(13, color: Colors.grey.shade500), textAlign: TextAlign.center),
+            Text(
+              'کسان دوست سے تیار کردہ — ${data.generatedOn}',
+              style: _ts(13, color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -201,7 +250,9 @@ class ReceiptWidget extends StatelessWidget {
 
   String _balanceText(int balance) {
     if (balance > 0) return '${Money(balance).format()} (پارٹی سے لینا ہے)';
-    if (balance < 0) return '${Money(balance.abs()).format()} (پارٹی کو دینا ہے)';
+    if (balance < 0) {
+      return '${Money(balance.abs()).format()} (پارٹی کو دینا ہے)';
+    }
     return 'حساب برابر';
   }
 
@@ -213,9 +264,11 @@ class ReceiptWidget extends StatelessWidget {
         children: [
           Text(label, style: _ts(16, color: Colors.grey.shade700)),
           Flexible(
-            child: Text(value,
-                style: _ts(18, weight: FontWeight.bold),
-                textAlign: TextAlign.left),
+            child: Text(
+              value,
+              style: _ts(18, weight: FontWeight.bold),
+              textAlign: TextAlign.left,
+            ),
           ),
         ],
       ),

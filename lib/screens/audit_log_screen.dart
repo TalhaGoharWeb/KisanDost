@@ -66,38 +66,40 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
               ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: _reload,
-                        child: const Text('دوبارہ کوشش کریں'),
-                      ),
-                    ],
-                  ),
-                )
-              : _rows.isEmpty
-                  ? const EmptyStateWidget(
-                      message: 'ابھی کوئی تبدیلی درج نہیں',
-                      subtitle: 'جب آپ خرچ، فروخت، فریق یا کوئی اور ریکارڈ بنائیں یا بدلیں گے تو وہ یہاں نظر آئے گا۔',
-                      fallbackIcon: Icons.history,
-                      imageAsset: '',
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _reload,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _rows.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, i) => _auditTile(_rows[i]),
-                      ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_error!, style: const TextStyle(fontSize: 16)),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: _reload,
+                      child: const Text('دوبارہ کوشش کریں'),
                     ),
+                  ],
+                ),
+              )
+              : _rows.isEmpty
+              ? const EmptyStateWidget(
+                message: 'ابھی کوئی تبدیلی درج نہیں',
+                subtitle:
+                    'جب آپ خرچ، فروخت، فریق یا کوئی اور ریکارڈ بنائیں یا بدلیں گے تو وہ یہاں نظر آئے گا۔',
+                fallbackIcon: Icons.history,
+                imageAsset: '',
+              )
+              : RefreshIndicator(
+                onRefresh: _reload,
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _rows.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) => _auditTile(_rows[i]),
+                ),
+              ),
     );
   }
 
@@ -112,8 +114,11 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: _actionColor(action).withValues(alpha: 0.12),
-          child: Icon(_actionIcon(action),
-              color: _actionColor(action), size: 20),
+          child: Icon(
+            _actionIcon(action),
+            color: _actionColor(action),
+            size: 20,
+          ),
         ),
         title: Text(
           '${_tableUrdu(table)} — ${_actionUrdu(action)}',
@@ -150,46 +155,46 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
 /// Urdu label for an audit action. Unknown actions fall back to the raw
 /// value — never blank, never invented.
 String _actionUrdu(String action) => switch (action) {
-      'create' => 'بنایا گیا',
-      'update' => 'تبدیل کیا گیا',
-      'delete' => 'حذف کیا گیا',
-      'soft_delete' => 'حذف کیا گیا',
-      'restore' => 'بحال کیا گیا',
-      'permanent_delete' => 'مستقل حذف کیا گیا',
-      _ => action,
-    };
+  'create' => 'بنایا گیا',
+  'update' => 'تبدیل کیا گیا',
+  'delete' => 'حذف کیا گیا',
+  'soft_delete' => 'حذف کیا گیا',
+  'restore' => 'بحال کیا گیا',
+  'permanent_delete' => 'مستقل حذف کیا گیا',
+  _ => action,
+};
 
 /// Urdu label for a table name. Unknown tables fall back to the raw name.
 String _tableUrdu(String table) => switch (table) {
-      'expenses' => 'خرچ',
-      'sales' => 'فروخت',
-      'harvests' => 'پیداوار',
-      'tasks' => 'کام',
-      'parties' => 'فریق',
-      'party_ledger_entries' => 'کھاتہ اندراج',
-      'batai_agreements' => 'بٹائی معاہدہ',
-      'batai_settlements' => 'بٹائی چکتائی',
-      'inventory_transactions' => 'اسٹاک لین دین',
-      'inventory_items' => 'اسٹاک چیز',
-      'thekas' => 'ٹھیکہ',
-      'theka_installments' => 'ٹھیکہ قسط',
-      'ushr_records' => 'عشر',
-      'farms' => 'فارم',
-      'fields' => 'کھیت',
-      'crop_seasons' => 'فصل',
-      _ => table,
-    };
+  'expenses' => 'خرچ',
+  'sales' => 'فروخت',
+  'harvests' => 'پیداوار',
+  'tasks' => 'کام',
+  'parties' => 'فریق',
+  'party_ledger_entries' => 'کھاتہ اندراج',
+  'batai_agreements' => 'بٹائی معاہدہ',
+  'batai_settlements' => 'بٹائی چکتائی',
+  'inventory_transactions' => 'اسٹاک لین دین',
+  'inventory_items' => 'اسٹاک چیز',
+  'thekas' => 'ٹھیکہ',
+  'theka_installments' => 'ٹھیکہ قسط',
+  'ushr_records' => 'عشر',
+  'farms' => 'فارم',
+  'fields' => 'کھیت',
+  'crop_seasons' => 'فصل',
+  _ => table,
+};
 
 Color _actionColor(String action) => switch (action) {
-      'create' => Colors.green.shade700,
-      'restore' => Colors.teal.shade700,
-      'delete' || 'soft_delete' || 'permanent_delete' => Colors.red.shade700,
-      _ => Colors.blueGrey.shade700,
-    };
+  'create' => Colors.green.shade700,
+  'restore' => Colors.teal.shade700,
+  'delete' || 'soft_delete' || 'permanent_delete' => Colors.red.shade700,
+  _ => Colors.blueGrey.shade700,
+};
 
 IconData _actionIcon(String action) => switch (action) {
-      'create' => Icons.add_circle_outline,
-      'restore' => Icons.restore,
-      'delete' || 'soft_delete' || 'permanent_delete' => Icons.delete_outline,
-      _ => Icons.edit_outlined,
-    };
+  'create' => Icons.add_circle_outline,
+  'restore' => Icons.restore,
+  'delete' || 'soft_delete' || 'permanent_delete' => Icons.delete_outline,
+  _ => Icons.edit_outlined,
+};

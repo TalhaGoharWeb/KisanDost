@@ -59,15 +59,15 @@ class FakePartyProvider extends PartyProvider {
   // pumpAndSettle() hang. The dialog under test does not depend on entries.
   @override
   Future<List<PartyLedgerEntry>> getEntries(int partyId) async => [
-        PartyLedgerEntry(
-          id: 1,
-          partyId: partyId,
-          type: PartyEntryType.udhaarDiya,
-          amountPaisa: 100000,
-          date: '2026-09-01',
-          createdAt: '2026-09-01T00:00:00',
-        ),
-      ];
+    PartyLedgerEntry(
+      id: 1,
+      partyId: partyId,
+      type: PartyEntryType.udhaarDiya,
+      amountPaisa: 100000,
+      date: '2026-09-01',
+      createdAt: '2026-09-01T00:00:00',
+    ),
+  ];
 
   @override
   Future<int> addEntry({
@@ -93,14 +93,14 @@ class FakeExpenseProvider extends ExpenseProvider {
   // under test does not depend on existing expenses.
   @override
   List<Expense> get expenses => [
-        Expense(
-          id: 1,
-          category: 'Fertilizer',
-          amountPaisa: 100000,
-          date: '2026-09-01',
-          description: 'کھاد',
-        ),
-      ];
+    Expense(
+      id: 1,
+      category: 'Fertilizer',
+      amountPaisa: 100000,
+      date: '2026-09-01',
+      description: 'کھاد',
+    ),
+  ];
 
   @override
   Future<void> fetchExpenses() async {}
@@ -142,22 +142,21 @@ class FakeActivityProvider extends ActivityProvider {}
 // ---------- Harnesses ----------
 
 BataiAgreementSummary fiftyFiftySummary() => BataiAgreementSummary(
-      agreement: BataiAgreement(
-        id: 1,
-        farmerRole: FarmerRole.landowner,
-        otherPartyId: 7,
-        ownerSharePercent: 50,
-        cultivatorSharePercent: 50,
-        startDate: '2026-01-01',
-        createdAt: '2026-01-01T00:00:00',
-      ),
-      partyName: 'ٹیسٹ فریق',
-    );
+  agreement: BataiAgreement(
+    id: 1,
+    farmerRole: FarmerRole.landowner,
+    otherPartyId: 7,
+    ownerSharePercent: 50,
+    cultivatorSharePercent: 50,
+    startDate: '2026-01-01',
+    createdAt: '2026-01-01T00:00:00',
+  ),
+  partyName: 'ٹیسٹ فریق',
+);
 
 void main() {
   group('batai settle dialog — split preview wiring', () {
-    testWidgets(
-        'typing an amount previews the Money.parse + splitBatai split; '
+    testWidgets('typing an amount previews the Money.parse + splitBatai split; '
         'clearing restores the hint', (tester) async {
       await tester.pumpWidget(
         MultiProvider(
@@ -169,9 +168,7 @@ void main() {
               value: FakeHarvestProvider(),
             ),
           ],
-          child: const MaterialApp(
-            home: BataiDetailScreen(agreementId: 1),
-          ),
+          child: const MaterialApp(home: BataiDetailScreen(agreementId: 1)),
         ),
       );
       await tester.pumpAndSettle(); // post-frame _load()
@@ -179,8 +176,7 @@ void main() {
       await tester.tap(find.text('حساب چکتا کریں'));
       await tester.pumpAndSettle();
 
-      final amountField =
-          find.widgetWithText(TextField, 'کل رقم (روپے) *');
+      final amountField = find.widgetWithText(TextField, 'کل رقم (روپے) *');
       expect(amountField, findsOneWidget);
 
       // 100.01 روپے = 10001 paisa → splitBatai(10001, 50) = 5001/5000:
@@ -195,97 +191,109 @@ void main() {
       // Clearing the field drops the preview back to the hint.
       await tester.enterText(amountField, '');
       await tester.pump();
-      expect(
-          find.text('رقم لکھیں تو حصے یہاں نظر آئیں گے'), findsOneWidget);
+      expect(find.text('رقم لکھیں تو حصے یہاں نظر آئیں گے'), findsOneWidget);
       expect(find.text('مالک: 50.01 روپے'), findsNothing);
     });
   });
 
   group('party entry dialog — Money.parse validation', () {
     testWidgets(
-        'garbage amount shows an Urdu snackbar and keeps the dialog open; '
-        'Urdu digits save the exact paisa', (tester) async {
-      final fake = FakePartyProvider(
-        Party(id: 1, name: 'ٹیسٹ پارٹی', createdAt: '2026-01-01T00:00:00'),
-      );
-      await tester.pumpWidget(
-        ChangeNotifierProvider<PartyProvider>.value(
-          value: fake,
-          child: const MaterialApp(home: PartyDetailScreen(partyId: 1)),
-        ),
-      );
-      await tester.pumpAndSettle();
+      'garbage amount shows an Urdu snackbar and keeps the dialog open; '
+      'Urdu digits save the exact paisa',
+      (tester) async {
+        final fake = FakePartyProvider(
+          Party(id: 1, name: 'ٹیسٹ پارٹی', createdAt: '2026-01-01T00:00:00'),
+        );
+        await tester.pumpWidget(
+          ChangeNotifierProvider<PartyProvider>.value(
+            value: fake,
+            child: const MaterialApp(home: PartyDetailScreen(partyId: 1)),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('اندراج کریں'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('اندراج کریں'));
+        await tester.pumpAndSettle();
 
-      final amountField = find.widgetWithText(TextField, 'رقم (روپے) *');
-      expect(amountField, findsOneWidget);
+        final amountField = find.widgetWithText(TextField, 'رقم (روپے) *');
+        expect(amountField, findsOneWidget);
 
-      await tester.enterText(amountField, 'abc');
-      await tester.tap(find.text('محفوظ کریں'));
-      await tester.pump();
-      // MoneyParseException's Urdu message, dialog still open, nothing saved.
-      expect(find.text('درست رقم درج کریں (مثلاً 1250 یا 1250.50)'),
-          findsOneWidget);
-      expect(find.text('نیا اندراج'), findsOneWidget);
-      expect(fake.addEntryCalls, 0);
+        await tester.enterText(amountField, 'abc');
+        await tester.tap(find.text('محفوظ کریں'));
+        await tester.pump();
+        // MoneyParseException's Urdu message, dialog still open, nothing saved.
+        expect(
+          find.text('درست رقم درج کریں (مثلاً 1250 یا 1250.50)'),
+          findsOneWidget,
+        );
+        expect(find.text('نیا اندراج'), findsOneWidget);
+        expect(fake.addEntryCalls, 0);
 
-      // Urdu digits parse: ۵۰۰۰ = 5000 rupees = 500000 paisa.
-      await tester.enterText(amountField, '۵۰۰۰');
-      await tester.tap(find.text('محفوظ کریں'));
-      await tester.pumpAndSettle();
-      expect(fake.recordedAmountPaisa, 500000);
-      expect(find.text('نیا اندراج'), findsNothing); // dialog closed on save
-    });
+        // Urdu digits parse: ۵۰۰۰ = 5000 rupees = 500000 paisa.
+        await tester.enterText(amountField, '۵۰۰۰');
+        await tester.tap(find.text('محفوظ کریں'));
+        await tester.pumpAndSettle();
+        expect(fake.recordedAmountPaisa, 500000);
+        expect(find.text('نیا اندراج'), findsNothing); // dialog closed on save
+      },
+    );
   });
 
   group('expense form — Money.parse validation', () {
     testWidgets(
-        'negative amount fails the validator with Urdu text and saves nothing; '
-        'Urdu digits pass and save exact paisa', (tester) async {
-      final expenses = FakeExpenseProvider();
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<ExpenseProvider>.value(value: expenses),
-            ChangeNotifierProvider<CropProvider>.value(
-                value: FakeCropProvider()),
-            ChangeNotifierProvider<ActivityProvider>.value(
-                value: FakeActivityProvider()),
-            ChangeNotifierProvider<FarmProvider>.value(
-                value: FakeFarmProvider()),
-          ],
-          child: const MaterialApp(home: ExpensesScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+      'negative amount fails the validator with Urdu text and saves nothing; '
+      'Urdu digits pass and save exact paisa',
+      (tester) async {
+        final expenses = FakeExpenseProvider();
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<ExpenseProvider>.value(value: expenses),
+              ChangeNotifierProvider<CropProvider>.value(
+                value: FakeCropProvider(),
+              ),
+              ChangeNotifierProvider<ActivityProvider>.value(
+                value: FakeActivityProvider(),
+              ),
+              ChangeNotifierProvider<FarmProvider>.value(
+                value: FakeFarmProvider(),
+              ),
+            ],
+            child: const MaterialApp(home: ExpensesScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // The FAB label is the only 'نیا خرچہ درج کریں' Text before the
-      // dialog opens (the app-bar entry is a tooltip, not rendered text).
-      await tester.tap(find.text('نیا خرچہ درج کریں'));
-      await tester.pumpAndSettle();
+        // The FAB label is the only 'نیا خرچہ درج کریں' Text before the
+        // dialog opens (the app-bar entry is a tooltip, not rendered text).
+        await tester.tap(find.text('نیا خرچہ درج کریں'));
+        await tester.pumpAndSettle();
 
-      final amountField =
-          find.widgetWithText(TextFormField, 'خرچے کی رقم (روپے)');
-      expect(amountField, findsOneWidget);
+        final amountField = find.widgetWithText(
+          TextFormField,
+          'خرچے کی رقم (روپے)',
+        );
+        expect(amountField, findsOneWidget);
 
-      await tester.enterText(amountField, '-5');
-      await tester.tap(find.text('محفوظ کریں'));
-      await tester.pump();
-      // The validator surfaces Money.parse's Urdu rejection; no save happens
-      // and the dialog stays open.
-      expect(find.text('درست رقم درج کریں (مثلاً 1250 یا 1250.50)'),
-          findsOneWidget);
-      expect(expenses.addExpenseCalls, 0);
+        await tester.enterText(amountField, '-5');
+        await tester.tap(find.text('محفوظ کریں'));
+        await tester.pump();
+        // The validator surfaces Money.parse's Urdu rejection; no save happens
+        // and the dialog stays open.
+        expect(
+          find.text('درست رقم درج کریں (مثلاً 1250 یا 1250.50)'),
+          findsOneWidget,
+        );
+        expect(expenses.addExpenseCalls, 0);
 
-      // Urdu digits pass validation: ۱۲۳ = 123 rupees = 12300 paisa.
-      await tester.enterText(amountField, '۱۲۳');
-      await tester.tap(find.text('محفوظ کریں'));
-      await tester.pumpAndSettle();
-      expect(expenses.recordedAmountPaisa, 12300);
-      expect(expenses.addExpenseCalls, 1);
-    });
+        // Urdu digits pass validation: ۱۲۳ = 123 rupees = 12300 paisa.
+        await tester.enterText(amountField, '۱۲۳');
+        await tester.tap(find.text('محفوظ کریں'));
+        await tester.pumpAndSettle();
+        expect(expenses.recordedAmountPaisa, 12300);
+        expect(expenses.addExpenseCalls, 1);
+      },
+    );
   });
 
   group('audit log viewer screen', () {
@@ -321,20 +329,25 @@ void main() {
       return db;
     }
 
-    testWidgets('logged actions render with Urdu labels and details',
-        (tester) async {
+    testWidgets('logged actions render with Urdu labels and details', (
+      tester,
+    ) async {
       await tester.runAsync(() async {
         final db = await openAuditDb();
-        await AuditService.log(db,
-            table: 'expenses',
-            rowId: 1,
-            action: AuditService.create,
-            details: 'خرچ: کھاد — 5,000 روپے');
-        await AuditService.log(db,
-            table: 'expenses',
-            rowId: 1,
-            action: AuditService.softDelete,
-            details: 'خرچ حذف');
+        await AuditService.log(
+          db,
+          table: 'expenses',
+          rowId: 1,
+          action: AuditService.create,
+          details: 'خرچ: کھاد — 5,000 روپے',
+        );
+        await AuditService.log(
+          db,
+          table: 'expenses',
+          rowId: 1,
+          action: AuditService.softDelete,
+          details: 'خرچ حذف',
+        );
 
         await tester.pumpWidget(
           MaterialApp(home: AuditLogScreen(executor: db)),

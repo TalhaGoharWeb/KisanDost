@@ -9,6 +9,7 @@ class ActivityWithDetails {
   final Activity activity;
   final String cropName;
   final List<String> fieldNames;
+
   /// Linked expense amount in INTEGER paisa (null when no expense).
   final int? expenseAmountPaisa;
 
@@ -73,7 +74,9 @@ class ActivityProvider extends ChangeNotifier {
     final Map<int, List<String>> seasonFields = {};
     for (final row in mappingRows) {
       final int seasonId = row['crop_season_id'] as int;
-      seasonFields.putIfAbsent(seasonId, () => []).add(row['field_name'] as String);
+      seasonFields
+          .putIfAbsent(seasonId, () => [])
+          .add(row['field_name'] as String);
     }
 
     _activities = List.generate(results.length, (i) {
@@ -88,9 +91,10 @@ class ActivityProvider extends ChangeNotifier {
         inventoryCategory: results[i]['inventory_category'],
         inventoryName: results[i]['inventory_name'],
         inventoryUnit: results[i]['inventory_unit'],
-        inventoryQuantity: results[i]['inventory_quantity'] == null
-            ? null
-            : (results[i]['inventory_quantity'] as num).toDouble(),
+        inventoryQuantity:
+            results[i]['inventory_quantity'] == null
+                ? null
+                : (results[i]['inventory_quantity'] as num).toDouble(),
         inventoryItemId: results[i]['inventory_item_id'],
         isCompleted: (results[i]['is_completed'] ?? 0) == 1,
       );
@@ -98,9 +102,10 @@ class ActivityProvider extends ChangeNotifier {
         activity: activity,
         cropName: results[i]['crop_name'],
         fieldNames: seasonFields[activity.cropSeasonId] ?? [],
-        expenseAmountPaisa: results[i]['expense_amount_paisa'] == null
-            ? null
-            : results[i]['expense_amount_paisa'] as int,
+        expenseAmountPaisa:
+            results[i]['expense_amount_paisa'] == null
+                ? null
+                : results[i]['expense_amount_paisa'] as int,
       );
     });
 
@@ -147,7 +152,8 @@ class ActivityProvider extends ChangeNotifier {
     required InventoryProvider inventoryProvider,
     required Activity activity,
   }) async {
-    if (activity.inventoryQuantity == null || activity.inventoryQuantity! <= 0) {
+    if (activity.inventoryQuantity == null ||
+        activity.inventoryQuantity! <= 0) {
       return;
     }
     if (activity.inventoryCategory == null ||
@@ -155,8 +161,11 @@ class ActivityProvider extends ChangeNotifier {
         activity.inventoryUnit == null) {
       return;
     }
-    final Inventory item =
-        await _resolveItemForRestore(ex, inventoryProvider, activity);
+    final Inventory item = await _resolveItemForRestore(
+      ex,
+      inventoryProvider,
+      activity,
+    );
     double qtyInItemUnit = activity.inventoryQuantity!;
     if (activity.inventoryUnit != item.unit) {
       qtyInItemUnit = UnitConverter.convert(
@@ -197,7 +206,9 @@ class ActivityProvider extends ChangeNotifier {
     // if the deduction is rejected (overuse / missing item), nothing is saved.
     await db.transaction((txn) async {
       int? finalExpenseId = expenseId;
-      if (finalExpenseId == null && expenseAmountPaisa != null && expenseAmountPaisa > 0) {
+      if (finalExpenseId == null &&
+          expenseAmountPaisa != null &&
+          expenseAmountPaisa > 0) {
         final newExpense = Expense(
           category: expenseCategory ?? 'Other',
           amountPaisa: expenseAmountPaisa,
@@ -319,8 +330,11 @@ class ActivityProvider extends ChangeNotifier {
           );
         }
       } else if (finalExpenseId != null) {
-        await txn.delete('expenses',
-            where: 'id = ?', whereArgs: [finalExpenseId]);
+        await txn.delete(
+          'expenses',
+          where: 'id = ?',
+          whereArgs: [finalExpenseId],
+        );
         finalExpenseId = null;
       }
 
@@ -338,9 +352,10 @@ class ActivityProvider extends ChangeNotifier {
           'inventory_unit': inventoryUnit,
           'inventory_quantity': inventoryQuantity,
           'inventory_item_id': inventoryItemId,
-          'is_completed': isCompleted == null
-              ? (oldActivity.isCompleted ? 1 : 0)
-              : (isCompleted ? 1 : 0),
+          'is_completed':
+              isCompleted == null
+                  ? (oldActivity.isCompleted ? 1 : 0)
+                  : (isCompleted ? 1 : 0),
         },
         where: 'id = ?',
         whereArgs: [id],
@@ -399,8 +414,10 @@ class ActivityProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> deleteActivity(int id,
-      {InventoryProvider? inventoryProvider}) async {
+  Future<void> deleteActivity(
+    int id, {
+    InventoryProvider? inventoryProvider,
+  }) async {
     final db = await DatabaseHelper.instance.database;
 
     await db.transaction((txn) async {
@@ -424,11 +441,7 @@ class ActivityProvider extends ChangeNotifier {
         );
       }
 
-      await txn.delete(
-        'activities',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      await txn.delete('activities', where: 'id = ?', whereArgs: [id]);
 
       if (activity.expenseId != null) {
         await txn.delete(

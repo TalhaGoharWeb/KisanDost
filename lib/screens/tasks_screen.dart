@@ -56,7 +56,12 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   String _getRemindersUrdu(String reminders) {
-    final offsets = reminders.split(',').map((e) => int.tryParse(e.trim())).whereType<int>().toList();
+    final offsets =
+        reminders
+            .split(',')
+            .map((e) => int.tryParse(e.trim()))
+            .whereType<int>()
+            .toList();
     final List<String> list = [];
     if (offsets.contains(0)) list.add('وقت پر');
     if (offsets.contains(60)) list.add('1 گھنٹہ پہلے');
@@ -90,35 +95,67 @@ class _TasksScreenState extends State<TasksScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('کل سرگرمیاں', total.toString(), Icons.playlist_add_check, Colors.white),
+          _buildStatItem(
+            'کل سرگرمیاں',
+            total.toString(),
+            Icons.playlist_add_check,
+            Colors.white,
+          ),
           Container(width: 1.5, height: 40, color: Colors.white24),
-          _buildStatItem('مکمل', completed.toString(), Icons.check_circle_rounded, Colors.greenAccent),
+          _buildStatItem(
+            'مکمل',
+            completed.toString(),
+            Icons.check_circle_rounded,
+            Colors.greenAccent,
+          ),
           Container(width: 1.5, height: 40, color: Colors.white24),
-          _buildStatItem('باقی', pending.toString(), Icons.pending_actions, Colors.yellowAccent),
+          _buildStatItem(
+            'باقی',
+            pending.toString(),
+            Icons.pending_actions,
+            Colors.yellowAccent,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String title, String count, IconData icon, Color iconColor) {
+  Widget _buildStatItem(
+    String title,
+    String count,
+    IconData icon,
+    Color iconColor,
+  ) {
     return Column(
       children: [
         Icon(icon, size: 28, color: iconColor),
         const SizedBox(height: 6),
         Text(
           count,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
           title,
-          style: const TextStyle(fontSize: 15, color: Colors.white70, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontSize: 15,
+            color: Colors.white70,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
   }
 
-  Widget _getStatusBadge({required String label, required Color bgColor, required Color textColor}) {
+  Widget _getStatusBadge({
+    required String label,
+    required Color bgColor,
+    required Color textColor,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -127,11 +164,14 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
-
 
   String _getCountdownText(DateTime dateTime) {
     final now = DateTime.now();
@@ -193,9 +233,34 @@ class _TasksScreenState extends State<TasksScreen> {
 
           // Real-time categorization
           final completedTasks = tasks.where((t) => t.isCompleted).toList();
-          final overdueTasks = tasks.where((t) => !t.isCompleted && t.dateTime.isBefore(now) && (t.snoozedUntil == null || t.snoozedUntil!.isBefore(now))).toList();
-          final todaysTasks = tasks.where((t) => !t.isCompleted && isSameDay(t.dateTime, now) && t.dateTime.isAfter(now)).toList();
-          final upcomingTasks = tasks.where((t) => !t.isCompleted && !isSameDay(t.dateTime, now) && t.dateTime.isAfter(now)).toList();
+          final overdueTasks =
+              tasks
+                  .where(
+                    (t) =>
+                        !t.isCompleted &&
+                        t.dateTime.isBefore(now) &&
+                        (t.snoozedUntil == null ||
+                            t.snoozedUntil!.isBefore(now)),
+                  )
+                  .toList();
+          final todaysTasks =
+              tasks
+                  .where(
+                    (t) =>
+                        !t.isCompleted &&
+                        isSameDay(t.dateTime, now) &&
+                        t.dateTime.isAfter(now),
+                  )
+                  .toList();
+          final upcomingTasks =
+              tasks
+                  .where(
+                    (t) =>
+                        !t.isCompleted &&
+                        !isSameDay(t.dateTime, now) &&
+                        t.dateTime.isAfter(now),
+                  )
+                  .toList();
 
           final List<Widget> listItems = [];
 
@@ -204,7 +269,13 @@ class _TasksScreenState extends State<TasksScreen> {
 
           // 2. Overdue Tasks
           if (overdueTasks.isNotEmpty) {
-            listItems.add(_buildCategoryHeader('التوا کے کام (Overdue Tasks)', Colors.red.shade700, overdueTasks.length));
+            listItems.add(
+              _buildCategoryHeader(
+                'التوا کے کام (Overdue Tasks)',
+                Colors.red.shade700,
+                overdueTasks.length,
+              ),
+            );
             for (var task in overdueTasks) {
               listItems.add(_buildTaskCard(task, taskProvider, isPast: true));
             }
@@ -212,7 +283,13 @@ class _TasksScreenState extends State<TasksScreen> {
 
           // 3. Today's Tasks
           if (todaysTasks.isNotEmpty) {
-            listItems.add(_buildCategoryHeader('آج کے کام (Today\'s Tasks)', Colors.blue.shade700, todaysTasks.length));
+            listItems.add(
+              _buildCategoryHeader(
+                'آج کے کام (Today\'s Tasks)',
+                Colors.blue.shade700,
+                todaysTasks.length,
+              ),
+            );
             for (var task in todaysTasks) {
               listItems.add(_buildTaskCard(task, taskProvider, isPast: false));
             }
@@ -220,7 +297,13 @@ class _TasksScreenState extends State<TasksScreen> {
 
           // 4. Upcoming Tasks
           if (upcomingTasks.isNotEmpty) {
-            listItems.add(_buildCategoryHeader('آنے والے کام (Upcoming Tasks)', Colors.deepPurple.shade700, upcomingTasks.length));
+            listItems.add(
+              _buildCategoryHeader(
+                'آنے والے کام (Upcoming Tasks)',
+                Colors.deepPurple.shade700,
+                upcomingTasks.length,
+              ),
+            );
             for (var task in upcomingTasks) {
               listItems.add(_buildTaskCard(task, taskProvider, isPast: false));
             }
@@ -228,7 +311,13 @@ class _TasksScreenState extends State<TasksScreen> {
 
           // 5. Completed Tasks
           if (completedTasks.isNotEmpty) {
-            listItems.add(_buildCategoryHeader('مکمل شدہ کام (Completed Tasks)', Colors.green.shade700, completedTasks.length));
+            listItems.add(
+              _buildCategoryHeader(
+                'مکمل شدہ کام (Completed Tasks)',
+                Colors.green.shade700,
+                completedTasks.length,
+              ),
+            );
             for (var task in completedTasks) {
               listItems.add(_buildTaskCard(task, taskProvider, isPast: false));
             }
@@ -256,7 +345,10 @@ class _TasksScreenState extends State<TasksScreen> {
           );
         },
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('نیا کام شامل کریں', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'نیا کام شامل کریں',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.deepPurple.shade600,
       ),
     );
@@ -285,7 +377,11 @@ class _TasksScreenState extends State<TasksScreen> {
             ),
             child: Text(
               count.toString(),
-              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -293,7 +389,11 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildTaskCard(TaskItem task, TaskProvider taskProvider, {required bool isPast}) {
+  Widget _buildTaskCard(
+    TaskItem task,
+    TaskProvider taskProvider, {
+    required bool isPast,
+  }) {
     // Color accent configuration
     Color sideColor = Colors.deepPurple.shade400;
     if (task.isCompleted) {
@@ -305,9 +405,7 @@ class _TasksScreenState extends State<TasksScreen> {
     return Card(
       elevation: 3,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       child: Container(
         decoration: BoxDecoration(
@@ -316,7 +414,10 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
         ),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
           leading: InkWell(
             onTap: () {
               taskProvider.toggleTaskCompletion(task.id, task.isCompleted);
@@ -332,9 +433,10 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
               width: 36,
               height: 36,
-              child: task.isCompleted
-                  ? const Icon(Icons.check, size: 24, color: Colors.white)
-                  : null,
+              child:
+                  task.isCompleted
+                      ? const Icon(Icons.check, size: 24, color: Colors.white)
+                      : null,
             ),
           ),
           title: Row(
@@ -346,7 +448,8 @@ class _TasksScreenState extends State<TasksScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                    decoration:
+                        task.isCompleted ? TextDecoration.lineThrough : null,
                     color: task.isCompleted ? Colors.grey : Colors.black87,
                   ),
                 ),
@@ -372,7 +475,8 @@ class _TasksScreenState extends State<TasksScreen> {
                       _formatDateTime(task.dateTime),
                       style: TextStyle(
                         color: isPast ? Colors.red : Colors.grey.shade700,
-                        fontWeight: isPast ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isPast ? FontWeight.bold : FontWeight.normal,
                         fontSize: 14,
                       ),
                     ),
@@ -381,19 +485,35 @@ class _TasksScreenState extends State<TasksScreen> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.repeat, size: 16, color: Colors.deepPurple.shade300),
+                    Icon(
+                      Icons.repeat,
+                      size: 16,
+                      color: Colors.deepPurple.shade300,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'دہراؤ: ${_getRecurrenceUrdu(task.recurrence)}',
-                      style: TextStyle(color: Colors.deepPurple.shade700, fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.deepPurple.shade700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(width: 14),
-                    Icon(Icons.notifications_outlined, size: 16, color: Colors.deepPurple.shade300),
+                    Icon(
+                      Icons.notifications_outlined,
+                      size: 16,
+                      color: Colors.deepPurple.shade300,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         'یاد دہانی: ${_getRemindersUrdu(task.reminders)}',
-                        style: TextStyle(color: Colors.deepPurple.shade700, fontSize: 13, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.deepPurple.shade700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -403,7 +523,11 @@ class _TasksScreenState extends State<TasksScreen> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.hourglass_empty, size: 16, color: Colors.amber.shade700),
+                      Icon(
+                        Icons.hourglass_empty,
+                        size: 16,
+                        color: Colors.amber.shade700,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         _getCountdownText(task.dateTime),
@@ -417,12 +541,17 @@ class _TasksScreenState extends State<TasksScreen> {
                     ],
                   ),
                 ],
-                if (task.description != null && task.description!.isNotEmpty) ...[
+                if (task.description != null &&
+                    task.description!.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.description_outlined, size: 15, color: Colors.grey.shade600),
+                      Icon(
+                        Icons.description_outlined,
+                        size: 15,
+                        color: Colors.grey.shade600,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -519,24 +648,37 @@ class _TasksScreenState extends State<TasksScreen> {
   void _showDeleteConfirm(BuildContext context, TaskProvider provider, int id) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('تصدیق کریں', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('کیا آپ واقعی یہ کام حذف کرنا چاہتے ہیں؟', style: TextStyle(fontSize: 16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('منسوخ کریں', style: TextStyle(color: Colors.grey, fontSize: 16)),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text(
+              'تصدیق کریں',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'کیا آپ واقعی یہ کام حذف کرنا چاہتے ہیں؟',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'منسوخ کریں',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  provider.deleteTask(id);
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text(
+                  Strings.delete,
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              provider.deleteTask(id);
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(Strings.delete, style: TextStyle(color: Colors.white, fontSize: 16)),
-          ),
-        ],
-      ),
     );
   }
 }

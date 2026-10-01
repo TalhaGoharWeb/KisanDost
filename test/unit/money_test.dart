@@ -33,7 +33,10 @@ void main() {
     test('rejects garbage', () {
       expect(() => Money.parse('abc'), throwsA(isA<MoneyParseException>()));
       expect(() => Money.parse('12.5.3'), throwsA(isA<MoneyParseException>()));
-      expect(() => Money.parse('12,34,56-'), throwsA(isA<MoneyParseException>()));
+      expect(
+        () => Money.parse('12,34,56-'),
+        throwsA(isA<MoneyParseException>()),
+      );
     });
 
     test('rejects negative amounts', () {
@@ -42,10 +45,8 @@ void main() {
 
     test('rejects more than 2 decimals instead of rounding', () {
       // 10.999 must NOT silently become 11.00.
-      expect(
-          () => Money.parse('10.999'), throwsA(isA<MoneyParseException>()));
-      expect(
-          () => Money.parse('10.001'), throwsA(isA<MoneyParseException>()));
+      expect(() => Money.parse('10.999'), throwsA(isA<MoneyParseException>()));
+      expect(() => Money.parse('10.001'), throwsA(isA<MoneyParseException>()));
     });
 
     test('error messages are Urdu', () {

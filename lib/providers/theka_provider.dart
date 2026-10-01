@@ -27,7 +27,8 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   List<Theka> _thekas = [];
-  final Map<int, List<ThekaInstallment>> _thekaInstallments = {}; // thekaId -> installments
+  final Map<int, List<ThekaInstallment>> _thekaInstallments =
+      {}; // thekaId -> installments
 
   List<Theka> get thekas => _thekas;
 
@@ -62,7 +63,10 @@ class ThekaProvider extends ChangeNotifier {
 
   Future<void> _fetchThekas() async {
     final db = await _db();
-    final List<Map<String, dynamic>> maps = await db.query('thekas', orderBy: 'id DESC');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'thekas',
+      orderBy: 'id DESC',
+    );
     _thekas = List.generate(maps.length, (i) => Theka.fromMap(maps[i]));
 
     for (var theka in _thekas) {
@@ -82,7 +86,10 @@ class ThekaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addTheka(Theka theka, List<ThekaInstallment> installments) async {
+  Future<void> addTheka(
+    Theka theka,
+    List<ThekaInstallment> installments,
+  ) async {
     await _txn((txn) async {
       final thekaId = await txn.insert('thekas', theka.toMap());
       for (var inst in installments) {
@@ -172,18 +179,22 @@ class ThekaProvider extends ChangeNotifier {
 
       // 3. Overpayment guard: paid can never exceed the installment total.
       if (newPaidTotalPaisa > currentInst.amountPaisa) {
-        final remaining = Money(currentInst.amountPaisa - currentInst.paidAmountPaisa);
+        final remaining = Money(
+          currentInst.amountPaisa - currentInst.paidAmountPaisa,
+        );
         throw Exception(
-            'ادا شدہ رقم قسط کی کل رقم (${Money(currentInst.amountPaisa).format()}) سے زیادہ نہیں ہو سکتی۔ بقایا رقم: ${remaining.format()}');
+          'ادا شدہ رقم قسط کی کل رقم (${Money(currentInst.amountPaisa).format()}) سے زیادہ نہیں ہو سکتی۔ بقایا رقم: ${remaining.format()}',
+        );
       }
 
       final isFullPayment = newPaidTotalPaisa >= currentInst.amountPaisa;
       final newStatus = isFullPayment ? 'Paid' : 'Partially Paid';
 
       int? expenseId = currentInst.expenseId;
-      final String desc = isFullPayment
-          ? 'ٹھیکہ ادائیگی: $farmName (قسط نمبر $installmentIndex)'
-          : 'ٹھیکہ جزوی ادائیگی: $farmName (قسط نمبر $installmentIndex)';
+      final String desc =
+          isFullPayment
+              ? 'ٹھیکہ ادائیگی: $farmName (قسط نمبر $installmentIndex)'
+              : 'ٹھیکہ جزوی ادائیگی: $farmName (قسط نمبر $installmentIndex)';
 
       if (expenseId == null) {
         // Insert new expense entry (cumulative total paid so far)
@@ -268,7 +279,10 @@ class ThekaProvider extends ChangeNotifier {
     await fetchThekas();
   }
 
-  Future<void> updateInstallmentSchedule(int thekaId, List<ThekaInstallment> newSchedule) async {
+  Future<void> updateInstallmentSchedule(
+    int thekaId,
+    List<ThekaInstallment> newSchedule,
+  ) async {
     await _txn((txn) async {
       // Verify no payments are recorded yet
       final List<Map<String, dynamic>> maps = await txn.query(
@@ -277,11 +291,17 @@ class ThekaProvider extends ChangeNotifier {
         whereArgs: [thekaId, 'Pending'],
       );
       if (maps.isNotEmpty) {
-        throw Exception('ادائیگیاں ریکارڈ ہونے کی وجہ سے شیڈول تبدیل نہیں کیا جا سکتا۔');
+        throw Exception(
+          'ادائیگیاں ریکارڈ ہونے کی وجہ سے شیڈول تبدیل نہیں کیا جا سکتا۔',
+        );
       }
 
       // Delete old installments
-      await txn.delete('theka_installments', where: 'theka_id = ?', whereArgs: [thekaId]);
+      await txn.delete(
+        'theka_installments',
+        where: 'theka_id = ?',
+        whereArgs: [thekaId],
+      );
 
       // Insert new installments
       for (var inst in newSchedule) {

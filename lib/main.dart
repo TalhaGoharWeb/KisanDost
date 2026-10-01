@@ -24,9 +24,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().init();
   // خودکار روزانہ بیک اپ: ایپ کھلنے پر دن میں ایک بار — کبھی لانچ نہیں روکتا، کبھی کریش نہیں کرتا۔
-  unawaited(BackupService().maybeAutoBackup().catchError((e) {
-    debugPrint('Auto-backup failed: $e');
-  }));
+  unawaited(
+    BackupService().maybeAutoBackup().catchError((e) {
+      debugPrint('Auto-backup failed: $e');
+    }),
+  );
   runApp(const KisanDostApp());
 }
 
@@ -38,31 +40,46 @@ class KisanDostApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => FarmProvider()..fetchFarms()),
-        ChangeNotifierProvider(create: (_) => CropProvider()..fetchCropSeasons()),
-        ChangeNotifierProvider(create: (_) => InventoryProvider()..fetchInventory()),
-        ChangeNotifierProvider(create: (_) => ActivityProvider()..fetchActivities()),
-        ChangeNotifierProvider(create: (_) => HarvestProvider()..fetchHarvests()),
-        ChangeNotifierProvider(create: (_) => ExpenseProvider()..fetchExpenses()),
+        ChangeNotifierProvider(
+          create: (_) => CropProvider()..fetchCropSeasons(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => InventoryProvider()..fetchInventory(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ActivityProvider()..fetchActivities(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => HarvestProvider()..fetchHarvests(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ExpenseProvider()..fetchExpenses(),
+        ),
         ChangeNotifierProvider(create: (_) => TaskProvider()..fetchTasks()),
         ChangeNotifierProvider(create: (_) => ThekaProvider()..fetchThekas()),
-        ChangeNotifierProvider(create: (_) => UshrProvider()..fetchUshrRecords()),
+        ChangeNotifierProvider(
+          create: (_) => UshrProvider()..fetchUshrRecords(),
+        ),
         ChangeNotifierProvider(create: (_) => PartyProvider()..fetchParties()),
-        ChangeNotifierProvider(create: (_) => BataiProvider()..fetchAgreements()),
+        ChangeNotifierProvider(
+          create: (_) => BataiProvider()..fetchAgreements(),
+        ),
         // App locale: text direction (RTL) comes from the locale via
         // flutter_localizations — never from a forced Directionality widget.
         ChangeNotifierProvider(create: (_) => AppLocale()..load()),
       ],
       child: Consumer<AppLocale>(
-        builder: (context, appLocale, _) => MaterialApp(
-          title: 'کسان دوست',
-          navigatorKey: NotificationService.navigatorKey,
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          locale: appLocale.locale,
-          supportedLocales: const [Locale('ur'), Locale('en')],
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          home: const SplashScreen(),
-        ),
+        builder:
+            (context, appLocale, _) => MaterialApp(
+              title: 'کسان دوست',
+              navigatorKey: NotificationService.navigatorKey,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              locale: appLocale.locale,
+              supportedLocales: const [Locale('ur'), Locale('en')],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+              home: const SplashScreen(),
+            ),
       ),
     );
   }

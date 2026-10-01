@@ -103,7 +103,9 @@ class _BackupScreenState extends State<BackupScreen> {
       if (!mounted) return;
       setState(() => _autoBackupEnabled = value);
       _showSnack(
-        value ? 'خودکار روزانہ بیک اپ آن کر دیا گیا' : 'خودکار روزانہ بیک اپ بند کر دیا گیا',
+        value
+            ? 'خودکار روزانہ بیک اپ آن کر دیا گیا'
+            : 'خودکار روزانہ بیک اپ بند کر دیا گیا',
         Colors.green,
       );
     } catch (e) {
@@ -114,29 +116,43 @@ class _BackupScreenState extends State<BackupScreen> {
   Future<void> _confirmDelete(BackupInfo info) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('بیک اپ حذف کریں؟', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(
-          'کیا آپ واقعی "${info.label}" بیک اپ حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں لیا جا سکتا۔',
-          style: const TextStyle(fontSize: 16, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('منسوخ کریں', style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('جی ہاں، حذف کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            title: const Text(
+              'بیک اپ حذف کریں؟',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              'کیا آپ واقعی "${info.label}" بیک اپ حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں لیا جا سکتا۔',
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(
+                  'منسوخ کریں',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'جی ہاں، حذف کریں',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (confirmed != true) return;
     try {
@@ -151,10 +167,7 @@ class _BackupScreenState extends State<BackupScreen> {
   Future<void> _shareBackup(BackupInfo info) async {
     try {
       await SharePlus.instance.share(
-        ShareParams(
-          text: 'کسان دوست بیک اپ',
-          files: [XFile(info.path)],
-        ),
+        ShareParams(text: 'کسان دوست بیک اپ', files: [XFile(info.path)]),
       );
     } catch (e) {
       _showSnack('شیئر کرنے میں خرابی: $e', Colors.red);
@@ -168,7 +181,9 @@ class _BackupScreenState extends State<BackupScreen> {
         allowedExtensions: ['db'],
       );
       if (result == null || result.files.single.path == null) return;
-      final info = await _backupService.importBackupFile(result.files.single.path!);
+      final info = await _backupService.importBackupFile(
+        result.files.single.path!,
+      );
       await _load();
       _showSnack('بیک اپ فائل درآمد ہو گئی: ${info.label}', Colors.green);
     } on BackupException catch (e) {
@@ -182,74 +197,112 @@ class _BackupScreenState extends State<BackupScreen> {
   void _showRestoreDialog(BackupInfo info) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('بحال کرنے کا طریقہ', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('"${info.label}" کو کیسے بحال کیا جائے؟', style: const TextStyle(fontSize: 16)),
-              const SizedBox(height: 12),
-              // Replace option
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.all(12),
-                ),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _doRestoreReplace(info);
-                },
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('تبدیل کریں (Replace)',
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
-                    SizedBox(height: 4),
-                    Text('موجودہ تمام ڈیٹا ختم کر کے بیک اپ بحال ہو گا',
-                        style: TextStyle(color: Colors.black87, fontSize: 14)),
-                    SizedBox(height: 4),
-                    Text('⚠ خبردار: موجودہ تمام ڈیٹا مستقل طور پر ضائع ہو جائے گا!',
-                        style: TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.bold)),
-                  ],
-                ),
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'بحال کرنے کا طریقہ',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '"${info.label}" کو کیسے بحال کیا جائے؟',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 12),
+                  // Replace option
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _doRestoreReplace(info);
+                    },
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'تبدیل کریں (Replace)',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'موجودہ تمام ڈیٹا ختم کر کے بیک اپ بحال ہو گا',
+                          style: TextStyle(color: Colors.black87, fontSize: 14),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '⚠ خبردار: موجودہ تمام ڈیٹا مستقل طور پر ضائع ہو جائے گا!',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Merge option
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.deepPurple.shade400),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _doRestoreMerge(info);
+                    },
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ضم کریں (Merge)',
+                          style: TextStyle(
+                            color: Colors.deepPurple,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'بیک اپ کی نئی چیزیں شامل ہوں گی، موجودہ ڈیٹا محفوظ رہے گا',
+                          style: TextStyle(color: Colors.black87, fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              // Merge option
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Colors.deepPurple.shade400),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.all(12),
-                ),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _doRestoreMerge(info);
-                },
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('ضم کریں (Merge)',
-                        style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold, fontSize: 16)),
-                    SizedBox(height: 4),
-                    Text('بیک اپ کی نئی چیزیں شامل ہوں گی، موجودہ ڈیٹا محفوظ رہے گا',
-                        style: TextStyle(color: Colors.black87, fontSize: 14)),
-                  ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'منسوخ کریں',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('منسوخ کریں', style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -257,16 +310,21 @@ class _BackupScreenState extends State<BackupScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Row(
-          children: [
-            const CircularProgressIndicator(color: Colors.deepPurple),
-            const SizedBox(width: 20),
-            Expanded(child: Text(message, style: const TextStyle(fontSize: 16))),
-          ],
-        ),
-      ),
+      builder:
+          (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            content: Row(
+              children: [
+                const CircularProgressIndicator(color: Colors.deepPurple),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(message, style: const TextStyle(fontSize: 16)),
+                ),
+              ],
+            ),
+          ),
     );
   }
 
@@ -288,29 +346,43 @@ class _BackupScreenState extends State<BackupScreen> {
     // تبدیل (Replace) سے پہلے واضح تصدیق — موجودہ ڈیٹا ضائع ہو جائے گا۔
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('آخری تصدیق', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-        content: const Text(
-          'بیک اپ کو تبدیل (Replace) کرنے سے آپ کا موجودہ تمام ڈیٹا مستقل طور پر ختم ہو جائے گا اور بیک اپ کا ڈیٹا بحال ہو گا۔ کیا آپ واقعی آگے بڑھنا چاہتے ہیں؟',
-          style: TextStyle(fontSize: 16, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('منسوخ کریں', style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('جی ہاں، بحال کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            title: const Text(
+              'آخری تصدیق',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            content: const Text(
+              'بیک اپ کو تبدیل (Replace) کرنے سے آپ کا موجودہ تمام ڈیٹا مستقل طور پر ختم ہو جائے گا اور بیک اپ کا ڈیٹا بحال ہو گا۔ کیا آپ واقعی آگے بڑھنا چاہتے ہیں؟',
+              style: TextStyle(fontSize: 16, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(
+                  'منسوخ کریں',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'جی ہاں، بحال کریں',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (confirmed != true || !mounted) return;
 
@@ -372,93 +444,151 @@ class _BackupScreenState extends State<BackupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('بیک اپ اور ڈیٹا بحالی', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'بیک اپ اور ڈیٹا بحالی',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.deepPurple.shade600,
         foregroundColor: Colors.white,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.deepPurple))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // نیا بیک اپ بٹن
-                  ElevatedButton.icon(
-                    onPressed: _isCreating ? null : _createBackup,
-                    icon: _isCreating
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                          )
-                        : const Icon(Icons.backup, size: 24, color: Colors.white),
-                    label: Text(
-                      _isCreating ? 'بیک اپ بن رہا ہے…' : 'نیا بیک اپ بنائیں',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple.shade600,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // فائل سے بحال کریں
-                  OutlinedButton.icon(
-                    onPressed: _importFromFile,
-                    icon: const Icon(Icons.upload_file, color: Colors.deepPurple),
-                    label: const Text('فائل سے بحال کریں',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.deepPurple.shade300),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // خودکار بیک اپ سوئچ
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: SwitchListTile(
-                      title: const Text('خودکار روزانہ بیک اپ',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('ایپ کھلنے پر دن میں ایک بار خودکار بیک اپ'),
-                      value: _autoBackupEnabled,
-                      activeThumbColor: Colors.deepPurple,
-                      secondary: const Icon(Icons.autorenew, color: Colors.deepPurple),
-                      onChanged: _toggleAutoBackup,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // بیک اپ فہرست
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8, bottom: 8),
-                    child: Text('محفوظ بیک اپس',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
-                  ),
-                  if (_backups.isEmpty)
-                    const Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(16))),
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Center(
-                          child: Text('ابھی تک کوئی بیک اپ نہیں بنا',
-                              style: TextStyle(fontSize: 16, color: Colors.grey)),
+      body:
+          _isLoading
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.deepPurple),
+              )
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // نیا بیک اپ بٹن
+                    ElevatedButton.icon(
+                      onPressed: _isCreating ? null : _createBackup,
+                      icon:
+                          _isCreating
+                              ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              )
+                              : const Icon(
+                                Icons.backup,
+                                size: 24,
+                                color: Colors.white,
+                              ),
+                      label: Text(
+                        _isCreating ? 'بیک اپ بن رہا ہے…' : 'نیا بیک اپ بنائیں',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                    )
-                  else
-                    ..._backups.map((info) => Card(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple.shade600,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // فائل سے بحال کریں
+                    OutlinedButton.icon(
+                      onPressed: _importFromFile,
+                      icon: const Icon(
+                        Icons.upload_file,
+                        color: Colors.deepPurple,
+                      ),
+                      label: const Text(
+                        'فائل سے بحال کریں',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.deepPurple.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // خودکار بیک اپ سوئچ
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: SwitchListTile(
+                        title: const Text(
+                          'خودکار روزانہ بیک اپ',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: const Text(
+                          'ایپ کھلنے پر دن میں ایک بار خودکار بیک اپ',
+                        ),
+                        value: _autoBackupEnabled,
+                        activeThumbColor: Colors.deepPurple,
+                        secondary: const Icon(
+                          Icons.autorenew,
+                          color: Colors.deepPurple,
+                        ),
+                        onChanged: _toggleAutoBackup,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // بیک اپ فہرست
+                    const Padding(
+                      padding: EdgeInsets.only(right: 8, bottom: 8),
+                      child: Text(
+                        'محفوظ بیک اپس',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple,
+                        ),
+                      ),
+                    ),
+                    if (_backups.isEmpty)
+                      const Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(16)),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: Center(
+                            child: Text(
+                              'ابھی تک کوئی بیک اپ نہیں بنا',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ..._backups.map(
+                        (info) => Card(
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           margin: const EdgeInsets.only(bottom: 12),
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
@@ -467,62 +597,93 @@ class _BackupScreenState extends State<BackupScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.save, color: Colors.deepPurple),
+                                    const Icon(
+                                      Icons.save,
+                                      color: Colors.deepPurple,
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: Text(info.label,
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      child: Text(
+                                        info.label,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                     if (_isAutoBackup(info))
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.deepPurple.shade50,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
-                                        child: Text('خودکار',
-                                            style: TextStyle(
-                                                fontSize: 12, color: Colors.deepPurple.shade700)),
+                                        child: Text(
+                                          'خودکار',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.deepPurple.shade700,
+                                          ),
+                                        ),
                                       ),
                                   ],
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   '${DateFormat('dd-MM-yyyy، hh:mm a').format(info.createdAt)}  •  ${_formatSize(info.sizeBytes)}  •  اسکیما v${info.schemaVersion ?? '?'}',
-                                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
                                   children: [
                                     TextButton.icon(
-                                      onPressed: _isRestoring ? null : () => _showRestoreDialog(info),
+                                      onPressed:
+                                          _isRestoring
+                                              ? null
+                                              : () => _showRestoreDialog(info),
                                       icon: const Icon(Icons.restore, size: 18),
                                       label: const Text('بحال کریں'),
-                                      style: TextButton.styleFrom(foregroundColor: Colors.deepPurple),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.deepPurple,
+                                      ),
                                     ),
                                     TextButton.icon(
                                       onPressed: () => _shareBackup(info),
                                       icon: const Icon(Icons.share, size: 18),
                                       label: const Text('شیئر کریں'),
-                                      style: TextButton.styleFrom(foregroundColor: Colors.blue),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.blue,
+                                      ),
                                     ),
                                     TextButton.icon(
                                       onPressed: () => _confirmDelete(info),
                                       icon: const Icon(Icons.delete, size: 18),
                                       label: const Text(Strings.delete),
-                                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.red,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ],
                             ),
                           ),
-                        )),
-                  const SizedBox(height: 30),
-                ],
+                        ),
+                      ),
+                    const SizedBox(height: 30),
+                  ],
+                ),
               ),
-            ),
     );
   }
 }

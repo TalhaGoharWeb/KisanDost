@@ -37,17 +37,18 @@ class _PartiesScreenState extends State<PartiesScreen> {
           children: [
             if (provider.parties.isNotEmpty) _buildTotalsHeader(provider),
             Expanded(
-              child: provider.errorMessage != null
-                  ? _errorView(provider)
-                  : provider.parties.isEmpty
+              child:
+                  provider.errorMessage != null
+                      ? _errorView(provider)
+                      : provider.parties.isEmpty
                       ? _emptyView()
                       : ListView.builder(
-                          itemCount: provider.parties.length,
-                          itemBuilder: (context, i) {
-                            final party = provider.parties[i];
-                            return _partyTile(context, provider, party, theme);
-                          },
-                        ),
+                        itemCount: provider.parties.length,
+                        itemBuilder: (context, i) {
+                          final party = provider.parties[i];
+                          return _partyTile(context, provider, party, theme);
+                        },
+                      ),
             ),
           ],
         ),
@@ -76,14 +77,18 @@ class _PartiesScreenState extends State<PartiesScreen> {
           Expanded(
             child: Column(
               children: [
-                const Text('لوگوں سے لینا ہے',
-                    style: TextStyle(fontSize: 14, color: Colors.black54)),
+                const Text(
+                  'لوگوں سے لینا ہے',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
                 const SizedBox(height: 4),
-                DigitText(Money(receivable).format(),
+                DigitText(
+                  Money(receivable).format(),
                   style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
                 ),
               ],
             ),
@@ -91,14 +96,18 @@ class _PartiesScreenState extends State<PartiesScreen> {
           Expanded(
             child: Column(
               children: [
-                const Text('لوگوں کو دینا ہے',
-                    style: TextStyle(fontSize: 14, color: Colors.black54)),
+                const Text(
+                  'لوگوں کو دینا ہے',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
                 const SizedBox(height: 4),
-                DigitText(Money(payable).format(),
+                DigitText(
+                  Money(payable).format(),
                   style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
                 ),
               ],
             ),
@@ -115,9 +124,11 @@ class _PartiesScreenState extends State<PartiesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(provider.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16)),
+            Text(
+              provider.errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => provider.fetchParties(),
@@ -149,8 +160,12 @@ class _PartiesScreenState extends State<PartiesScreen> {
     );
   }
 
-  Widget _partyTile(BuildContext context, PartyProvider provider, Party party,
-      ThemeData theme) {
+  Widget _partyTile(
+    BuildContext context,
+    PartyProvider provider,
+    Party party,
+    ThemeData theme,
+  ) {
     final balance = provider.balanceOf(party.id!);
     final Color balanceColor;
     final String balanceLabel;
@@ -172,31 +187,41 @@ class _PartiesScreenState extends State<PartiesScreen> {
           child: Text(
             party.name.isNotEmpty ? party.name.characters.first : '?',
             style: TextStyle(
-                color: theme.primaryColor, fontWeight: FontWeight.bold),
+              color: theme.primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        title: Text(party.name,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        title: Text(
+          party.name,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+        ),
         subtitle: party.phone != null ? Text(party.phone!) : null,
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            DigitText(Money(balance.abs()).format(),
+            DigitText(
+              Money(balance.abs()).format(),
               style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: balanceColor),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: balanceColor,
+              ),
             ),
-            Text(balanceLabel,
-                style: TextStyle(fontSize: 12, color: balanceColor)),
+            Text(
+              balanceLabel,
+              style: TextStyle(fontSize: 12, color: balanceColor),
+            ),
           ],
         ),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => PartyDetailScreen(partyId: party.id!)),
-        ).then((_) => provider.fetchParties()),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PartyDetailScreen(partyId: party.id!),
+              ),
+            ).then((_) => provider.fetchParties()),
       ),
     );
   }
@@ -208,96 +233,103 @@ class _PartiesScreenState extends State<PartiesScreen> {
     final notesCtrl = TextEditingController(text: existing?.notes ?? '');
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'نئی پارٹی' : 'پارٹی میں ترمیم'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'نام *',
-                  hintText: 'مثلاً علی دکان دار',
-                  border: OutlineInputBorder(),
-                ),
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(existing == null ? 'نئی پارٹی' : 'پارٹی میں ترمیم'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'نام *',
+                      hintText: 'مثلاً علی دکان دار',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'فون نمبر (اختیاری)',
+                      hintText: 'مثلاً 03001234567',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: Strings.noteOptional,
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'فون نمبر (اختیاری)',
-                  hintText: 'مثلاً 03001234567',
-                  border: OutlineInputBorder(),
+            ),
+            actions: [
+              if (existing != null)
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      await provider.deleteParty(existing.id!);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    } on PartyException catch (e) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(
+                          ctx,
+                        ).showSnackBar(SnackBar(content: Text(e.message)));
+                      }
+                    }
+                  },
+                  child: const Text(
+                    Strings.delete,
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('منسوخ کریں'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesCtrl,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: Strings.noteOptional,
-                  border: OutlineInputBorder(),
-                ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    if (existing == null) {
+                      await provider.addParty(
+                        Party(
+                          name: nameCtrl.text,
+                          phone: phoneCtrl.text,
+                          notes: notesCtrl.text,
+                          createdAt: DateTime.now().toIso8601String(),
+                        ),
+                      );
+                    } else {
+                      await provider.updateParty(
+                        Party(
+                          id: existing.id,
+                          name: nameCtrl.text,
+                          phone: phoneCtrl.text,
+                          notes: notesCtrl.text,
+                          createdAt: existing.createdAt,
+                        ),
+                      );
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } on PartyException catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(
+                        ctx,
+                      ).showSnackBar(SnackBar(content: Text(e.message)));
+                    }
+                  }
+                },
+                child: const Text(Strings.save),
               ),
             ],
           ),
-        ),
-        actions: [
-          if (existing != null)
-            TextButton(
-              onPressed: () async {
-                try {
-                  await provider.deleteParty(existing.id!);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                } on PartyException catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(content: Text(e.message)),
-                    );
-                  }
-                }
-              },
-              child: const Text(Strings.delete,
-                  style: TextStyle(color: Colors.red)),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('منسوخ کریں'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                if (existing == null) {
-                  await provider.addParty(Party(
-                    name: nameCtrl.text,
-                    phone: phoneCtrl.text,
-                    notes: notesCtrl.text,
-                    createdAt: DateTime.now().toIso8601String(),
-                  ));
-                } else {
-                  await provider.updateParty(Party(
-                    id: existing.id,
-                    name: nameCtrl.text,
-                    phone: phoneCtrl.text,
-                    notes: notesCtrl.text,
-                    createdAt: existing.createdAt,
-                  ));
-                }
-                if (ctx.mounted) Navigator.pop(ctx);
-              } on PartyException catch (e) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text(e.message)),
-                  );
-                }
-              }
-            },
-            child: const Text(Strings.save),
-          ),
-        ],
-      ),
     );
   }
 }

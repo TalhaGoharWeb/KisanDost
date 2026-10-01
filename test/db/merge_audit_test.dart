@@ -57,16 +57,15 @@ void main() {
   /// restore_service.dart `_mergeTable` (bulk path): column intersection of
   /// main/bk, then INSERT OR IGNORE ... SELECT. No FK clauses in these
   /// fixtures, so the orphan fallback path is not exercised.
-  Future<void> mergeTableLikeRestoreService(
-      Database db, String table) async {
-    final mainCols = (await db
-            .rawQuery('PRAGMA main.table_info("$table")'))
-        .map((c) => c['name'].toString())
-        .toSet();
-    final bkCols = (await db
-            .rawQuery('PRAGMA bk.table_info("$table")'))
-        .map((c) => c['name'].toString())
-        .toSet();
+  Future<void> mergeTableLikeRestoreService(Database db, String table) async {
+    final mainCols =
+        (await db.rawQuery(
+          'PRAGMA main.table_info("$table")',
+        )).map((c) => c['name'].toString()).toSet();
+    final bkCols =
+        (await db.rawQuery(
+          'PRAGMA bk.table_info("$table")',
+        )).map((c) => c['name'].toString()).toSet();
     final common = mainCols.intersection(bkCols).toList(growable: false);
     if (common.isEmpty) return;
     final cols = common.map((c) => '"$c"').join(', ');
@@ -85,11 +84,9 @@ void main() {
       expect(RestoreService.mergeTableOrder.last, 'audit_log');
     });
 
-    test(
-        'soft-deleted expense arrives with deleted_at intact; '
+    test('soft-deleted expense arrives with deleted_at intact; '
         'audit_log rows merge', () async {
-      final tmp =
-          await Directory.systemTemp.createTemp('phase12_merge_test');
+      final tmp = await Directory.systemTemp.createTemp('phase12_merge_test');
       try {
         // --- "Backup" database: one soft-deleted expense, one live expense,
         // --- and two audit rows.
@@ -147,29 +144,27 @@ void main() {
 
         // Both expenses arrived; the soft-deleted one is STILL soft-deleted
         // (deleted_at copied verbatim — merge does not resurrect).
-        final mergedExpenses =
-            await current.query('expenses', orderBy: 'id ASC');
+        final mergedExpenses = await current.query(
+          'expenses',
+          orderBy: 'id ASC',
+        );
         expect(mergedExpenses, hasLength(2));
-        final mergedDead = mergedExpenses.firstWhere(
-            (r) => r['id'] == deadId);
+        final mergedDead = mergedExpenses.firstWhere((r) => r['id'] == deadId);
         expect(mergedDead['deleted_at'], '2026-09-20T10:00:00');
-        final mergedLive = mergedExpenses.firstWhere(
-            (r) => r['id'] == liveId);
+        final mergedLive = mergedExpenses.firstWhere((r) => r['id'] == liveId);
         expect(mergedLive['deleted_at'], isNull);
 
         // Audit rows merged with their actions and details intact.
-        final mergedAudit =
-            await current.query('audit_log', orderBy: 'id ASC');
+        final mergedAudit = await current.query('audit_log', orderBy: 'id ASC');
         expect(mergedAudit, hasLength(2));
         expect(
-            mergedAudit.map((r) => r['action']),
-            containsAll(['create', 'soft_delete']));
+          mergedAudit.map((r) => r['action']),
+          containsAll(['create', 'soft_delete']),
+        );
         expect(
-            mergedAudit
-                .map((r) => r['details'])
-                .whereType<String>()
-                .toList(),
-            containsAll(['خرچ حذف', 'خرچ: کھاد — 5,000 روپے']));
+          mergedAudit.map((r) => r['details']).whereType<String>().toList(),
+          containsAll(['خرچ حذف', 'خرچ: کھاد — 5,000 روپے']),
+        );
 
         await current.close();
       } finally {
@@ -259,18 +254,16 @@ void main() {
       // Second run on the already-migrated db must not throw.
       await DatabaseHelper.migrateV14ToV15(db);
 
-      for (final t in [
-        'expenses',
-        'sales',
-        'harvests',
-        'tasks',
-        'parties',
-      ]) {
-        expect(await hasColumn(db, t, 'deleted_at'), isTrue,
-            reason: '$t should have deleted_at after the migration');
+      for (final t in ['expenses', 'sales', 'harvests', 'tasks', 'parties']) {
+        expect(
+          await hasColumn(db, t, 'deleted_at'),
+          isTrue,
+          reason: '$t should have deleted_at after the migration',
+        );
       }
       final auditTables = await db.rawQuery(
-          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'audit_log'");
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'audit_log'",
+      );
       expect(auditTables, hasLength(1));
 
       // The pre-existing row survived with NULL deleted_at (still live).

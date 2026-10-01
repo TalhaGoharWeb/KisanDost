@@ -27,51 +27,47 @@ enum FarmerRole {
 
 /// Wire value stored in the DB.
 String farmerRoleToString(FarmerRole role) => switch (role) {
-      FarmerRole.landowner => 'landowner',
-      FarmerRole.cultivator => 'cultivator',
-    };
+  FarmerRole.landowner => 'landowner',
+  FarmerRole.cultivator => 'cultivator',
+};
 
 FarmerRole farmerRoleFromString(String raw) => switch (raw) {
-      'landowner' => FarmerRole.landowner,
-      'cultivator' => FarmerRole.cultivator,
-      _ => throw ArgumentError('Unknown farmer role: $raw'),
-    };
+  'landowner' => FarmerRole.landowner,
+  'cultivator' => FarmerRole.cultivator,
+  _ => throw ArgumentError('Unknown farmer role: $raw'),
+};
 
 /// Urdu label shown in the UI.
 String farmerRoleUrdu(FarmerRole role) => switch (role) {
-      FarmerRole.landowner => 'میں مالک ہوں',
-      FarmerRole.cultivator => 'میں مزارع ہوں',
-    };
+  FarmerRole.landowner => 'میں مالک ہوں',
+  FarmerRole.cultivator => 'میں مزارع ہوں',
+};
 
 /// Lifecycle of a batai agreement. Settled/cancelled are set MANUALLY by
 /// the farmer — settling a harvest never flips the status automatically,
 /// because one season is usually settled over several harvests.
-enum BataiStatus {
-  active,
-  settled,
-  cancelled,
-}
+enum BataiStatus { active, settled, cancelled }
 
 /// Wire value stored in the DB.
 String bataiStatusToString(BataiStatus status) => switch (status) {
-      BataiStatus.active => 'active',
-      BataiStatus.settled => 'settled',
-      BataiStatus.cancelled => 'cancelled',
-    };
+  BataiStatus.active => 'active',
+  BataiStatus.settled => 'settled',
+  BataiStatus.cancelled => 'cancelled',
+};
 
 BataiStatus bataiStatusFromString(String raw) => switch (raw) {
-      'active' => BataiStatus.active,
-      'settled' => BataiStatus.settled,
-      'cancelled' => BataiStatus.cancelled,
-      _ => throw ArgumentError('Unknown batai status: $raw'),
-    };
+  'active' => BataiStatus.active,
+  'settled' => BataiStatus.settled,
+  'cancelled' => BataiStatus.cancelled,
+  _ => throw ArgumentError('Unknown batai status: $raw'),
+};
 
 /// Urdu label shown in the UI.
 String bataiStatusUrdu(BataiStatus status) => switch (status) {
-      BataiStatus.active => 'فعال',
-      BataiStatus.settled => 'چکتا شدہ',
-      BataiStatus.cancelled => 'منسوخ',
-    };
+  BataiStatus.active => 'فعال',
+  BataiStatus.settled => 'چکتا شدہ',
+  BataiStatus.cancelled => 'منسوخ',
+};
 
 /// Splits [totalPaisa] between owner and cultivator per the rounding rule.
 ///
@@ -80,10 +76,14 @@ String bataiStatusUrdu(BataiStatus status) => switch (status) {
 /// share, and on a tie to the OWNER. The two results always sum to
 /// [totalPaisa] exactly.
 ({int ownerPaisa, int cultivatorPaisa}) splitBatai(
-    int totalPaisa, int ownerPercent) {
+  int totalPaisa,
+  int ownerPercent,
+) {
   assert(totalPaisa > 0, 'totalPaisa must be positive');
-  assert(ownerPercent >= 0 && ownerPercent <= 100,
-      'ownerPercent must be 0..100');
+  assert(
+    ownerPercent >= 0 && ownerPercent <= 100,
+    'ownerPercent must be 0..100',
+  );
   final cultivatorPercent = 100 - ownerPercent;
   var ownerPaisa = totalPaisa * ownerPercent ~/ 100;
   var cultivatorPaisa = totalPaisa * cultivatorPercent ~/ 100;
@@ -136,14 +136,16 @@ class BataiAgreement {
   });
 
   /// "My" share percent, from OUR farmer's perspective.
-  int get mySharePercent => farmerRole == FarmerRole.landowner
-      ? ownerSharePercent
-      : cultivatorSharePercent;
+  int get mySharePercent =>
+      farmerRole == FarmerRole.landowner
+          ? ownerSharePercent
+          : cultivatorSharePercent;
 
   /// The other party's share percent.
-  int get otherSharePercent => farmerRole == FarmerRole.landowner
-      ? cultivatorSharePercent
-      : ownerSharePercent;
+  int get otherSharePercent =>
+      farmerRole == FarmerRole.landowner
+          ? cultivatorSharePercent
+          : ownerSharePercent;
 
   /// Splits [totalPaisa] per the rounding rule.
   ({int ownerPaisa, int cultivatorPaisa}) split(int totalPaisa) =>
@@ -152,7 +154,9 @@ class BataiAgreement {
   /// My paisa out of a [totalPaisa] settlement, role-aware.
   int mySharePaisa(int totalPaisa) {
     final s = split(totalPaisa);
-    return farmerRole == FarmerRole.landowner ? s.ownerPaisa : s.cultivatorPaisa;
+    return farmerRole == FarmerRole.landowner
+        ? s.ownerPaisa
+        : s.cultivatorPaisa;
   }
 
   /// The other party's paisa out of a [totalPaisa] settlement, role-aware.
@@ -164,38 +168,38 @@ class BataiAgreement {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'farmer_role': farmerRoleToString(farmerRole),
-        'other_party_id': otherPartyId,
-        'farm_id': farmId,
-        'field_id': fieldId,
-        'crop_season_id': cropSeasonId,
-        'owner_share_percent': ownerSharePercent,
-        'cultivator_share_percent': cultivatorSharePercent,
-        'expense_note': expenseNote,
-        'start_date': startDate,
-        'end_date': endDate,
-        'status': bataiStatusToString(status),
-        'notes': notes,
-        'created_at': createdAt,
-      };
+    'id': id,
+    'farmer_role': farmerRoleToString(farmerRole),
+    'other_party_id': otherPartyId,
+    'farm_id': farmId,
+    'field_id': fieldId,
+    'crop_season_id': cropSeasonId,
+    'owner_share_percent': ownerSharePercent,
+    'cultivator_share_percent': cultivatorSharePercent,
+    'expense_note': expenseNote,
+    'start_date': startDate,
+    'end_date': endDate,
+    'status': bataiStatusToString(status),
+    'notes': notes,
+    'created_at': createdAt,
+  };
 
   factory BataiAgreement.fromMap(Map<String, dynamic> map) => BataiAgreement(
-        id: map['id'] as int?,
-        farmerRole: farmerRoleFromString(map['farmer_role'] as String),
-        otherPartyId: map['other_party_id'] as int,
-        farmId: map['farm_id'] as int?,
-        fieldId: map['field_id'] as int?,
-        cropSeasonId: map['crop_season_id'] as int?,
-        ownerSharePercent: map['owner_share_percent'] as int,
-        cultivatorSharePercent: map['cultivator_share_percent'] as int,
-        expenseNote: map['expense_note'] as String?,
-        startDate: map['start_date'] as String,
-        endDate: map['end_date'] as String?,
-        status: bataiStatusFromString(map['status'] as String),
-        notes: map['notes'] as String?,
-        createdAt: map['created_at'] as String,
-      );
+    id: map['id'] as int?,
+    farmerRole: farmerRoleFromString(map['farmer_role'] as String),
+    otherPartyId: map['other_party_id'] as int,
+    farmId: map['farm_id'] as int?,
+    fieldId: map['field_id'] as int?,
+    cropSeasonId: map['crop_season_id'] as int?,
+    ownerSharePercent: map['owner_share_percent'] as int,
+    cultivatorSharePercent: map['cultivator_share_percent'] as int,
+    expenseNote: map['expense_note'] as String?,
+    startDate: map['start_date'] as String,
+    endDate: map['end_date'] as String?,
+    status: bataiStatusFromString(map['status'] as String),
+    notes: map['notes'] as String?,
+    createdAt: map['created_at'] as String,
+  );
 }
 
 /// One settlement (چکتائی): an append-only record of a split harvest/sale.
@@ -228,30 +232,30 @@ class BataiSettlement {
   });
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'agreement_id': agreementId,
-        'harvest_id': harvestId,
-        'sale_id': saleId,
-        'total_paisa': totalPaisa,
-        'owner_paisa': ownerPaisa,
-        'cultivator_paisa': cultivatorPaisa,
-        'settle_date': settleDate,
-        'note': note,
-        'created_at': createdAt,
-      };
+    'id': id,
+    'agreement_id': agreementId,
+    'harvest_id': harvestId,
+    'sale_id': saleId,
+    'total_paisa': totalPaisa,
+    'owner_paisa': ownerPaisa,
+    'cultivator_paisa': cultivatorPaisa,
+    'settle_date': settleDate,
+    'note': note,
+    'created_at': createdAt,
+  };
 
   factory BataiSettlement.fromMap(Map<String, dynamic> map) => BataiSettlement(
-        id: map['id'] as int?,
-        agreementId: map['agreement_id'] as int,
-        harvestId: map['harvest_id'] as int?,
-        saleId: map['sale_id'] as int?,
-        totalPaisa: map['total_paisa'] as int,
-        ownerPaisa: map['owner_paisa'] as int,
-        cultivatorPaisa: map['cultivator_paisa'] as int,
-        settleDate: map['settle_date'] as String,
-        note: map['note'] as String?,
-        createdAt: map['created_at'] as String,
-      );
+    id: map['id'] as int?,
+    agreementId: map['agreement_id'] as int,
+    harvestId: map['harvest_id'] as int?,
+    saleId: map['sale_id'] as int?,
+    totalPaisa: map['total_paisa'] as int,
+    ownerPaisa: map['owner_paisa'] as int,
+    cultivatorPaisa: map['cultivator_paisa'] as int,
+    settleDate: map['settle_date'] as String,
+    note: map['note'] as String?,
+    createdAt: map['created_at'] as String,
+  );
 }
 
 /// An agreement plus the resolved display names for the list screen

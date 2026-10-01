@@ -45,30 +45,30 @@ void main() {
     return PartyProvider(testExecutor: db);
   }
 
-  Future<int> addParty(PartyProvider p, String name) => p.addParty(Party(
-        name: name,
-        createdAt: DateTime.now().toIso8601String(),
-      ));
+  Future<int> addParty(PartyProvider p, String name) => p.addParty(
+    Party(name: name, createdAt: DateTime.now().toIso8601String()),
+  );
 
   group('DB v13 migration', () {
-    test('creates parties and party_ledger_entries tables, idempotently',
-        () async {
-      final db = await openV12Db();
-      await DatabaseHelper.migrateV12ToV13(db);
-      // Second run must be a no-op, not an error.
-      await DatabaseHelper.migrateV12ToV13(db);
+    test(
+      'creates parties and party_ledger_entries tables, idempotently',
+      () async {
+        final db = await openV12Db();
+        await DatabaseHelper.migrateV12ToV13(db);
+        // Second run must be a no-op, not an error.
+        await DatabaseHelper.migrateV12ToV13(db);
 
-      final tables = (await db.rawQuery(
-              "SELECT name FROM sqlite_master WHERE type = 'table'"))
-          .map((r) => r['name'] as String)
-          .toSet();
-      expect(tables, containsAll(['parties', 'party_ledger_entries']));
+        final tables =
+            (await db.rawQuery(
+              "SELECT name FROM sqlite_master WHERE type = 'table'",
+            )).map((r) => r['name'] as String).toSet();
+        expect(tables, containsAll(['parties', 'party_ledger_entries']));
 
-      final entryCols = (await db.rawQuery(
-              'PRAGMA table_info(party_ledger_entries)'))
-          .map((c) => c['name'] as String)
-          .toSet();
-      expect(
+        final entryCols =
+            (await db.rawQuery(
+              'PRAGMA table_info(party_ledger_entries)',
+            )).map((c) => c['name'] as String).toSet();
+        expect(
           entryCols,
           containsAll([
             'id',
@@ -78,14 +78,16 @@ void main() {
             'date',
             'note',
             'created_at',
-          ]));
+          ]),
+        );
 
-      final indexes = (await db.rawQuery(
-              "SELECT name FROM sqlite_master WHERE type = 'index'"))
-          .map((r) => r['name'] as String)
-          .toSet();
-      expect(indexes, contains('idx_party_ledger_entries_party'));
-    });
+        final indexes =
+            (await db.rawQuery(
+              "SELECT name FROM sqlite_master WHERE type = 'index'",
+            )).map((r) => r['name'] as String).toSet();
+        expect(indexes, contains('idx_party_ledger_entries_party'));
+      },
+    );
   });
 
   group('entry type signs', () {
@@ -94,17 +96,19 @@ void main() {
       final id = await addParty(p, 'علی');
 
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.udhaarDiya,
-          amountPaisa: 500000,
-          date: '2026-10-01');
+        partyId: id,
+        type: PartyEntryType.udhaarDiya,
+        amountPaisa: 500000,
+        date: '2026-10-01',
+      );
       expect(p.balanceOf(id), 500000);
 
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.udhaarLiya,
-          amountPaisa: 200000,
-          date: '2026-10-01');
+        partyId: id,
+        type: PartyEntryType.udhaarLiya,
+        amountPaisa: 200000,
+        date: '2026-10-01',
+      );
       expect(p.balanceOf(id), 300000);
     });
 
@@ -113,28 +117,32 @@ void main() {
       final id = await addParty(p, 'بشیر');
 
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.udhaarDiya,
-          amountPaisa: 500000,
-          date: '2026-10-01');
+        partyId: id,
+        type: PartyEntryType.udhaarDiya,
+        amountPaisa: 500000,
+        date: '2026-10-01',
+      );
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.wusooli,
-          amountPaisa: 200000,
-          date: '2026-10-02');
+        partyId: id,
+        type: PartyEntryType.wusooli,
+        amountPaisa: 200000,
+        date: '2026-10-02',
+      );
       expect(p.balanceOf(id), 300000);
 
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.udhaarLiya,
-          amountPaisa: 100000,
-          date: '2026-10-03');
+        partyId: id,
+        type: PartyEntryType.udhaarLiya,
+        amountPaisa: 100000,
+        date: '2026-10-03',
+      );
       expect(p.balanceOf(id), 200000);
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.adaigi,
-          amountPaisa: 100000,
-          date: '2026-10-04');
+        partyId: id,
+        type: PartyEntryType.adaigi,
+        amountPaisa: 100000,
+        date: '2026-10-04',
+      );
       expect(p.balanceOf(id), 300000);
     });
 
@@ -142,17 +150,19 @@ void main() {
       final p = await openProvider();
       final id = await addParty(p, 'کریم');
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.udhaarDiya,
-          amountPaisa: 100000,
-          date: '2026-09-01',
-          note: 'پہلا');
+        partyId: id,
+        type: PartyEntryType.udhaarDiya,
+        amountPaisa: 100000,
+        date: '2026-09-01',
+        note: 'پہلا',
+      );
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.wusooli,
-          amountPaisa: 40000,
-          date: '2026-10-01',
-          note: 'دوسرا');
+        partyId: id,
+        type: PartyEntryType.wusooli,
+        amountPaisa: 40000,
+        date: '2026-10-01',
+        note: 'دوسرا',
+      );
 
       final entries = await p.getEntries(id);
       expect(entries.length, 2);
@@ -165,41 +175,45 @@ void main() {
   });
 
   group('totals', () {
-    test('totalReceivable/totalPayable split positive and negative balances',
-        () async {
-      final p = await openProvider();
-      final a = await addParty(p, 'الف');
-      final b = await addParty(p, 'ب');
-      await addParty(p, 'ج'); // zero balance
+    test(
+      'totalReceivable/totalPayable split positive and negative balances',
+      () async {
+        final p = await openProvider();
+        final a = await addParty(p, 'الف');
+        final b = await addParty(p, 'ب');
+        await addParty(p, 'ج'); // zero balance
 
-      await p.addEntry(
+        await p.addEntry(
           partyId: a,
           type: PartyEntryType.udhaarDiya,
           amountPaisa: 500000,
-          date: '2026-10-01');
-      await p.addEntry(
+          date: '2026-10-01',
+        );
+        await p.addEntry(
           partyId: b,
           type: PartyEntryType.udhaarLiya,
           amountPaisa: 300000,
-          date: '2026-10-01');
+          date: '2026-10-01',
+        );
 
-      expect(p.totalReceivablePaisa, 500000);
-      expect(p.totalPayablePaisa, 300000);
-      expect(p.allBalances[a], 500000);
-      expect(p.allBalances[b], -300000);
-    });
+        expect(p.totalReceivablePaisa, 500000);
+        expect(p.totalPayablePaisa, 300000);
+        expect(p.allBalances[a], 500000);
+        expect(p.allBalances[b], -300000);
+      },
+    );
   });
 
   group('deletion rules', () {
-    test('deleteParty is blocked when entries exist; party survives',
-        () async {
+    test('deleteParty is blocked when entries exist; party survives', () async {
       final p = await openProvider();
       final id = await addParty(p, 'دانش');
       await p.addEntry(
-          partyId: id,
-          type: PartyEntryType.udhaarDiya,
-          amountPaisa: 100000,
-          date: '2026-10-01');
+        partyId: id,
+        type: PartyEntryType.udhaarDiya,
+        amountPaisa: 100000,
+        date: '2026-10-01',
+      );
 
       expect(() => p.deleteParty(id), throwsA(isA<PartyException>()));
       // Party and its entries are still there.
@@ -232,10 +246,11 @@ void main() {
       for (final bad in [0, -500]) {
         expect(
           () => p.addEntry(
-              partyId: id,
-              type: PartyEntryType.udhaarDiya,
-              amountPaisa: bad,
-              date: '2026-10-01'),
+            partyId: id,
+            type: PartyEntryType.udhaarDiya,
+            amountPaisa: bad,
+            date: '2026-10-01',
+          ),
           throwsA(isA<PartyException>()),
         );
       }
@@ -245,10 +260,7 @@ void main() {
 
     test('empty party name is rejected', () async {
       final p = await openProvider();
-      expect(
-        () => addParty(p, '   '),
-        throwsA(isA<PartyException>()),
-      );
+      expect(() => addParty(p, '   '), throwsA(isA<PartyException>()));
       expect(p.parties, isEmpty);
     });
 
@@ -257,10 +269,11 @@ void main() {
       final id = await addParty(p, 'فہد');
       expect(
         () => p.addEntry(
-            partyId: id,
-            type: PartyEntryType.udhaarDiya,
-            amountPaisa: 100000,
-            date: 'not-a-date'),
+          partyId: id,
+          type: PartyEntryType.udhaarDiya,
+          amountPaisa: 100000,
+          date: 'not-a-date',
+        ),
         throwsA(isA<PartyException>()),
       );
     });
@@ -269,8 +282,10 @@ void main() {
   group('backup merge order', () {
     test('parties comes before party_ledger_entries', () {
       final order = RestoreService.mergeTableOrder;
-      expect(order.indexOf('parties'),
-          lessThan(order.indexOf('party_ledger_entries')));
+      expect(
+        order.indexOf('parties'),
+        lessThan(order.indexOf('party_ledger_entries')),
+      );
     });
   });
 }

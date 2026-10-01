@@ -40,7 +40,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       totalExpensesPaisa: expenseProvider.totalExpensesPaisa,
       seasons: [
         ...cropProvider.activeCropSeasons,
-        ...cropProvider.harvestedCropSeasons
+        ...cropProvider.harvestedCropSeasons,
       ],
       activities: activityProvider.activities,
       expenses: expenseProvider.expenses,
@@ -50,26 +50,30 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     final totalExpenses = pnl.totalExpensesPaisa;
     final netProfit = pnl.netPaisa;
 
-    final List<CropPL> cropPLList = pnl.crops
-        .map((r) => CropPL(
-              details: r.details,
-              income: r.incomePaisa,
-              expenses: r.expensesPaisa,
-              net: r.netPaisa,
-              harvests: r.harvests,
-              activities: r.activities,
-            ))
-        .toList();
+    final List<CropPL> cropPLList =
+        pnl.crops
+            .map(
+              (r) => CropPL(
+                details: r.details,
+                income: r.incomePaisa,
+                expenses: r.expensesPaisa,
+                net: r.netPaisa,
+                harvests: r.harvests,
+                activities: r.activities,
+              ),
+            )
+            .toList();
 
     // 3. Filtered Crops list
-    final filteredCropPLList = cropPLList.where((pl) {
-      if (_selectedStatus == 'Active') {
-        return pl.details.cropSeason.status == 'Active';
-      } else if (_selectedStatus == 'Harvested') {
-        return pl.details.cropSeason.status == 'Harvested';
-      }
-      return true;
-    }).toList();
+    final filteredCropPLList =
+        cropPLList.where((pl) {
+          if (_selectedStatus == 'Active') {
+            return pl.details.cropSeason.status == 'Active';
+          } else if (_selectedStatus == 'Harvested') {
+            return pl.details.cropSeason.status == 'Harvested';
+          }
+          return true;
+        }).toList();
 
     // 4. Key Insights
     CropPL? mostProfitable;
@@ -91,7 +95,10 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           unitQuantities[hwd.harvest.unit] =
               (unitQuantities[hwd.harvest.unit] ?? 0.0) + hwd.harvest.quantity;
         }
-        final yieldSum = pl.harvests.fold(0.0, (sum, h) => sum + h.harvest.quantity);
+        final yieldSum = pl.harvests.fold(
+          0.0,
+          (sum, h) => sum + h.harvest.quantity,
+        );
         if (yieldSum > maxYield) {
           maxYield = yieldSum;
           highestYielding = pl;
@@ -105,10 +112,12 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     // 5. Category-wise Expenses Breakdown
     final Map<String, int> categorySums = {};
     for (var exp in expenseProvider.expenses) {
-      categorySums[exp.category] = (categorySums[exp.category] ?? 0) + exp.amountPaisa;
+      categorySums[exp.category] =
+          (categorySums[exp.category] ?? 0) + exp.amountPaisa;
     }
-    final sortedCategories = categorySums.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final sortedCategories =
+        categorySums.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     // Indirect Expenses: expenses not linked to any crop — neither via
     // activities nor via the direct expenses.crop_season_id link.
@@ -179,11 +188,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
               expenseProvider,
             ),
             // Tab 3: Theka Report
-            _buildThekaReportTab(
-              context,
-              thekaProvider,
-              farmProvider,
-            ),
+            _buildThekaReportTab(context, thekaProvider, farmProvider),
             // Tab 4: Ushr Report
             _buildUshrReportTab(
               context,
@@ -205,11 +210,14 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     int totalExpenses,
   ) {
     final isProfit = netProfit >= 0;
-    final primaryGrad = isProfit ? const Color(0xFF1B5E20) : const Color(0xFFB71C1C);
-    final secondaryGrad = isProfit ? const Color(0xFF4CAF50) : const Color(0xFFE53935);
-    final statusText = isProfit
-        ? 'ماشاءاللہ، آپ کا کاروبار منافع میں ہے!'
-        : 'احتیاط! آپ کا کاروبار نقصان میں ہے۔';
+    final primaryGrad =
+        isProfit ? const Color(0xFF1B5E20) : const Color(0xFFB71C1C);
+    final secondaryGrad =
+        isProfit ? const Color(0xFF4CAF50) : const Color(0xFFE53935);
+    final statusText =
+        isProfit
+            ? 'ماشاءاللہ، آپ کا کاروبار منافع میں ہے!'
+            : 'احتیاط! آپ کا کاروبار نقصان میں ہے۔';
 
     return Container(
       width: double.infinity,
@@ -224,7 +232,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: (isProfit ? Colors.green : Colors.red).withValues(alpha: 0.3),
+            color: (isProfit ? Colors.green : Colors.red).withValues(
+              alpha: 0.3,
+            ),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -248,7 +258,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  DigitText(Money(netProfit.abs()).format(),
+                  DigitText(
+                    Money(netProfit.abs()).format(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
@@ -291,7 +302,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.arrow_upward, color: Colors.greenAccent, size: 16),
+                        Icon(
+                          Icons.arrow_upward,
+                          color: Colors.greenAccent,
+                          size: 16,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'کل فروخت (آمدنی)',
@@ -304,7 +319,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    DigitText(Money(totalSales).format(),
+                    DigitText(
+                      Money(totalSales).format(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -322,7 +338,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.arrow_downward, color: Colors.redAccent, size: 16),
+                        Icon(
+                          Icons.arrow_downward,
+                          color: Colors.redAccent,
+                          size: 16,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'کل اخراجات',
@@ -335,7 +355,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    DigitText(Money(totalExpenses).format(),
+                    DigitText(
+                      Money(totalExpenses).format(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -368,10 +389,15 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       physics: const BouncingScrollPhysics(),
       children: [
         _buildSummaryCard(context, netProfit, totalSales, totalExpenses),
-        
+
         // Insights
-        _buildInsightsPanel(mostProfitable, highestYielding, highestYieldText, cropProvider),
-        
+        _buildInsightsPanel(
+          mostProfitable,
+          highestYielding,
+          highestYieldText,
+          cropProvider,
+        ),
+
         // Filters title
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -430,7 +456,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             ),
           )
         else
-          ...filteredList.map((pl) => _buildCropPLCard(context, pl, cropProvider)),
+          ...filteredList.map(
+            (pl) => _buildCropPLCard(context, pl, cropProvider),
+          ),
 
         const SizedBox(height: 40),
       ],
@@ -466,7 +494,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     String highestYieldText,
     CropProvider cropProvider,
   ) {
-    if (mostProfitable == null && highestYielding == null) return const SizedBox.shrink();
+    if (mostProfitable == null && highestYielding == null) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -543,7 +573,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.workspace_premium, color: Colors.orange, size: 18),
+                              Icon(
+                                Icons.workspace_premium,
+                                color: Colors.orange,
+                                size: 18,
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'زیادہ پیداوار',
@@ -586,16 +620,22 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     );
   }
 
-  Widget _buildCropPLCard(BuildContext context, CropPL pl, CropProvider cropProvider) {
+  Widget _buildCropPLCard(
+    BuildContext context,
+    CropPL pl,
+    CropProvider cropProvider,
+  ) {
     final season = pl.details.cropSeason;
-    final cropNameUrdu = cropProvider.predefinedCrops[season.cropName] ?? season.cropName;
+    final cropNameUrdu =
+        cropProvider.predefinedCrops[season.cropName] ?? season.cropName;
     final cropNet = pl.net;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: cropNet >= 0 ? Colors.green.shade50 : Colors.red.shade50,
+          backgroundColor:
+              cropNet >= 0 ? Colors.green.shade50 : Colors.red.shade50,
           child: Icon(
             cropNet >= 0 ? Icons.trending_up : Icons.trending_down,
             color: cropNet >= 0 ? Colors.green : Colors.red,
@@ -645,10 +685,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             ),
           ],
         ),
-        children: [
-          const Divider(),
-          _buildCropDetails(context, pl),
-        ],
+        children: [const Divider(), _buildCropDetails(context, pl)],
       ),
     );
   }
@@ -660,7 +697,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       decoration: BoxDecoration(
         color: isActive ? Colors.blue.shade50 : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isActive ? Colors.blue.shade200 : Colors.grey.shade300),
+        border: Border.all(
+          color: isActive ? Colors.blue.shade200 : Colors.grey.shade300,
+        ),
       ),
       child: Text(
         isActive ? 'کاشت شدہ' : 'کٹائی شدہ',
@@ -674,7 +713,12 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     );
   }
 
-  Widget _buildMiniStat(String label, int amount, Color color, {bool isBold = false}) {
+  Widget _buildMiniStat(
+    String label,
+    int amount,
+    Color color, {
+    bool isBold = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -686,7 +730,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             fontFamily: 'Jameel Noori Nastaleeq',
           ),
         ),
-        DigitText(Money(amount).format(),
+        DigitText(
+          Money(amount).format(),
           style: TextStyle(
             fontSize: 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
@@ -759,7 +804,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                             ),
                           ),
                           Text(
-                            DateFormat('yyyy-MM-dd').format(DateTime.parse(h.date)),
+                            DateFormat(
+                              'yyyy-MM-dd',
+                            ).format(DateTime.parse(h.date)),
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 12,
@@ -878,7 +925,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                           ),
                         ),
                       Text(
-                        DateFormat('yyyy-MM-dd').format(DateTime.parse(act.date)),
+                        DateFormat(
+                          'yyyy-MM-dd',
+                        ).format(DateTime.parse(act.date)),
                         style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 11,
@@ -887,7 +936,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       ),
                     ],
                   ),
-                  trailing: DigitText(Money(actwd.expenseAmountPaisa ?? 0).format(),
+                  trailing: DigitText(
+                    Money(actwd.expenseAmountPaisa ?? 0).format(),
                     style: const TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
@@ -950,18 +1000,27 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
               else ...[
                 // List of categories progress bars
                 ...sortedCategories.map((entry) {
-                  final catUrdu = expenseProvider.expenseCategories[entry.key] ?? entry.key;
-                  final percentage = totalExpenses > 0 ? (entry.value / totalExpenses) : 0.0;
-                  return _buildCategoryProgressRow(catUrdu, entry.value, percentage, theme.primaryColor);
+                  final catUrdu =
+                      expenseProvider.expenseCategories[entry.key] ?? entry.key;
+                  final percentage =
+                      totalExpenses > 0 ? (entry.value / totalExpenses) : 0.0;
+                  return _buildCategoryProgressRow(
+                    catUrdu,
+                    entry.value,
+                    percentage,
+                    theme.primaryColor,
+                  );
                 }),
-                
+
                 // Show Indirect/General expenses if they exist
                 if (indirectExpenses > 0) ...[
                   const Divider(height: 24),
                   _buildCategoryProgressRow(
                     'غیر فصلاتی / متفرق اخراجات (Indirect)',
                     indirectExpenses,
-                    totalExpenses > 0 ? (indirectExpenses / totalExpenses) : 0.0,
+                    totalExpenses > 0
+                        ? (indirectExpenses / totalExpenses)
+                        : 0.0,
                     Colors.grey.shade600,
                   ),
                   const SizedBox(height: 8),
@@ -1086,12 +1145,17 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
     for (var theka in thekas) {
       totalThekaAmount += theka.totalAmountPaisa;
-      farmTotal[theka.farmId] = (farmTotal[theka.farmId] ?? 0) + theka.totalAmountPaisa;
+      farmTotal[theka.farmId] =
+          (farmTotal[theka.farmId] ?? 0) + theka.totalAmountPaisa;
 
-      final seasonName = theka.durationDetails?.isNotEmpty == true 
-          ? theka.durationDetails! 
-          : (theka.durationType == 'Yearly' ? 'سالانہ ٹھیکہ' : 'دیگر ٹھیکہ');
-      seasonalTotal[seasonName] = (seasonalTotal[seasonName] ?? 0) + theka.totalAmountPaisa;
+      final seasonName =
+          theka.durationDetails?.isNotEmpty == true
+              ? theka.durationDetails!
+              : (theka.durationType == 'Yearly'
+                  ? 'سالانہ ٹھیکہ'
+                  : 'دیگر ٹھیکہ');
+      seasonalTotal[seasonName] =
+          (seasonalTotal[seasonName] ?? 0) + theka.totalAmountPaisa;
 
       final insts = thekaProvider.getInstallmentsForTheka(theka.id!);
       totalInstallments += insts.length;
@@ -1106,14 +1170,17 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         }
 
         totalPaid += inst.paidAmountPaisa;
-        farmPaid[theka.farmId] = (farmPaid[theka.farmId] ?? 0) + inst.paidAmountPaisa;
-        seasonalPaid[seasonName] = (seasonalPaid[seasonName] ?? 0) + inst.paidAmountPaisa;
+        farmPaid[theka.farmId] =
+            (farmPaid[theka.farmId] ?? 0) + inst.paidAmountPaisa;
+        seasonalPaid[seasonName] =
+            (seasonalPaid[seasonName] ?? 0) + inst.paidAmountPaisa;
 
         // Group by year of payment (if paid) or due date (if pending)
-        final String yearStr = inst.paidDate != null 
-            ? inst.paidDate!.split('-').first
-            : inst.dueDate.split('-').first;
-        
+        final String yearStr =
+            inst.paidDate != null
+                ? inst.paidDate!.split('-').first
+                : inst.dueDate.split('-').first;
+
         yearlyTotal[yearStr] = (yearlyTotal[yearStr] ?? 0) + inst.amountPaisa;
         yearlyPaid[yearStr] = (yearlyPaid[yearStr] ?? 0) + inst.paidAmountPaisa;
       }
@@ -1127,7 +1194,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         // 1. Overview Summary Card
         Card(
           elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           color: Colors.brown.shade800,
           child: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -1146,9 +1215,21 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildPLSummaryCol('کل ٹھیکہ رقم', totalThekaAmount, Colors.white),
-                    _buildPLSummaryCol('کل ادا شدہ', totalPaid, Colors.greenAccent),
-                    _buildPLSummaryCol('کل واجب الادا', totalPending, Colors.orangeAccent),
+                    _buildPLSummaryCol(
+                      'کل ٹھیکہ رقم',
+                      totalThekaAmount,
+                      Colors.white,
+                    ),
+                    _buildPLSummaryCol(
+                      'کل ادا شدہ',
+                      totalPaid,
+                      Colors.greenAccent,
+                    ),
+                    _buildPLSummaryCol(
+                      'کل واجب الادا',
+                      totalPending,
+                      Colors.orangeAccent,
+                    ),
                   ],
                 ),
               ],
@@ -1159,7 +1240,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
         // 2. Installments Status Card
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1179,10 +1262,26 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatCol('کل اقساط', totalInstallments, Colors.black87),
-                    _buildStatCol('مکمل ادا شدہ', paidInstallments, Colors.green),
-                    _buildStatCol('جزوی ادا شدہ', partialInstallments, Colors.orange),
-                    _buildStatCol('غیر ادا شدہ', pendingInstallments, Colors.red),
+                    _buildStatCol(
+                      'کل اقساط',
+                      totalInstallments,
+                      Colors.black87,
+                    ),
+                    _buildStatCol(
+                      'مکمل ادا شدہ',
+                      paidInstallments,
+                      Colors.green,
+                    ),
+                    _buildStatCol(
+                      'جزوی ادا شدہ',
+                      partialInstallments,
+                      Colors.orange,
+                    ),
+                    _buildStatCol(
+                      'غیر ادا شدہ',
+                      pendingInstallments,
+                      Colors.red,
+                    ),
                   ],
                 ),
               ],
@@ -1193,7 +1292,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
         // 3. Farm-wise Theka Table
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1219,16 +1320,53 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                   children: [
                     const TableRow(
                       children: [
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('زمین کا نام', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('کل ٹھیکہ', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('اندازہ ادا شدہ', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('باقی رقم', style: TextStyle(fontWeight: FontWeight.bold)))),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'زمین کا نام',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'کل ٹھیکہ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'اندازہ ادا شدہ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'باقی رقم',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     ...farmTotal.entries.map((entry) {
                       final farm = farmProvider.farms.firstWhere(
                         (f) => f.id == entry.key,
-                        orElse: () => Farm(name: 'نامعلوم فارم', totalArea: 0.0, createdAt: ''),
+                        orElse:
+                            () => Farm(
+                              name: 'نامعلوم فارم',
+                              totalArea: 0.0,
+                              createdAt: '',
+                            ),
                       );
                       final fTotal = entry.value;
                       final fPaid = farmPaid[entry.key] ?? 0;
@@ -1236,10 +1374,44 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
                       return TableRow(
                         children: [
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(farm.name))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(fTotal).format()))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(fPaid).format(), style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(fPending).format(), style: const TextStyle(color: Colors.red)))),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Text(farm.name),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(Money(fTotal).format()),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(
+                                Money(fPaid).format(),
+                                style: const TextStyle(color: Colors.green),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(
+                                Money(fPending).format(),
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ),
                         ],
                       );
                     }),
@@ -1253,7 +1425,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
         // 4. Seasonal Theka Table
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1279,10 +1453,42 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                   children: [
                     const TableRow(
                       children: [
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('سلسلہ/فصل', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('کل ٹھیکہ', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('ادا شدہ', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('باقی رقم', style: TextStyle(fontWeight: FontWeight.bold)))),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'سلسلہ/فصل',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'کل ٹھیکہ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'ادا شدہ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'باقی رقم',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     ...seasonalTotal.entries.map((entry) {
@@ -1292,10 +1498,44 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
                       return TableRow(
                         children: [
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(entry.key))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(sTotal).format()))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(sPaid).format(), style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(sPending).format(), style: const TextStyle(color: Colors.red)))),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Text(entry.key),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(Money(sTotal).format()),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(
+                                Money(sPaid).format(),
+                                style: const TextStyle(color: Colors.green),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(
+                                Money(sPending).format(),
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ),
                         ],
                       );
                     }),
@@ -1309,7 +1549,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
         // 5. Yearly Theka Table
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1335,10 +1577,42 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                   children: [
                     const TableRow(
                       children: [
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('سال', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('کل ٹھیکہ', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('ادا شدہ', style: TextStyle(fontWeight: FontWeight.bold)))),
-                        TableCell(child: Padding(padding: EdgeInsets.symmetric(vertical: 8.0), child: Text('باقی رقم', style: TextStyle(fontWeight: FontWeight.bold)))),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'سال',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'کل ٹھیکہ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'ادا شدہ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        TableCell(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'باقی رقم',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     ...yearlyTotal.entries.map((entry) {
@@ -1348,10 +1622,44 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
                       return TableRow(
                         children: [
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${entry.key}ء'))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(yTotal).format()))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(yPaid).format(), style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(yPending).format(), style: const TextStyle(color: Colors.red)))),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Text('${entry.key}ء'),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(Money(yTotal).format()),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(
+                                Money(yPaid).format(),
+                                style: const TextStyle(color: Colors.green),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: DigitText(
+                                Money(yPending).format(),
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ),
                         ],
                       );
                     }),
@@ -1368,9 +1676,13 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
   Widget _buildPLSummaryCol(String label, int amount, Color textCol) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
         const SizedBox(height: 6),
-        DigitText(Money(amount).format(),
+        DigitText(
+          Money(amount).format(),
           style: TextStyle(
             color: textCol,
             fontSize: 16,
@@ -1424,24 +1736,28 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     for (var item in ushrRecords) {
       final u = item.ushrRecord;
       totalUshrAmount += u.ushrAmountPaisa;
-      
+
       // Same formula as UshrRecord.remainingBalancePaisa: crop-paid value is
       // qty x rate, rounded to the paisa. Types only — inclusion logic unchanged.
       final paidCropPaisa = (u.qtyPaid * u.ratePerUnitPaisa).round();
       totalPaidUshr += u.cashPaidPaisa + paidCropPaisa;
       ushrPaidInCropPaisa += paidCropPaisa;
       ushrPaidInCashPaisa += u.cashPaidPaisa;
-      
+
       totalPendingUshr += u.remainingBalancePaisa;
 
-      farmUshr[item.farmName] = (farmUshr[item.farmName] ?? 0) + u.ushrAmountPaisa;
+      farmUshr[item.farmName] =
+          (farmUshr[item.farmName] ?? 0) + u.ushrAmountPaisa;
 
-      final cropNameUrdu = cropProvider.predefinedCrops[item.cropName] ?? item.cropName;
-      seasonalUshr[cropNameUrdu] = (seasonalUshr[cropNameUrdu] ?? 0) + u.ushrAmountPaisa;
+      final cropNameUrdu =
+          cropProvider.predefinedCrops[item.cropName] ?? item.cropName;
+      seasonalUshr[cropNameUrdu] =
+          (seasonalUshr[cropNameUrdu] ?? 0) + u.ushrAmountPaisa;
 
-      final String yearStr = u.datePaid != null
-          ? u.datePaid!.split('-').first
-          : DateTime.now().year.toString();
+      final String yearStr =
+          u.datePaid != null
+              ? u.datePaid!.split('-').first
+              : DateTime.now().year.toString();
       yearlyUshr[yearStr] = (yearlyUshr[yearStr] ?? 0) + u.ushrAmountPaisa;
     }
 
@@ -1450,7 +1766,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       children: [
         Card(
           elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           color: Colors.green.shade800,
           child: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -1469,17 +1787,41 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildPLSummaryCol('کل عشر رقم', totalUshrAmount, Colors.white),
-                    _buildPLSummaryCol('کل ادا شدہ عشر', totalPaidUshr, Colors.greenAccent),
-                    _buildPLSummaryCol('کل واجب الادا عشر', totalPendingUshr, Colors.orangeAccent),
+                    _buildPLSummaryCol(
+                      'کل عشر رقم',
+                      totalUshrAmount,
+                      Colors.white,
+                    ),
+                    _buildPLSummaryCol(
+                      'کل ادا شدہ عشر',
+                      totalPaidUshr,
+                      Colors.greenAccent,
+                    ),
+                    _buildPLSummaryCol(
+                      'کل واجب الادا عشر',
+                      totalPendingUshr,
+                      Colors.orangeAccent,
+                    ),
                   ],
                 ),
                 const Divider(color: Colors.white24, height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('ادا شدہ بجنس (Crop): Rs. ${_formatPaisaNumber(ushrPaidInCropPaisa)}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                    Text('ادا شدہ بنقد (Cash): Rs. ${_formatPaisaNumber(ushrPaidInCashPaisa)}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(
+                      'ادا شدہ بجنس (Crop): Rs. ${_formatPaisaNumber(ushrPaidInCropPaisa)}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      'ادا شدہ بنقد (Cash): Rs. ${_formatPaisaNumber(ushrPaidInCashPaisa)}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -1489,7 +1831,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         const SizedBox(height: 16),
 
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1516,13 +1860,20 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         TableCell(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text('فارم کا نام', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              'فارم کا نام',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                         TableCell(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text('عشر رقم (روپے)', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.left),
+                            child: Text(
+                              'عشر رقم (روپے)',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.left,
+                            ),
                           ),
                         ),
                       ],
@@ -1532,14 +1883,21 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         children: [
                           TableCell(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
                               child: Text(entry.key),
                             ),
                           ),
                           TableCell(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text('Rs. ${_formatPaisaNumber(entry.value)}', textAlign: TextAlign.left),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Text(
+                                'Rs. ${_formatPaisaNumber(entry.value)}',
+                                textAlign: TextAlign.left,
+                              ),
                             ),
                           ),
                         ],
@@ -1554,7 +1912,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         const SizedBox(height: 16),
 
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1581,13 +1941,20 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         TableCell(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text('فصل کا نام', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              'فصل کا نام',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                         TableCell(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text('عشر رقم (روپے)', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.left),
+                            child: Text(
+                              'عشر رقم (روپے)',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.left,
+                            ),
                           ),
                         ),
                       ],
@@ -1597,14 +1964,21 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         children: [
                           TableCell(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
                               child: Text(entry.key),
                             ),
                           ),
                           TableCell(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text('Rs. ${_formatPaisaNumber(entry.value)}', textAlign: TextAlign.left),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Text(
+                                'Rs. ${_formatPaisaNumber(entry.value)}',
+                                textAlign: TextAlign.left,
+                              ),
                             ),
                           ),
                         ],
@@ -1619,7 +1993,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
         const SizedBox(height: 16),
 
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1646,13 +2022,20 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         TableCell(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text('سال', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              'سال',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                         TableCell(
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: Text('عشر رقم (روپے)', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.left),
+                            child: Text(
+                              'عشر رقم (روپے)',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.left,
+                            ),
                           ),
                         ),
                       ],
@@ -1662,14 +2045,21 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         children: [
                           TableCell(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
                               child: Text(entry.key),
                             ),
                           ),
                           TableCell(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text('Rs. ${_formatPaisaNumber(entry.value)}', textAlign: TextAlign.left),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
+                              ),
+                              child: Text(
+                                'Rs. ${_formatPaisaNumber(entry.value)}',
+                                textAlign: TextAlign.left,
+                              ),
                             ),
                           ),
                         ],
@@ -1691,13 +2081,14 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       children: [
         Text(
           val.toString(),
-          style: TextStyle(color: valColor, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            color: valColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.grey, fontSize: 12),
-        ),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
       ],
     );
   }

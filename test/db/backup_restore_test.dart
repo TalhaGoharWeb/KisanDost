@@ -124,8 +124,7 @@ void main() {
         expect(info.hasSidecar, isTrue);
         expect(info.sizeBytes, greaterThan(0));
         expect(info.name, startsWith('kisandost_backup_'));
-        expect(info.name,
-            endsWith('_v${DatabaseHelper.schemaVersion}.db'));
+        expect(info.name, endsWith('_v${DatabaseHelper.schemaVersion}.db'));
 
         // Throws on any problem.
         await backups.verifyBackup(info.path);
@@ -169,10 +168,7 @@ void main() {
         // before the first. (The orphan copy gets "now" as its mtime, so
         // its position is not asserted.)
         final names = list.map((b) => b.name).toList();
-        expect(
-          names.indexOf(second.name),
-          lessThan(names.indexOf(first.name)),
-        );
+        expect(names.indexOf(second.name), lessThan(names.indexOf(first.name)));
         final orphan = list.firstWhere(
           (b) => b.name == 'kisandost_backup_orphan.db',
         );
@@ -348,12 +344,11 @@ void main() {
         DatabaseHelper.schemaVersion,
       );
       // The v13 party tables were created by the forward migration too.
-      final allTables = (await db.rawQuery(
-              "SELECT name FROM sqlite_master WHERE type = 'table'"))
-          .map((r) => r['name'] as String)
-          .toSet();
-      expect(allTables,
-          containsAll(['parties', 'party_ledger_entries']));
+      final allTables =
+          (await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type = 'table'",
+          )).map((r) => r['name'] as String).toSet();
+      expect(allTables, containsAll(['parties', 'party_ledger_entries']));
       final cols =
           (await db.rawQuery(
             'PRAGMA table_info(expenses)',

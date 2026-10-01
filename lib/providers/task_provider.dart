@@ -34,7 +34,10 @@ class TaskItem {
       id: map['id'],
       title: map['title'],
       description: map['description'],
-      snoozedUntil: map['snoozed_until'] != null ? DateTime.parse(map['snoozed_until']) : null,
+      snoozedUntil:
+          map['snoozed_until'] != null
+              ? DateTime.parse(map['snoozed_until'])
+              : null,
       dateTime: DateTime.parse(map['date_time']),
       isCompleted: map['is_completed'] == 1,
       recurrence: map['recurrence'] ?? 'none',
@@ -102,10 +105,16 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addTask(String title, String? description, DateTime dateTime, {String recurrence = 'none', String reminders = '0'}) async {
+  Future<void> addTask(
+    String title,
+    String? description,
+    DateTime dateTime, {
+    String recurrence = 'none',
+    String reminders = '0',
+  }) async {
     final db = await _db();
     int id = 0;
-    
+
     try {
       id = await db.insert('tasks', {
         'title': title,
@@ -117,7 +126,9 @@ class TaskProvider with ChangeNotifier {
         'reminders': reminders,
       });
     } catch (e) {
-      debugPrint('Error inserting task: $e. Attempting self-healing database fix.');
+      debugPrint(
+        'Error inserting task: $e. Attempting self-healing database fix.',
+      );
       try {
         await db.execute("ALTER TABLE tasks ADD COLUMN description TEXT");
       } catch (_) {}
@@ -166,7 +177,7 @@ class TaskProvider with ChangeNotifier {
   Future<void> toggleTaskCompletion(int id, bool currentStatus) async {
     final db = await _db();
     final newStatus = !currentStatus;
-    
+
     await db.update(
       'tasks',
       {
@@ -195,7 +206,7 @@ class TaskProvider with ChangeNotifier {
         break;
       }
     }
-    
+
     if (toggledTask != null) {
       if (newStatus) {
         await NotificationService().cancelTaskNotifications(id);
@@ -205,7 +216,14 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateTask(int id, String title, String? description, DateTime dateTime, {String recurrence = 'none', String reminders = '0'}) async {
+  Future<void> updateTask(
+    int id,
+    String title,
+    String? description,
+    DateTime dateTime, {
+    String recurrence = 'none',
+    String reminders = '0',
+  }) async {
     final db = await _db();
 
     final values = {
@@ -217,14 +235,11 @@ class TaskProvider with ChangeNotifier {
       'reminders': reminders,
     };
     try {
-      await db.update(
-        'tasks',
-        values,
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      await db.update('tasks', values, where: 'id = ?', whereArgs: [id]);
     } catch (e) {
-      debugPrint('Error updating task: $e. Attempting self-healing database fix.');
+      debugPrint(
+        'Error updating task: $e. Attempting self-healing database fix.',
+      );
       try {
         await db.execute("ALTER TABLE tasks ADD COLUMN description TEXT");
       } catch (_) {}
@@ -232,12 +247,7 @@ class TaskProvider with ChangeNotifier {
         await db.execute("ALTER TABLE tasks ADD COLUMN snoozed_until TEXT");
       } catch (_) {}
       try {
-        await db.update(
-          'tasks',
-          values,
-          where: 'id = ?',
-          whereArgs: [id],
-        );
+        await db.update('tasks', values, where: 'id = ?', whereArgs: [id]);
       } catch (retryError) {
         debugPrint('Self-healing database fix failed on update: $retryError');
       }
@@ -270,11 +280,7 @@ class TaskProvider with ChangeNotifier {
   /// unchanged on purpose.
   Future<void> deleteTask(int id) async {
     final db = await _db();
-    final existing = await db.query(
-      'tasks',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final existing = await db.query('tasks', where: 'id = ?', whereArgs: [id]);
     await db.update(
       'tasks',
       {'deleted_at': DateTime.now().toIso8601String()},
@@ -286,9 +292,7 @@ class TaskProvider with ChangeNotifier {
       table: 'tasks',
       rowId: id,
       action: AuditService.softDelete,
-      details: existing.isEmpty
-          ? 'کام حذف'
-          : 'کام: ${existing.first['title']}',
+      details: existing.isEmpty ? 'کام حذف' : 'کام: ${existing.first['title']}',
     );
 
     _tasks.removeWhere((t) => t.id == id);

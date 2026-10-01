@@ -34,8 +34,7 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
     setState(() => _loading = true);
     final provider = context.read<BataiProvider>();
     final summary = await provider.getAgreementSummary(widget.agreementId);
-    final settlements =
-        await provider.getSettlements(widget.agreementId);
+    final settlements = await provider.getSettlements(widget.agreementId);
     if (!mounted) return;
     setState(() {
       _summary = summary;
@@ -49,49 +48,54 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
     final summary = _summary;
     return Scaffold(
       appBar: AppBar(title: const Text('بٹائی معاہدے کی تفصیل')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : summary == null
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : summary == null
               ? const Center(child: Text('معاہدہ نہیں ملا۔'))
               : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(12),
-                    children: [
-                      _termsCard(summary),
-                      const SizedBox(height: 12),
-                      _totalsCard(summary.agreement),
-                      const SizedBox(height: 12),
-                      _actionsRow(summary),
-                      const SizedBox(height: 16),
-                      const Text('چکتائیاں',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      if (_settlements.isEmpty)
-                        const Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text(
-                              'ابھی کوئی چکتائی درج نہیں۔ فصل بکنے پر "حساب چکتا کریں" دبائیں۔',
-                              style: TextStyle(fontSize: 15),
-                            ),
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: [
+                    _termsCard(summary),
+                    const SizedBox(height: 12),
+                    _totalsCard(summary.agreement),
+                    const SizedBox(height: 12),
+                    _actionsRow(summary),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'چکتائیاں',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_settlements.isEmpty)
+                      const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                            'ابھی کوئی چکتائی درج نہیں۔ فصل بکنے پر "حساب چکتا کریں" دبائیں۔',
+                            style: TextStyle(fontSize: 15),
                           ),
-                        )
-                      else
-                        for (final s in _settlements) _settlementCard(s),
-                      const SizedBox(height: 80),
-                    ],
-                  ),
+                        ),
+                      )
+                    else
+                      for (final s in _settlements) _settlementCard(s),
+                    const SizedBox(height: 80),
+                  ],
                 ),
-      floatingActionButton: summary != null &&
-              summary.agreement.status != BataiStatus.cancelled
-          ? FloatingActionButton.extended(
-              onPressed: () => _openSettleDialog(summary.agreement),
-              icon: const Icon(Icons.calculate_outlined),
-              label: const Text('حساب چکتا کریں'),
-            )
-          : null,
+              ),
+      floatingActionButton:
+          summary != null && summary.agreement.status != BataiStatus.cancelled
+              ? FloatingActionButton.extended(
+                onPressed: () => _openSettleDialog(summary.agreement),
+                icon: const Icon(Icons.calculate_outlined),
+                label: const Text('حساب چکتا کریں'),
+              )
+              : null,
     );
   }
 
@@ -115,7 +119,9 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
                   child: Text(
                     s.partyName ?? 'نامعلوم فریق',
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 BataiStatusChip(status: a.status),
@@ -123,8 +129,10 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
             ),
             const Divider(height: 24),
             _row('آپ کا کردار', farmerRoleUrdu(a.farmerRole)),
-            _row('حصے',
-                'مالک ${a.ownerSharePercent}٪ / مزارع ${a.cultivatorSharePercent}٪'),
+            _row(
+              'حصے',
+              'مالک ${a.ownerSharePercent}٪ / مزارع ${a.cultivatorSharePercent}٪',
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(
@@ -137,10 +145,18 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
               ),
             ),
             if (place.isNotEmpty) _row('زمین / فصل', place),
-            _row('اخراجات کی تقسیم',
-                (a.expenseNote?.isNotEmpty ?? false) ? a.expenseNote! : 'درج نہیں'),
-            _row('مدت',
-                a.endDate == null ? '${a.startDate} سے جاری' : '${a.startDate} تا ${a.endDate}'),
+            _row(
+              'اخراجات کی تقسیم',
+              (a.expenseNote?.isNotEmpty ?? false)
+                  ? a.expenseNote!
+                  : 'درج نہیں',
+            ),
+            _row(
+              'مدت',
+              a.endDate == null
+                  ? '${a.startDate} سے جاری'
+                  : '${a.startDate} تا ${a.endDate}',
+            ),
             if (a.notes?.isNotEmpty ?? false) _row('نوٹ', a.notes!),
           ],
         ),
@@ -156,14 +172,16 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
         children: [
           SizedBox(
             width: 130,
-            child: Text(label,
-                style:
-                    TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w500)),
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
@@ -174,9 +192,10 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
     var total = 0, mine = 0;
     for (final s in _settlements) {
       total += s.totalPaisa;
-      mine += a.farmerRole == FarmerRole.landowner
-          ? s.ownerPaisa
-          : s.cultivatorPaisa;
+      mine +=
+          a.farmerRole == FarmerRole.landowner
+              ? s.ownerPaisa
+              : s.cultivatorPaisa;
     }
     return Card(
       elevation: 2,
@@ -189,11 +208,14 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('اب تک کل چکتائی',
-                      style: TextStyle(fontSize: 14)),
-                  DigitText(Money(total).format(),
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('اب تک کل چکتائی', style: TextStyle(fontSize: 14)),
+                  DigitText(
+                    Money(total).format(),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -201,13 +223,18 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('آپ کا موصول شدہ حصہ',
-                      style: TextStyle(fontSize: 14)),
-                  DigitText(Money(mine).format(),
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade800)),
+                  const Text(
+                    'آپ کا موصول شدہ حصہ',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  DigitText(
+                    Money(mine).format(),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -226,36 +253,39 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
       children: [
         PopupMenuButton<BataiStatus>(
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade400),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('حیثیت بدلیں',
-                style: TextStyle(fontSize: 15)),
+            child: const Text('حیثیت بدلیں', style: TextStyle(fontSize: 15)),
           ),
           onSelected: (status) => _changeStatus(a.id!, status),
-          itemBuilder: (_) => [
-            for (final st in BataiStatus.values)
-              PopupMenuItem(
-                  value: st, child: Text(bataiStatusUrdu(st))),
-          ],
+          itemBuilder:
+              (_) => [
+                for (final st in BataiStatus.values)
+                  PopupMenuItem(value: st, child: Text(bataiStatusUrdu(st))),
+              ],
         ),
         OutlinedButton(
-          onPressed: termsLocked
-              ? () => ScaffoldMessenger.of(context).showSnackBar(
+          onPressed:
+              termsLocked
+                  ? () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text(
-                            'چکتائی ہو چکی ہے — شرائط تبدیل نہیں ہو سکتیں۔')),
+                      content: Text(
+                        'چکتائی ہو چکی ہے — شرائط تبدیل نہیں ہو سکتیں۔',
+                      ),
+                    ),
                   )
-              : () => _openEditForm(s),
+                  : () => _openEditForm(s),
           child: const Text('شرائط میں ترمیم'),
         ),
         TextButton(
           onPressed: () => _delete(a.id!),
-          child: const Text(Strings.delete,
-              style: TextStyle(color: Colors.red)),
+          child: const Text(
+            Strings.delete,
+            style: TextStyle(color: Colors.red),
+          ),
         ),
       ],
     );
@@ -276,27 +306,35 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
                   child: Text(
                     '${Money(s.totalPaisa).format()} • ${s.settleDate}',
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            Text('مالک: ${Money(s.ownerPaisa).format()}',
-                style: const TextStyle(fontSize: 14)),
-            Text('مزارع: ${Money(s.cultivatorPaisa).format()}',
-                style: const TextStyle(fontSize: 14)),
+            Text(
+              'مالک: ${Money(s.ownerPaisa).format()}',
+              style: const TextStyle(fontSize: 14),
+            ),
+            Text(
+              'مزارع: ${Money(s.cultivatorPaisa).format()}',
+              style: const TextStyle(fontSize: 14),
+            ),
             if (link != null) ...[
               const SizedBox(height: 4),
-              Text(link,
-                  style:
-                      TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              Text(
+                link,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
             ],
             if (s.note?.isNotEmpty ?? false) ...[
               const SizedBox(height: 4),
-              Text(s.note!,
-                  style:
-                      TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              Text(
+                s.note!,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
             ],
           ],
         ),
@@ -318,9 +356,10 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
     if (s.saleId != null) {
       for (final sale in hp.sales) {
         if (sale.id == s.saleId) {
-          final buyer = (sale.buyerName?.isNotEmpty ?? false)
-              ? sale.buyerName!
-              : 'نامعلوم خریدار';
+          final buyer =
+              (sale.buyerName?.isNotEmpty ?? false)
+                  ? sale.buyerName!
+                  : 'نامعلوم خریدار';
           return 'فروخت: $buyer — ${Money(sale.totalAmountPaisa).format()} (${sale.date})';
         }
       }
@@ -343,8 +382,9 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
       if (mounted) _load();
     } on BataiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -352,10 +392,11 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
   Future<void> _openEditForm(BataiAgreementSummary s) async {
     final saved = await showDialog<bool>(
       context: context,
-      builder: (_) => BataiAgreementDialog(
-        existing: s,
-        settlementCount: _settlements.length,
-      ),
+      builder:
+          (_) => BataiAgreementDialog(
+            existing: s,
+            settlementCount: _settlements.length,
+          ),
     );
     if (saved == true && mounted) _load();
   }
@@ -363,21 +404,24 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
   Future<void> _delete(int id) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('معاہدہ حذف کریں؟'),
-        content: const Text('یہ معاہدہ مستقل طور پر حذف ہو جائے گا۔'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('منسوخ کریں'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('معاہدہ حذف کریں؟'),
+            content: const Text('یہ معاہدہ مستقل طور پر حذف ہو جائے گا۔'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('منسوخ کریں'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  Strings.delete,
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child:
-                const Text(Strings.delete, style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
     if (confirm != true || !mounted) return;
     try {
@@ -385,8 +429,9 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
       if (mounted) Navigator.pop(context);
     } on BataiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -449,7 +494,8 @@ class _SettleDialogState extends State<_SettleDialog> {
       lastDate: DateTime(2100),
     );
     if (date != null) {
-      _dateCtrl.text = '${date.year.toString().padLeft(4, '0')}-'
+      _dateCtrl.text =
+          '${date.year.toString().padLeft(4, '0')}-'
           '${date.month.toString().padLeft(2, '0')}-'
           '${date.day.toString().padLeft(2, '0')}';
     }
@@ -459,24 +505,27 @@ class _SettleDialogState extends State<_SettleDialog> {
     try {
       final total = Money.parse(_totalCtrl.text).paisa;
       await context.read<BataiProvider>().settleAgreement(
-            agreementId: widget.agreement.id!,
-            totalPaisa: total,
-            harvestId: _harvestId,
-            saleId: _saleId,
-            settleDate: _dateCtrl.text.trim(),
-            note: _noteCtrl.text,
-          );
+        agreementId: widget.agreement.id!,
+        totalPaisa: total,
+        harvestId: _harvestId,
+        saleId: _saleId,
+        settleDate: _dateCtrl.text.trim(),
+        note: _noteCtrl.text,
+      );
       if (mounted) Navigator.pop(context, true);
     } on BataiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } on Object catch (e) {
       // Money.parse throws MoneyParseException with an Urdu message.
       if (mounted) {
         final msg = e.toString().replaceFirst('MoneyParseException: ', '');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
     }
   }
@@ -495,8 +544,9 @@ class _SettleDialogState extends State<_SettleDialog> {
             children: [
               TextField(
                 controller: _totalCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'کل رقم (روپے) *',
                   hintText: 'مثلاً 125000',
@@ -511,31 +561,39 @@ class _SettleDialogState extends State<_SettleDialog> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.green.shade200),
                 ),
-                child: _preview == null
-                    ? const Text('رقم لکھیں تو حصے یہاں نظر آئیں گے',
-                        style: TextStyle(fontSize: 14))
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                child:
+                    _preview == null
+                        ? const Text(
+                          'رقم لکھیں تو حصے یہاں نظر آئیں گے',
+                          style: TextStyle(fontSize: 14),
+                        )
+                        : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
                               'مالک: ${Money(_preview!.ownerPaisa).format()}',
                               style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold)),
-                          Text(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
                               'مزارع: ${Money(_preview!.cultivatorPaisa).format()}',
                               style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          Text(
-                            'باقی ماندہ پیسے (0–99) بڑے حصے میں شامل ہیں — برابری پر مالک کو ملتے ہیں۔',
-                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'باقی ماندہ پیسے (0–99) بڑے حصے میں شامل ہیں — برابری پر مالک کو ملتے ہیں۔',
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade700),
-                          ),
-                        ],
-                      ),
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
@@ -546,12 +604,15 @@ class _SettleDialogState extends State<_SettleDialog> {
                 ),
                 items: [
                   const DropdownMenuItem<int?>(
-                      value: null, child: Text('— کوئی نہیں —')),
+                    value: null,
+                    child: Text('— کوئی نہیں —'),
+                  ),
                   for (final h in hp.harvests)
                     DropdownMenuItem<int?>(
                       value: h.harvest.id,
                       child: Text(
-                          '${h.cropName} — ${h.harvest.quantity} ${h.harvest.unit} (${h.harvest.date})'),
+                        '${h.cropName} — ${h.harvest.quantity} ${h.harvest.unit} (${h.harvest.date})',
+                      ),
                     ),
                 ],
                 onChanged: (v) => setState(() => _harvestId = v),
@@ -565,12 +626,15 @@ class _SettleDialogState extends State<_SettleDialog> {
                 ),
                 items: [
                   const DropdownMenuItem<int?>(
-                      value: null, child: Text('— کوئی نہیں —')),
+                    value: null,
+                    child: Text('— کوئی نہیں —'),
+                  ),
                   for (final s in hp.sales)
                     DropdownMenuItem<int?>(
                       value: s.id,
                       child: Text(
-                          '${(s.buyerName?.isNotEmpty ?? false) ? s.buyerName! : 'نامعلوم خریدار'} — ${Money(s.totalAmountPaisa).format()} (${s.date})'),
+                        '${(s.buyerName?.isNotEmpty ?? false) ? s.buyerName! : 'نامعلوم خریدار'} — ${Money(s.totalAmountPaisa).format()} (${s.date})',
+                      ),
                     ),
                 ],
                 onChanged: (v) => setState(() => _saleId = v),

@@ -208,11 +208,7 @@ class ExpenseProvider extends ChangeNotifier {
   /// destructive confirmation. The audit log keeps the record.
   Future<void> permanentDeleteExpense(int id) async {
     await _txn((txn) async {
-      await txn.delete(
-        'expenses',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      await txn.delete('expenses', where: 'id = ?', whereArgs: [id]);
       await AuditService.log(
         txn,
         table: 'expenses',

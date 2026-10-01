@@ -131,20 +131,29 @@ Widget makeHome({
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<TaskProvider>.value(
-          value: FakeTaskProvider(List.of(tasks), fakeError: taskError)),
+        value: FakeTaskProvider(List.of(tasks), fakeError: taskError),
+      ),
       ChangeNotifierProvider<ExpenseProvider>.value(
-          value: FakeExpenseProvider(List.of(expenses))),
+        value: FakeExpenseProvider(List.of(expenses)),
+      ),
       ChangeNotifierProvider<HarvestProvider>.value(
-          value: FakeHarvestProvider(List.of(harvests), List.of(sales))),
+        value: FakeHarvestProvider(List.of(harvests), List.of(sales)),
+      ),
       ChangeNotifierProvider<ThekaProvider>.value(
-          value: FakeThekaProvider(List.of(installments))),
+        value: FakeThekaProvider(List.of(installments)),
+      ),
       ChangeNotifierProvider<CropProvider>.value(
-          value: FakeCropProvider(List.of(crops))),
+        value: FakeCropProvider(List.of(crops)),
+      ),
       ChangeNotifierProvider<FarmProvider>.value(
-          value: FakeFarmProvider(List.of(farms))),
+        value: FakeFarmProvider(List.of(farms)),
+      ),
       ChangeNotifierProvider<PartyProvider>.value(
-          value: FakePartyProvider(
-              receivable: partyReceivable, payable: partyPayable)),
+        value: FakePartyProvider(
+          receivable: partyReceivable,
+          payable: partyPayable,
+        ),
+      ),
     ],
     child: const MaterialApp(home: DashboardScreen()),
   );
@@ -166,18 +175,26 @@ void main() {
       expect(find.text('رقم کی صورتحال'), findsOneWidget);
       expect(find.text('فصلوں کی صورتحال'), findsOneWidget);
       expect(
-          find.text('آج کے لیے کوئی کام شیڈول نہیں ہے — آپ کی ڈائری اپ ٹو ڈیٹ ہے!'),
-          findsOneWidget);
-      expect(find.text('ابھی کوئی لین دین ریکارڈ نہیں — پہلا خرچ لکھ کر شروع کریں۔'),
-          findsOneWidget);
-      expect(find.text('ابھی کوئی فصل درج نہیں — نئے سیزن کی فصل لکھ کر شروع کریں۔'),
-          findsOneWidget);
+        find.text(
+          'آج کے لیے کوئی کام شیڈول نہیں ہے — آپ کی ڈائری اپ ٹو ڈیٹ ہے!',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('ابھی کوئی لین دین ریکارڈ نہیں — پہلا خرچ لکھ کر شروع کریں۔'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('ابھی کوئی فصل درج نہیں — نئے سیزن کی فصل لکھ کر شروع کریں۔'),
+        findsOneWidget,
+      );
       // No zero-amount stats shown on a fresh install.
       expect(find.text(Money(0).format()), findsNothing);
     });
 
-    testWidgets('quick actions and full feature menu are present',
-        (tester) async {
+    testWidgets('quick actions and full feature menu are present', (
+      tester,
+    ) async {
       await tester.pumpWidget(makeHome());
       await tester.pumpAndSettle();
 
@@ -202,8 +219,9 @@ void main() {
       }
     });
 
-    testWidgets('header shows greeting, Urdu date, onboarding line',
-        (tester) async {
+    testWidgets('header shows greeting, Urdu date, onboarding line', (
+      tester,
+    ) async {
       await tester.pumpWidget(makeHome());
       await tester.pumpAndSettle();
 
@@ -214,9 +232,9 @@ void main() {
     });
 
     testWidgets('header shows farm name when farms exist', (tester) async {
-      await tester.pumpWidget(makeHome(farms: [
-        Farm(name: 'چک 12', totalArea: 5, createdAt: 'x'),
-      ]));
+      await tester.pumpWidget(
+        makeHome(farms: [Farm(name: 'چک 12', totalArea: 5, createdAt: 'x')]),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('زمین: چک 12'), findsOneWidget);
@@ -224,15 +242,20 @@ void main() {
   });
 
   group('TODAY home — tasks', () {
-    testWidgets('overdue badge on overdue, today tasks listed, future hidden',
-        (tester) async {
+    testWidgets('overdue badge on overdue, today tasks listed, future hidden', (
+      tester,
+    ) async {
       final now = DateTime.now();
-      await tester.pumpWidget(makeHome(tasks: [
-        task(1, 'پانی لگائیں', now.add(const Duration(hours: 2))),
-        task(2, 'سپرے کریں', now.subtract(const Duration(days: 1))),
-        task(3, 'کھاد ڈالیں', now.add(const Duration(days: 5))),
-        task(4, 'مکمل کام', now.add(const Duration(hours: 1)), done: true),
-      ]));
+      await tester.pumpWidget(
+        makeHome(
+          tasks: [
+            task(1, 'پانی لگائیں', now.add(const Duration(hours: 2))),
+            task(2, 'سپرے کریں', now.subtract(const Duration(days: 1))),
+            task(3, 'کھاد ڈالیں', now.add(const Duration(days: 5))),
+            task(4, 'مکمل کام', now.add(const Duration(hours: 1)), done: true),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('پانی لگائیں'), findsOneWidget);
@@ -245,9 +268,11 @@ void main() {
 
     testWidgets('tapping a task opens the task form', (tester) async {
       final now = DateTime.now();
-      await tester.pumpWidget(makeHome(tasks: [
-        task(1, 'پانی لگائیں', now.add(const Duration(hours: 2))),
-      ]));
+      await tester.pumpWidget(
+        makeHome(
+          tasks: [task(1, 'پانی لگائیں', now.add(const Duration(hours: 2)))],
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('پانی لگائیں'));
@@ -268,31 +293,39 @@ void main() {
     testWidgets('today/month expense and month income totals', (tester) async {
       final now = DateTime.now();
       final firstOfMonth = DateTime(now.year, now.month, 1, 12);
-      await tester.pumpWidget(makeHome(expenses: [
-        Expense(
-            category: 'Labour',
-            amountPaisa: 125000,
-            date: now.toIso8601String()),
-        Expense(
-            category: 'Seeds',
-            amountPaisa: 250000,
-            date: firstOfMonth.toIso8601String()),
-      ], sales: [
-        Sale(
-          harvestId: 1,
-          quantity: 40,
-          pricePerUnitPaisa: 125000,
-          totalAmountPaisa: 500000,
-          date: now.toIso8601String(),
+      await tester.pumpWidget(
+        makeHome(
+          expenses: [
+            Expense(
+              category: 'Labour',
+              amountPaisa: 125000,
+              date: now.toIso8601String(),
+            ),
+            Expense(
+              category: 'Seeds',
+              amountPaisa: 250000,
+              date: firstOfMonth.toIso8601String(),
+            ),
+          ],
+          sales: [
+            Sale(
+              harvestId: 1,
+              quantity: 40,
+              pricePerUnitPaisa: 125000,
+              totalAmountPaisa: 500000,
+              date: now.toIso8601String(),
+            ),
+          ],
         ),
-      ]));
+      );
       await tester.pumpAndSettle();
 
-      final todayExpected =
-          isSameDay(now, firstOfMonth) ? 375000 : 125000;
+      final todayExpected = isSameDay(now, firstOfMonth) ? 375000 : 125000;
       // On the 1st of the month, "today" and "this month" show the same total.
-      expect(find.text(Money(375000).format()),
-          isSameDay(now, firstOfMonth) ? findsNWidgets(2) : findsOneWidget);
+      expect(
+        find.text(Money(375000).format()),
+        isSameDay(now, firstOfMonth) ? findsNWidgets(2) : findsOneWidget,
+      );
       if (!isSameDay(now, firstOfMonth)) {
         expect(find.text(Money(todayExpected).format()), findsOneWidget);
       }
@@ -300,42 +333,59 @@ void main() {
       expect(find.text(Money(500000).format()), findsNWidgets(2));
     });
 
-    testWidgets('theka installments due within 7 days surface; paid/far ones do not',
-        (tester) async {
-      final now = DateTime.now();
-      ThekaInstallment inst(
-              int id, int amount, int paid, DateTime due) =>
-          ThekaInstallment(
-            id: id,
-            thekaId: 1,
-            amountPaisa: amount,
-            paidAmountPaisa: paid,
-            dueDate: ymd(due),
-            status: 'Pending',
-          );
-      await tester.pumpWidget(makeHome(installments: [
-        inst(1, 1000000, 400000, now.add(const Duration(days: 3))),
-        inst(2, 500000, 500000, now.add(const Duration(days: 2))), // fully paid
-        inst(3, 200000, 0, now.add(const Duration(days: 30))), // too far
-        inst(4, 300000, 0, now.subtract(const Duration(days: 2))), // overdue
-      ]));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'theka installments due within 7 days surface; paid/far ones do not',
+      (tester) async {
+        final now = DateTime.now();
+        ThekaInstallment inst(int id, int amount, int paid, DateTime due) =>
+            ThekaInstallment(
+              id: id,
+              thekaId: 1,
+              amountPaisa: amount,
+              paidAmountPaisa: paid,
+              dueDate: ymd(due),
+              status: 'Pending',
+            );
+        await tester.pumpWidget(
+          makeHome(
+            installments: [
+              inst(1, 1000000, 400000, now.add(const Duration(days: 3))),
+              inst(
+                2,
+                500000,
+                500000,
+                now.add(const Duration(days: 2)),
+              ), // fully paid
+              inst(3, 200000, 0, now.add(const Duration(days: 30))), // too far
+              inst(
+                4,
+                300000,
+                0,
+                now.subtract(const Duration(days: 2)),
+              ), // overdue
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('جلد واجب الادا ٹھیکہ قسطیں'), findsOneWidget);
-      // Remaining on the due-soon one: 600000 paisa.
-      expect(find.text(Money(600000).format()), findsOneWidget);
-      // Overdue unpaid one: 300000 paisa, marked زائد المیعاد in its date line.
-      expect(find.text(Money(300000).format()), findsOneWidget);
-      expect(find.textContaining('زائد المیعاد'), findsOneWidget);
-      // Fully-paid and far-future installments stay hidden.
-      expect(find.text(Money(500000).format()), findsNothing);
-      expect(find.text(Money(200000).format()), findsNothing);
-    });
+        expect(find.text('جلد واجب الادا ٹھیکہ قسطیں'), findsOneWidget);
+        // Remaining on the due-soon one: 600000 paisa.
+        expect(find.text(Money(600000).format()), findsOneWidget);
+        // Overdue unpaid one: 300000 paisa, marked زائد المیعاد in its date line.
+        expect(find.text(Money(300000).format()), findsOneWidget);
+        expect(find.textContaining('زائد المیعاد'), findsOneWidget);
+        // Fully-paid and far-future installments stay hidden.
+        expect(find.text(Money(500000).format()), findsNothing);
+        expect(find.text(Money(200000).format()), findsNothing);
+      },
+    );
 
-    testWidgets('party receivable/payable lines show when non-zero',
-        (tester) async {
+    testWidgets('party receivable/payable lines show when non-zero', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-          makeHome(partyReceivable: 250000, partyPayable: 100000));
+        makeHome(partyReceivable: 250000, partyPayable: 100000),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('لوگوں سے لینا ہے'), findsOneWidget);
@@ -383,19 +433,21 @@ void main() {
         fieldSize: 5,
         farmName: 'چک 12',
       );
-      await tester.pumpWidget(makeHome(
-        crops: [season],
-        harvests: [harvest],
-        sales: [
-          Sale(
-            harvestId: 7,
-            quantity: 40,
-            pricePerUnitPaisa: 125000,
-            totalAmountPaisa: 500000,
-            date: now.toIso8601String(),
-          ),
-        ],
-      ));
+      await tester.pumpWidget(
+        makeHome(
+          crops: [season],
+          harvests: [harvest],
+          sales: [
+            Sale(
+              harvestId: 7,
+              quantity: 40,
+              pricePerUnitPaisa: 125000,
+              totalAmountPaisa: 500000,
+              date: now.toIso8601String(),
+            ),
+          ],
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('گندم'), findsWidgets);
@@ -427,11 +479,18 @@ void main() {
       expect(isTaskDueToday(plain, now), isFalse);
 
       final snoozed = TaskItem(
-          id: 2, title: 'b', dateTime: past, snoozedUntil: now.add(const Duration(hours: 5)));
+        id: 2,
+        title: 'b',
+        dateTime: past,
+        snoozedUntil: now.add(const Duration(hours: 5)),
+      );
       expect(isTaskOverdue(snoozed, now), isFalse);
 
       final later = TaskItem(
-          id: 3, title: 'c', dateTime: now.add(const Duration(hours: 2)));
+        id: 3,
+        title: 'c',
+        dateTime: now.add(const Duration(hours: 2)),
+      );
       expect(isTaskDueToday(later, now), isTrue);
       expect(isTaskOverdue(later, now), isFalse);
     });
@@ -440,11 +499,12 @@ void main() {
       final now = DateTime(2026, 10, 1, 12);
       ThekaInstallment inst(String due, int amount, int paid) =>
           ThekaInstallment(
-              thekaId: 1,
-              amountPaisa: amount,
-              paidAmountPaisa: paid,
-              dueDate: due,
-              status: 'Pending');
+            thekaId: 1,
+            amountPaisa: amount,
+            paidAmountPaisa: paid,
+            dueDate: due,
+            status: 'Pending',
+          );
       final list = dueSoonInstallments([
         inst('2026-10-03', 100000, 0), // in 2 days
         inst('2026-09-28', 50000, 0), // overdue

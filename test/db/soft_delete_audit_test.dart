@@ -35,8 +35,7 @@ void main() {
   SharedPreferences.setMockInitialValues({});
   // TaskProvider cancels/schedules notifications on delete/add; the plugin
   // has no real backend in tests, so every method call is a no-op.
-  const notifChannel =
-      MethodChannel('dexterx.dev/flutter_local_notifications');
+  const notifChannel = MethodChannel('dexterx.dev/flutter_local_notifications');
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(notifChannel, (call) async => null);
 
@@ -198,10 +197,7 @@ void main() {
       if (table != null) 'table_name = ?',
       if (action != null) 'action = ?',
     ].join(' AND ');
-    final args = [
-      if (table != null) table,
-      if (action != null) action,
-    ];
+    final args = [if (table != null) table, if (action != null) action];
     return db.query(
       'audit_log',
       where: where.isEmpty ? null : where,
@@ -216,32 +212,42 @@ void main() {
   }
 
   group('DB v15 migration', () {
-    test('adds deleted_at to the 5 tables and creates audit_log, idempotently',
-        () async {
-      final db = await openV14Db();
-      expect(await hasDeletedAt(db, 'expenses'), isFalse);
+    test(
+      'adds deleted_at to the 5 tables and creates audit_log, idempotently',
+      () async {
+        final db = await openV14Db();
+        expect(await hasDeletedAt(db, 'expenses'), isFalse);
 
-      await DatabaseHelper.migrateV14ToV15(db);
-      // Second run must be a no-op, not an error.
-      await DatabaseHelper.migrateV14ToV15(db);
+        await DatabaseHelper.migrateV14ToV15(db);
+        // Second run must be a no-op, not an error.
+        await DatabaseHelper.migrateV14ToV15(db);
 
-      for (final t in ['expenses', 'harvests', 'sales', 'tasks', 'parties']) {
-        expect(await hasDeletedAt(db, t), isTrue, reason: t);
-      }
-      // Tables that must NOT gain soft delete.
-      for (final t in ['party_ledger_entries', 'crop_seasons']) {
-        expect(await hasDeletedAt(db, t), isFalse, reason: t);
-      }
+        for (final t in ['expenses', 'harvests', 'sales', 'tasks', 'parties']) {
+          expect(await hasDeletedAt(db, t), isTrue, reason: t);
+        }
+        // Tables that must NOT gain soft delete.
+        for (final t in ['party_ledger_entries', 'crop_seasons']) {
+          expect(await hasDeletedAt(db, t), isFalse, reason: t);
+        }
 
-      final cols = (await db.rawQuery('PRAGMA table_info(audit_log)'))
-          .map((c) => c['name'] as String)
-          .toSet();
-      expect(
-        cols,
-        containsAll(
-            ['id', 'ts', 'table_name', 'row_id', 'action', 'details', 'created_at']),
-      );
-    });
+        final cols =
+            (await db.rawQuery(
+              'PRAGMA table_info(audit_log)',
+            )).map((c) => c['name'] as String).toSet();
+        expect(
+          cols,
+          containsAll([
+            'id',
+            'ts',
+            'table_name',
+            'row_id',
+            'action',
+            'details',
+            'created_at',
+          ]),
+        );
+      },
+    );
 
     test('clearTables empties the Phase-11 tables too', () async {
       final db = await openV14Db();
@@ -299,69 +305,77 @@ void main() {
       return ExpenseProvider(testExecutor: db);
     }
 
-    test('delete hides, restore revives, permanent removes; audit tracks all',
-        () async {
-      final db = await openV14Db();
-      await DatabaseHelper.migrateV14ToV15(db);
-      final p = await openProvider(db);
+    test(
+      'delete hides, restore revives, permanent removes; audit tracks all',
+      () async {
+        final db = await openV14Db();
+        await DatabaseHelper.migrateV14ToV15(db);
+        final p = await openProvider(db);
 
-      final id = await p.addExpense(
-        category: 'کھاد',
-        amountPaisa: 500000,
-        date: '2026-10-01',
-      );
-      final id2 = await p.addExpense(
-        category: 'بیج',
-        amountPaisa: 200000,
-        date: '2026-10-01',
-      );
-      expect(p.expenses.map((e) => e.id), containsAll([id, id2]));
-      expect(p.totalExpensesPaisa, 700000);
-      var logs =
-          await auditRows(db, table: 'expenses', action: 'create');
-      expect(logs, hasLength(2));
-      expect(logs.first['row_id'], id);
+        final id = await p.addExpense(
+          category: 'کھاد',
+          amountPaisa: 500000,
+          date: '2026-10-01',
+        );
+        final id2 = await p.addExpense(
+          category: 'بیج',
+          amountPaisa: 200000,
+          date: '2026-10-01',
+        );
+        expect(p.expenses.map((e) => e.id), containsAll([id, id2]));
+        expect(p.totalExpensesPaisa, 700000);
+        var logs = await auditRows(db, table: 'expenses', action: 'create');
+        expect(logs, hasLength(2));
+        expect(logs.first['row_id'], id);
 
-      // Soft delete: hidden from the list AND the total, row survives.
-      await p.deleteExpense(id);
-      expect(p.expenses.map((e) => e.id), isNot(contains(id)));
-      expect(p.expenses.map((e) => e.id), contains(id2));
-      expect(p.totalExpensesPaisa, 200000);
-      final raw =
-          await db.query('expenses', where: 'id = ?', whereArgs: [id]);
-      expect(raw, hasLength(1));
-      expect(raw.first['deleted_at'], isNotNull);
-      logs = await auditRows(db, table: 'expenses', action: 'soft_delete');
-      expect(logs, hasLength(1));
-      expect(logs.first['row_id'], id);
+        // Soft delete: hidden from the list AND the total, row survives.
+        await p.deleteExpense(id);
+        expect(p.expenses.map((e) => e.id), isNot(contains(id)));
+        expect(p.expenses.map((e) => e.id), contains(id2));
+        expect(p.totalExpensesPaisa, 200000);
+        final raw = await db.query(
+          'expenses',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        expect(raw, hasLength(1));
+        expect(raw.first['deleted_at'], isNotNull);
+        logs = await auditRows(db, table: 'expenses', action: 'soft_delete');
+        expect(logs, hasLength(1));
+        expect(logs.first['row_id'], id);
 
-      // Recycle bin sees it with a readable label.
-      final bin = await RecycleBinService.listDeleted(executor: db);
-      expect(bin.map((i) => i.id), contains(id));
-      final binItem = bin.firstWhere((i) => i.id == id);
-      expect(binItem.table, 'expenses');
-      expect(RecycleBinService.urduFor('expenses'), 'اخراجات');
+        // Recycle bin sees it with a readable label.
+        final bin = await RecycleBinService.listDeleted(executor: db);
+        expect(bin.map((i) => i.id), contains(id));
+        final binItem = bin.firstWhere((i) => i.id == id);
+        expect(binItem.table, 'expenses');
+        expect(RecycleBinService.urduFor('expenses'), 'اخراجات');
 
-      // Restore: back in the list and the total.
-      await p.restoreExpense(id);
-      expect(p.expenses.map((e) => e.id), contains(id));
-      expect(p.totalExpensesPaisa, 700000);
-      logs = await auditRows(db, table: 'expenses', action: 'restore');
-      expect(logs, hasLength(1));
-      expect((await RecycleBinService.listDeleted(executor: db)), isEmpty);
+        // Restore: back in the list and the total.
+        await p.restoreExpense(id);
+        expect(p.expenses.map((e) => e.id), contains(id));
+        expect(p.totalExpensesPaisa, 700000);
+        logs = await auditRows(db, table: 'expenses', action: 'restore');
+        expect(logs, hasLength(1));
+        expect((await RecycleBinService.listDeleted(executor: db)), isEmpty);
 
-      // Permanent delete: the row is truly gone.
-      await p.deleteExpense(id);
-      await p.permanentDeleteExpense(id);
-      expect(
+        // Permanent delete: the row is truly gone.
+        await p.deleteExpense(id);
+        await p.permanentDeleteExpense(id);
+        expect(
           await db.query('expenses', where: 'id = ?', whereArgs: [id]),
-          isEmpty);
-      logs =
-          await auditRows(db, table: 'expenses', action: 'permanent_delete');
-      expect(logs, hasLength(1));
-      // The audit log itself survives the permanent delete.
-      expect(await auditRows(db, table: 'expenses'), hasLength(6));
-    });
+          isEmpty,
+        );
+        logs = await auditRows(
+          db,
+          table: 'expenses',
+          action: 'permanent_delete',
+        );
+        expect(logs, hasLength(1));
+        // The audit log itself survives the permanent delete.
+        expect(await auditRows(db, table: 'expenses'), hasLength(6));
+      },
+    );
 
     test('updateExpense writes an audit row', () async {
       final db = await openV14Db();
@@ -386,46 +400,57 @@ void main() {
   });
 
   group('task soft delete + audit', () {
-    test('delete hides, restore revives, permanent removes; audit tracks all',
-        () async {
-      final db = await openV14Db();
-      await DatabaseHelper.migrateV14ToV15(db);
-      final p = TaskProvider(testExecutor: db);
+    test(
+      'delete hides, restore revives, permanent removes; audit tracks all',
+      () async {
+        final db = await openV14Db();
+        await DatabaseHelper.migrateV14ToV15(db);
+        final p = TaskProvider(testExecutor: db);
 
-      // A past date: the notification scheduler skips it (no recurrence),
-      // so the test never touches real plugin scheduling.
-      await p.addTask('پانی لگانا', null, DateTime(2020, 1, 1));
-      await p.fetchTasks();
-      expect(p.tasks, hasLength(1));
-      final id = p.tasks.first.id;
-      expect(
-          await auditRows(db, table: 'tasks', action: 'create'), hasLength(1));
+        // A past date: the notification scheduler skips it (no recurrence),
+        // so the test never touches real plugin scheduling.
+        await p.addTask('پانی لگانا', null, DateTime(2020, 1, 1));
+        await p.fetchTasks();
+        expect(p.tasks, hasLength(1));
+        final id = p.tasks.first.id;
+        expect(
+          await auditRows(db, table: 'tasks', action: 'create'),
+          hasLength(1),
+        );
 
-      await p.deleteTask(id);
-      await p.fetchTasks();
-      expect(p.tasks, isEmpty);
-      final raw = await db.query('tasks', where: 'id = ?', whereArgs: [id]);
-      expect(raw.first['deleted_at'], isNotNull);
-      expect(await auditRows(db, table: 'tasks', action: 'soft_delete'),
-          hasLength(1));
+        await p.deleteTask(id);
+        await p.fetchTasks();
+        expect(p.tasks, isEmpty);
+        final raw = await db.query('tasks', where: 'id = ?', whereArgs: [id]);
+        expect(raw.first['deleted_at'], isNotNull);
+        expect(
+          await auditRows(db, table: 'tasks', action: 'soft_delete'),
+          hasLength(1),
+        );
 
-      final bin = await RecycleBinService.listDeleted(executor: db);
-      expect(bin.map((i) => i.table), contains('tasks'));
+        final bin = await RecycleBinService.listDeleted(executor: db);
+        expect(bin.map((i) => i.table), contains('tasks'));
 
-      await p.restoreTask(id);
-      await p.fetchTasks();
-      expect(p.tasks.map((t) => t.id), contains(id));
-      expect(await auditRows(db, table: 'tasks', action: 'restore'),
-          hasLength(1));
+        await p.restoreTask(id);
+        await p.fetchTasks();
+        expect(p.tasks.map((t) => t.id), contains(id));
+        expect(
+          await auditRows(db, table: 'tasks', action: 'restore'),
+          hasLength(1),
+        );
 
-      await p.deleteTask(id);
-      await p.permanentDeleteTask(id);
-      expect(await db.query('tasks', where: 'id = ?', whereArgs: [id]),
-          isEmpty);
-      expect(
+        await p.deleteTask(id);
+        await p.permanentDeleteTask(id);
+        expect(
+          await db.query('tasks', where: 'id = ?', whereArgs: [id]),
+          isEmpty,
+        );
+        expect(
           await auditRows(db, table: 'tasks', action: 'permanent_delete'),
-          hasLength(1));
-    });
+          hasLength(1),
+        );
+      },
+    );
   });
 
   group('harvest + sale soft delete + audit', () {
@@ -456,83 +481,99 @@ void main() {
       return HarvestProvider(testExecutor: db);
     }
 
-    test('deleteHarvest soft-deletes its sales; subtree restores individually',
-        () async {
-      final db = await openV14Db();
-      await DatabaseHelper.migrateV14ToV15(db);
-      final p = await openProvider(db);
+    test(
+      'deleteHarvest soft-deletes its sales; subtree restores individually',
+      () async {
+        final db = await openV14Db();
+        await DatabaseHelper.migrateV14ToV15(db);
+        final p = await openProvider(db);
 
-      await p.addHarvest(
-        cropSeasonId: 1,
-        quantity: 100,
-        unit: 'من',
-        date: '2026-10-01',
-      );
-      await p.fetchHarvests();
-      expect(p.harvests, hasLength(1));
-      final harvestId = p.harvests.first.harvest.id!;
-      expect(
+        await p.addHarvest(
+          cropSeasonId: 1,
+          quantity: 100,
+          unit: 'من',
+          date: '2026-10-01',
+        );
+        await p.fetchHarvests();
+        expect(p.harvests, hasLength(1));
+        final harvestId = p.harvests.first.harvest.id!;
+        expect(
           await auditRows(db, table: 'harvests', action: 'create'),
-          hasLength(1));
+          hasLength(1),
+        );
 
-      await p.recordSale(
-        harvestId: harvestId,
-        quantity: 40,
-        pricePerUnitPaisa: 500000,
-        date: '2026-10-02',
-        buyerName: 'آڑھتی',
-      );
-      await p.fetchHarvests();
-      expect(p.sales, hasLength(1));
-      final saleId = p.sales.first.id!;
-      expect(await auditRows(db, table: 'sales', action: 'create'),
-          hasLength(1));
+        await p.recordSale(
+          harvestId: harvestId,
+          quantity: 40,
+          pricePerUnitPaisa: 500000,
+          date: '2026-10-02',
+          buyerName: 'آڑھتی',
+        );
+        await p.fetchHarvests();
+        expect(p.sales, hasLength(1));
+        final saleId = p.sales.first.id!;
+        expect(
+          await auditRows(db, table: 'sales', action: 'create'),
+          hasLength(1),
+        );
 
-      // Deleting the harvest soft-deletes the harvest AND its live sales.
-      await p.deleteHarvest(harvestId);
-      await p.fetchHarvests();
-      expect(p.harvests, isEmpty);
-      expect(p.sales, isEmpty);
-      expect(
-          (await db.query('harvests',
-                  where: 'id = ?', whereArgs: [harvestId]))
-              .first['deleted_at'],
-          isNotNull);
-      expect(
-          (await db
-                  .query('sales', where: 'id = ?', whereArgs: [saleId]))
-              .first['deleted_at'],
-          isNotNull);
-      expect(await auditRows(db, table: 'harvests', action: 'soft_delete'),
-          hasLength(1));
-      expect(await auditRows(db, table: 'sales', action: 'soft_delete'),
-          hasLength(1));
+        // Deleting the harvest soft-deletes the harvest AND its live sales.
+        await p.deleteHarvest(harvestId);
+        await p.fetchHarvests();
+        expect(p.harvests, isEmpty);
+        expect(p.sales, isEmpty);
+        expect(
+          (await db.query(
+            'harvests',
+            where: 'id = ?',
+            whereArgs: [harvestId],
+          )).first['deleted_at'],
+          isNotNull,
+        );
+        expect(
+          (await db.query(
+            'sales',
+            where: 'id = ?',
+            whereArgs: [saleId],
+          )).first['deleted_at'],
+          isNotNull,
+        );
+        expect(
+          await auditRows(db, table: 'harvests', action: 'soft_delete'),
+          hasLength(1),
+        );
+        expect(
+          await auditRows(db, table: 'sales', action: 'soft_delete'),
+          hasLength(1),
+        );
 
-      // The bin lists both, grouped.
-      final bin = await RecycleBinService.listDeleted(executor: db);
-      expect(bin.map((i) => i.table).toSet(), {'harvests', 'sales'});
+        // The bin lists both, grouped.
+        final bin = await RecycleBinService.listDeleted(executor: db);
+        expect(bin.map((i) => i.table).toSet(), {'harvests', 'sales'});
 
-      // Restore is individual: restoring the harvest does NOT resurrect
-      // the sale — the farmer restores exactly what he means to.
-      await p.restoreHarvest(harvestId);
-      await p.fetchHarvests();
-      expect(p.harvests, hasLength(1));
-      expect(p.sales, isEmpty);
-      await p.restoreSale(saleId);
-      await p.fetchHarvests();
-      expect(p.sales, hasLength(1));
+        // Restore is individual: restoring the harvest does NOT resurrect
+        // the sale — the farmer restores exactly what he means to.
+        await p.restoreHarvest(harvestId);
+        await p.fetchHarvests();
+        expect(p.harvests, hasLength(1));
+        expect(p.sales, isEmpty);
+        await p.restoreSale(saleId);
+        await p.fetchHarvests();
+        expect(p.sales, hasLength(1));
 
-      // Permanent delete removes the harvest row itself.
-      await p.deleteHarvest(harvestId);
-      await p.permanentDeleteHarvest(harvestId);
-      expect(
-          await db.query('harvests',
-              where: 'id = ?', whereArgs: [harvestId]),
-          isEmpty);
-      expect(
+        // Permanent delete removes the harvest row itself.
+        await p.deleteHarvest(harvestId);
+        await p.permanentDeleteHarvest(harvestId);
+        expect(
+          await db.query('harvests', where: 'id = ?', whereArgs: [harvestId]),
+          isEmpty,
+        );
+        expect(
           await auditRows(db, table: 'harvests', action: 'permanent_delete'),
-          hasLength(1));
-    });
+          hasLength(1),
+        );
+      },
+    );
 
     test('deleteSale soft-deletes only the sale', () async {
       final db = await openV14Db();
@@ -561,80 +602,88 @@ void main() {
       // The harvest stays live; only the sale is hidden.
       expect(p.harvests, hasLength(1));
       expect(p.sales, isEmpty);
-      expect(await auditRows(db, table: 'sales', action: 'soft_delete'),
-          hasLength(1));
+      expect(
+        await auditRows(db, table: 'sales', action: 'soft_delete'),
+        hasLength(1),
+      );
     });
   });
 
   group('party soft delete + audit', () {
-    test('delete hides, restore revives, permanent removes; audit tracks all',
-        () async {
-      final db = await openV14Db();
-      await DatabaseHelper.migrateV14ToV15(db);
-      final p = PartyProvider(testExecutor: db);
+    test(
+      'delete hides, restore revives, permanent removes; audit tracks all',
+      () async {
+        final db = await openV14Db();
+        await DatabaseHelper.migrateV14ToV15(db);
+        final p = PartyProvider(testExecutor: db);
 
-      final id = await p.addParty(Party(
-        name: 'دانش',
-        createdAt: DateTime.now().toIso8601String(),
-      ));
-      expect(p.parties.map((x) => x.id), contains(id));
-      expect(
+        final id = await p.addParty(
+          Party(name: 'دانش', createdAt: DateTime.now().toIso8601String()),
+        );
+        expect(p.parties.map((x) => x.id), contains(id));
+        expect(
           await auditRows(db, table: 'parties', action: 'create'),
-          hasLength(1));
+          hasLength(1),
+        );
 
-      await p.deleteParty(id);
-      expect(p.parties.map((x) => x.id), isNot(contains(id)));
-      final raw =
-          await db.query('parties', where: 'id = ?', whereArgs: [id]);
-      expect(raw.first['deleted_at'], isNotNull);
-      expect(await auditRows(db, table: 'parties', action: 'soft_delete'),
-          hasLength(1));
+        await p.deleteParty(id);
+        expect(p.parties.map((x) => x.id), isNot(contains(id)));
+        final raw = await db.query('parties', where: 'id = ?', whereArgs: [id]);
+        expect(raw.first['deleted_at'], isNotNull);
+        expect(
+          await auditRows(db, table: 'parties', action: 'soft_delete'),
+          hasLength(1),
+        );
 
-      final bin = await RecycleBinService.listDeleted(executor: db);
-      expect(bin.map((i) => i.table), contains('parties'));
+        final bin = await RecycleBinService.listDeleted(executor: db);
+        expect(bin.map((i) => i.table), contains('parties'));
 
-      await p.restoreParty(id);
-      expect(p.parties.map((x) => x.id), contains(id));
+        await p.restoreParty(id);
+        expect(p.parties.map((x) => x.id), contains(id));
 
-      await p.deleteParty(id);
-      await p.permanentDeleteParty(id);
-      expect(await db.query('parties', where: 'id = ?', whereArgs: [id]),
-          isEmpty);
-      expect(
+        await p.deleteParty(id);
+        await p.permanentDeleteParty(id);
+        expect(
+          await db.query('parties', where: 'id = ?', whereArgs: [id]),
+          isEmpty,
+        );
+        expect(
           await auditRows(db, table: 'parties', action: 'permanent_delete'),
-          hasLength(1));
-    });
+          hasLength(1),
+        );
+      },
+    );
 
-    test('deleteParty is blocked when batai agreements reference the party',
-        () async {
-      final db = await openV14Db();
-      await DatabaseHelper.migrateV14ToV15(db);
-      final p = PartyProvider(testExecutor: db);
-      final id = await p.addParty(Party(
-        name: 'زمیندار',
-        createdAt: DateTime.now().toIso8601String(),
-      ));
-      await db.insert('batai_agreements', {
-        'farmer_role': 'landowner',
-        'other_party_id': id,
-        'owner_share_percent': 50,
-        'cultivator_share_percent': 50,
-        'start_date': '2026-10-01',
-        'created_at': '2026-10-01',
-      });
+    test(
+      'deleteParty is blocked when batai agreements reference the party',
+      () async {
+        final db = await openV14Db();
+        await DatabaseHelper.migrateV14ToV15(db);
+        final p = PartyProvider(testExecutor: db);
+        final id = await p.addParty(
+          Party(name: 'زمیندار', createdAt: DateTime.now().toIso8601String()),
+        );
+        await db.insert('batai_agreements', {
+          'farmer_role': 'landowner',
+          'other_party_id': id,
+          'owner_share_percent': 50,
+          'cultivator_share_percent': 50,
+          'start_date': '2026-10-01',
+          'created_at': '2026-10-01',
+        });
 
-      expect(() => p.deleteParty(id), throwsA(isA<PartyException>()));
-      expect(p.parties.map((x) => x.id), contains(id));
-    });
+        expect(() => p.deleteParty(id), throwsA(isA<PartyException>()));
+        expect(p.parties.map((x) => x.id), contains(id));
+      },
+    );
 
     test('addEntry refuses a soft-deleted party', () async {
       final db = await openV14Db();
       await DatabaseHelper.migrateV14ToV15(db);
       final p = PartyProvider(testExecutor: db);
-      final id = await p.addParty(Party(
-        name: 'عارضی',
-        createdAt: DateTime.now().toIso8601String(),
-      ));
+      final id = await p.addParty(
+        Party(name: 'عارضی', createdAt: DateTime.now().toIso8601String()),
+      );
       await p.deleteParty(id);
 
       expect(

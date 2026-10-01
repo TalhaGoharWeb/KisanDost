@@ -31,11 +31,12 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       _selectedDate = widget.task!.dateTime;
       _selectedTime = TimeOfDay.fromDateTime(widget.task!.dateTime);
       _recurrence = widget.task!.recurrence;
-      _selectedReminders = widget.task!.reminders
-          .split(',')
-          .map((e) => int.tryParse(e.trim()))
-          .whereType<int>()
-          .toList();
+      _selectedReminders =
+          widget.task!.reminders
+              .split(',')
+              .map((e) => int.tryParse(e.trim()))
+              .whereType<int>()
+              .toList();
       if (_selectedReminders.isEmpty) {
         _selectedReminders = [0];
       }
@@ -65,8 +66,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     final initialDate = _selectedDate ?? DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: initialDate.isBefore(DateTime.now()) ? DateTime.now() : initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)), // allow past dates for editing reference
+      initialDate:
+          initialDate.isBefore(DateTime.now()) ? DateTime.now() : initialDate,
+      firstDate: DateTime.now().subtract(
+        const Duration(days: 365),
+      ), // allow past dates for editing reference
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
@@ -95,7 +99,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           _selectedReminders.remove(minutes);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('کم از کم ایک یاد دہانی منتخب کرنا ضروری ہے')),
+            const SnackBar(
+              content: Text('کم از کم ایک یاد دہانی منتخب کرنا ضروری ہے'),
+            ),
           );
         }
       } else {
@@ -108,7 +114,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     if (_formKey.currentState!.validate()) {
       if (_selectedDate == null || _selectedTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('براہ کرم تاریخ اور وقت کا انتخاب کریں')),
+          const SnackBar(
+            content: Text('براہ کرم تاریخ اور وقت کا انتخاب کریں'),
+          ),
         );
         return;
       }
@@ -124,7 +132,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       );
 
       // Only validate past time for new non-recurring tasks
-      if (widget.task == null && _recurrence == 'none' && taskDateTime.isBefore(DateTime.now())) {
+      if (widget.task == null &&
+          _recurrence == 'none' &&
+          taskDateTime.isBefore(DateTime.now())) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('گزرا ہوا وقت منتخب نہیں کیا جا سکتا')),
         );
@@ -154,7 +164,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           reminders: remindersString,
         );
       }
-      
+
       if (mounted) {
         Navigator.pop(context);
       }
@@ -189,14 +199,19 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   fillColor: Colors.grey.shade100,
                 ),
                 style: const TextStyle(fontSize: 18),
-                validator: (val) => val == null || val.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                validator:
+                    (val) =>
+                        val == null || val.isEmpty
+                            ? 'براہ کرم نام درج کریں'
+                            : null,
                 onSaved: (val) => _title = val!,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: _description,
                 decoration: InputDecoration(
-                  labelText: 'تفصیل (تفصیل اختیاری ہے، جیسے: پانی کا دورانیہ ۲ گھنٹے)',
+                  labelText:
+                      'تفصیل (تفصیل اختیاری ہے، جیسے: پانی کا دورانیہ ۲ گھنٹے)',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -213,9 +228,12 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 children: [
                   Expanded(
                     child: _buildPickerButton(
-                      label: _selectedDate == null
-                          ? 'تاریخ منتخب کریں'
-                          : DateFormat('dd MMM yyyy').format(_selectedDate!),
+                      label:
+                          _selectedDate == null
+                              ? 'تاریخ منتخب کریں'
+                              : DateFormat(
+                                'dd MMM yyyy',
+                              ).format(_selectedDate!),
                       icon: Icons.calendar_today,
                       onTap: _pickDate,
                       isActive: _selectedDate != null,
@@ -224,9 +242,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildPickerButton(
-                      label: _selectedTime == null
-                          ? 'وقت منتخب کریں'
-                          : _selectedTime!.format(context),
+                      label:
+                          _selectedTime == null
+                              ? 'وقت منتخب کریں'
+                              : _selectedTime!.format(context),
                       icon: Icons.access_time,
                       onTap: _pickTime,
                       isActive: _selectedTime != null,
@@ -234,7 +253,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   ),
                 ],
               ),
-              
+
               // Recurrence Section
               _buildSectionTitle('یاد دہانی کا دہراؤ (فریکوئنسی)'),
               Row(
@@ -243,13 +262,23 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   const SizedBox(width: 12),
                   _buildRecurrenceOption('روزانہ', 'daily', Icons.replay),
                   const SizedBox(width: 12),
-                  _buildRecurrenceOption('ہفتہ وار', 'weekly', Icons.calendar_view_week),
+                  _buildRecurrenceOption(
+                    'ہفتہ وار',
+                    'weekly',
+                    Icons.calendar_view_week,
+                  ),
                 ],
               ),
 
               // Reminders Section
-              _buildSectionTitle('کتنی دیر پہلے یاد دلائیں؟ (ایک سے زائد منتخب کر سکتے ہیں)'),
-              _buildReminderCheckbox('کام کے وقت', 0, Icons.notifications_active),
+              _buildSectionTitle(
+                'کتنی دیر پہلے یاد دلائیں؟ (ایک سے زائد منتخب کر سکتے ہیں)',
+              ),
+              _buildReminderCheckbox(
+                'کام کے وقت',
+                0,
+                Icons.notifications_active,
+              ),
               _buildReminderCheckbox('1 گھنٹہ پہلے', 60, Icons.hourglass_top),
               _buildReminderCheckbox('1 دن پہلے', 1440, Icons.today),
 
@@ -266,7 +295,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 ),
                 child: Text(
                   isEditing ? 'ترمیم محفوظ کریں' : Strings.save,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -281,7 +313,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       padding: const EdgeInsets.only(top: 28.0, bottom: 12.0),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
       ),
     );
   }
@@ -301,7 +337,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           decoration: BoxDecoration(
             color: isSelected ? Colors.deepPurple.shade50 : Colors.white,
             border: Border.all(
-              color: isSelected ? Colors.deepPurple.shade600 : Colors.grey.shade400,
+              color:
+                  isSelected
+                      ? Colors.deepPurple.shade600
+                      : Colors.grey.shade400,
               width: 2,
             ),
             borderRadius: BorderRadius.circular(16),
@@ -311,7 +350,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               Icon(
                 icon,
                 size: 28,
-                color: isSelected ? Colors.deepPurple.shade600 : Colors.grey.shade600,
+                color:
+                    isSelected
+                        ? Colors.deepPurple.shade600
+                        : Colors.grey.shade600,
               ),
               const SizedBox(height: 8),
               Text(
@@ -319,7 +361,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? Colors.deepPurple.shade800 : Colors.black87,
+                  color:
+                      isSelected ? Colors.deepPurple.shade800 : Colors.black87,
                 ),
               ),
             ],
@@ -340,7 +383,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.deepPurple.shade50 : Colors.white,
           border: Border.all(
-            color: isSelected ? Colors.deepPurple.shade600 : Colors.grey.shade400,
+            color:
+                isSelected ? Colors.deepPurple.shade600 : Colors.grey.shade400,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(16),
@@ -348,8 +392,13 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
         child: Row(
           children: [
             Icon(
-              isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-              color: isSelected ? Colors.deepPurple.shade600 : Colors.grey.shade600,
+              isSelected
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
+              color:
+                  isSelected
+                      ? Colors.deepPurple.shade600
+                      : Colors.grey.shade600,
               size: 28,
             ),
             const SizedBox(width: 12),
@@ -393,7 +442,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             Icon(
               icon,
               size: 32,
-              color: isActive ? Colors.deepPurple.shade600 : Colors.grey.shade600,
+              color:
+                  isActive ? Colors.deepPurple.shade600 : Colors.grey.shade600,
             ),
             const SizedBox(height: 8),
             Text(

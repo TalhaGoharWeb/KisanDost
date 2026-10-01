@@ -54,13 +54,14 @@ String urduTimeOfDay(DateTime dt) {
   final h = dt.hour;
   final m = dt.minute.toString().padLeft(2, '0');
   final h12 = h % 12 == 0 ? 12 : h % 12;
-  final part = h < 5
-      ? 'رات'
-      : h < 12
+  final part =
+      h < 5
+          ? 'رات'
+          : h < 12
           ? 'صبح'
           : h < 17
-              ? 'دوپہر'
-              : 'شام';
+          ? 'دوپہر'
+          : 'شام';
   return '$part $h12:$m';
 }
 
@@ -95,10 +96,12 @@ bool isTaskDueToday(TaskItem task, DateTime now) {
 
 /// Today's actionable tasks: overdue first, then due-today, each group by time.
 List<TaskItem> todaysTasks(List<TaskItem> tasks, DateTime now) {
-  final overdue = tasks.where((t) => isTaskOverdue(t, now)).toList()
-    ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
-  final dueToday = tasks.where((t) => isTaskDueToday(t, now)).toList()
-    ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+  final overdue =
+      tasks.where((t) => isTaskOverdue(t, now)).toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+  final dueToday =
+      tasks.where((t) => isTaskDueToday(t, now)).toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
   return [...overdue, ...dueToday];
 }
 
@@ -145,13 +148,14 @@ List<ThekaInstallment> dueSoonInstallments(
 }) {
   final today = DateTime(now.year, now.month, now.day);
   final cutoff = today.add(Duration(days: withinDays));
-  final due = installments.where((i) {
-    if (i.amountPaisa - i.paidAmountPaisa <= 0) return false;
-    final d = tryParseStoredDate(i.dueDate);
-    if (d == null) return false;
-    final dueDay = DateTime(d.year, d.month, d.day);
-    return !dueDay.isAfter(cutoff);
-  }).toList();
+  final due =
+      installments.where((i) {
+        if (i.amountPaisa - i.paidAmountPaisa <= 0) return false;
+        final d = tryParseStoredDate(i.dueDate);
+        if (d == null) return false;
+        final dueDay = DateTime(d.year, d.month, d.day);
+        return !dueDay.isAfter(cutoff);
+      }).toList();
   due.sort((a, b) => a.dueDate.compareTo(b.dueDate));
   return due;
 }

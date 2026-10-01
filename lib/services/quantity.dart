@@ -1,4 +1,5 @@
 import '../l10n/strings.dart';
+
 /// Quantity parsing for farmer-typed numeric input (amounts of produce,
 /// areas, weights — anything that is NOT money).
 ///

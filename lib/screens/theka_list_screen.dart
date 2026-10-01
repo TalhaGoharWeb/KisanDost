@@ -47,9 +47,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
     final int overallPending = overallTotal - overallPaid;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('زمین کا ٹھیکہ (لیز ریکارڈ)'),
-      ),
+      appBar: AppBar(title: const Text('زمین کا ٹھیکہ (لیز ریکارڈ)')),
       body: RefreshIndicator(
         onRefresh: () async {
           await thekaProvider.fetchThekas();
@@ -58,210 +56,285 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
         child: Column(
           children: [
             if (thekaProvider.thekas.isNotEmpty)
-              _buildSummaryHeader(overallTotal, overallPaid, overallPending, theme),
+              _buildSummaryHeader(
+                overallTotal,
+                overallPaid,
+                overallPending,
+                theme,
+              ),
             Expanded(
-              child: thekaProvider.thekas.isEmpty
-                  ? SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.7,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const EmptyStateWidget(
-                              message: 'کوئی ٹھیکہ معاہدہ موجود نہیں ہے',
-                              subtitle: 'نیا ٹھیکہ معاہدہ درج کرنے کے لیے نیچے بٹن دبائیں',
-                              fallbackIcon: Icons.description_outlined,
-                              imageAsset: 'assets/images/wheat.png',
+              child:
+                  thekaProvider.thekas.isEmpty
+                      ? SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.7,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const EmptyStateWidget(
+                                message: 'کوئی ٹھیکہ معاہدہ موجود نہیں ہے',
+                                subtitle:
+                                    'نیا ٹھیکہ معاہدہ درج کرنے کے لیے نیچے بٹن دبائیں',
+                                fallbackIcon: Icons.description_outlined,
+                                imageAsset: 'assets/images/wheat.png',
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ThekaFormScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.add),
+                                label: const Text('ٹھیکہ معاہدہ شامل کریں'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      : ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        itemCount: thekaProvider.thekas.length,
+                        itemBuilder: (context, index) {
+                          final theka = thekaProvider.thekas[index];
+                          final farm = farmProvider.farms.firstWhere(
+                            (f) => f.id == theka.farmId,
+                            orElse:
+                                () => Farm(
+                                  name: 'نامعلوم فارم',
+                                  totalArea: 0.0,
+                                  createdAt: '',
+                                ),
+                          );
+
+                          // Find field name if applicable
+                          String fieldText = '';
+                          if (theka.fieldId != null) {
+                            final fields = farmProvider.getFieldsForFarm(
+                              theka.farmId,
+                            );
+                            final field = fields.firstWhere(
+                              (f) => f.id == theka.fieldId,
+                              orElse:
+                                  () => Field(
+                                    farmId: elementsId(theka.farmId),
+                                    name: '',
+                                    sizeAcres: 0.0,
+                                  ),
+                            );
+                            if (field.name.isNotEmpty) {
+                              fieldText = ' - ${field.name}';
+                            }
+                          }
+
+                          final insts = thekaProvider.getInstallmentsForTheka(
+                            theka.id!,
+                          );
+                          int paidAmt = 0;
+                          int paidCount = 0;
+                          for (var inst in insts) {
+                            paidAmt += inst.paidAmountPaisa;
+                            if (inst.status == 'Paid') {
+                              paidCount++;
+                            }
+                          }
+                          final int pendingAmt =
+                              theka.totalAmountPaisa - paidAmt;
+                          final double progress =
+                              theka.totalAmountPaisa > 0
+                                  ? (paidAmt / theka.totalAmountPaisa)
+                                  : 0.0;
+
+                          // Urdu duration type mapping
+                          String durationUrdu = theka.durationType;
+                          if (theka.durationType == 'Yearly') {
+                            durationUrdu = 'سالانہ';
+                          } else if (theka.durationType == 'Seasonal') {
+                            durationUrdu = 'موسمی / فصلاتی';
+                          } else if (theka.durationType == 'Custom') {
+                            durationUrdu = 'کسٹم';
+                          }
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: () {
+                            elevation: 3,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const ThekaFormScreen()),
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => ThekaDetailsScreen(
+                                          thekaId: theka.id!,
+                                        ),
+                                  ),
                                 );
                               },
-                              icon: const Icon(Icons.add),
-                              label: const Text('ٹھیکہ معاہدہ شامل کریں'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      itemCount: thekaProvider.thekas.length,
-                      itemBuilder: (context, index) {
-                        final theka = thekaProvider.thekas[index];
-                        final farm = farmProvider.farms.firstWhere(
-                          (f) => f.id == theka.farmId,
-                          orElse: () => Farm(name: 'نامعلوم فارم', totalArea: 0.0, createdAt: ''),
-                        );
-
-                        // Find field name if applicable
-                        String fieldText = '';
-                        if (theka.fieldId != null) {
-                          final fields = farmProvider.getFieldsForFarm(theka.farmId);
-                          final field = fields.firstWhere(
-                            (f) => f.id == theka.fieldId,
-                            orElse: () => Field(farmId: elementsId(theka.farmId), name: '', sizeAcres: 0.0),
-                          );
-                          if (field.name.isNotEmpty) {
-                            fieldText = ' - ${field.name}';
-                          }
-                        }
-
-                        final insts = thekaProvider.getInstallmentsForTheka(theka.id!);
-                        int paidAmt = 0;
-                        int paidCount = 0;
-                        for (var inst in insts) {
-                          paidAmt += inst.paidAmountPaisa;
-                          if (inst.status == 'Paid') {
-                            paidCount++;
-                          }
-                        }
-                        final int pendingAmt = theka.totalAmountPaisa - paidAmt;
-                        final double progress = theka.totalAmountPaisa > 0 ? (paidAmt / theka.totalAmountPaisa) : 0.0;
-
-                        // Urdu duration type mapping
-                        String durationUrdu = theka.durationType;
-                        if (theka.durationType == 'Yearly') {
-                          durationUrdu = 'سالانہ';
-                        } else if (theka.durationType == 'Seasonal') {
-                          durationUrdu = 'موسمی / فصلاتی';
-                        } else if (theka.durationType == 'Custom') {
-                          durationUrdu = 'کسٹم';
-                        }
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 3,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ThekaDetailsScreen(thekaId: theka.id!),
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          '${farm.name}$fieldText',
-                                          style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.brown.shade50,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.brown.shade200),
-                                        ),
-                                        child: Text(
-                                          durationUrdu,
-                                          style: TextStyle(
-                                            color: Colors.brown.shade800,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (theka.durationDetails != null && theka.durationDetails!.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'تفصیل: ${theka.durationDetails}',
-                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                                    ),
-                                  ],
-                                  const Divider(height: 20),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      _buildAmountLabel('کل ٹھیکہ', theka.totalAmountPaisa, Colors.black),
-                                      _buildAmountLabel('کل ادا شدہ', paidAmt, Colors.green),
-                                      _buildAmountLabel('واجب الادا', pendingAmt, Colors.red.shade700),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(10),
-                                          child: LinearProgressIndicator(
-                                            value: progress,
-                                            backgroundColor: Colors.grey.shade200,
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              progress >= 1.0 ? Colors.green : Colors.orange,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '${farm.name}$fieldText',
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                            minHeight: 8,
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.brown.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.brown.shade200,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            durationUrdu,
+                                            style: TextStyle(
+                                              color: Colors.brown.shade800,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (theka.durationDetails != null &&
+                                        theka.durationDetails!.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
                                       Text(
-                                        '${(progress * 100).toStringAsFixed(0)}%',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        'تفصیل: ${theka.durationDetails}',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 14,
+                                        ),
                                       ),
                                     ],
-                                  ),
-                                  if (theka.paymentMethod == 'Installment') ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'اقساط: $paidCount مکمل / ${insts.length} کل',
-                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                    const Divider(height: 20),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        _buildAmountLabel(
+                                          'کل ٹھیکہ',
+                                          theka.totalAmountPaisa,
+                                          Colors.black,
+                                        ),
+                                        _buildAmountLabel(
+                                          'کل ادا شدہ',
+                                          paidAmt,
+                                          Colors.green,
+                                        ),
+                                        _buildAmountLabel(
+                                          'واجب الادا',
+                                          pendingAmt,
+                                          Colors.red.shade700,
+                                        ),
+                                      ],
                                     ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            child: LinearProgressIndicator(
+                                              value: progress,
+                                              backgroundColor:
+                                                  Colors.grey.shade200,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    progress >= 1.0
+                                                        ? Colors.green
+                                                        : Colors.orange,
+                                                  ),
+                                              minHeight: 8,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          '${(progress * 100).toStringAsFixed(0)}%',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (theka.paymentMethod ==
+                                        'Installment') ...[
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'اقساط: $paidCount مکمل / ${insts.length} کل',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
             ),
           ],
         ),
       ),
-      floatingActionButton: thekaProvider.thekas.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ThekaFormScreen()),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('نیا ٹھیکہ معاہدہ'),
-              backgroundColor: Colors.brown.shade800,
-              foregroundColor: Colors.white,
-            )
-          : null,
+      floatingActionButton:
+          thekaProvider.thekas.isNotEmpty
+              ? FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ThekaFormScreen()),
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('نیا ٹھیکہ معاہدہ'),
+                backgroundColor: Colors.brown.shade800,
+                foregroundColor: Colors.white,
+              )
+              : null,
     );
   }
 
@@ -270,7 +343,12 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
     return id;
   }
 
-  Widget _buildSummaryHeader(int total, int paid, int pending, ThemeData theme) {
+  Widget _buildSummaryHeader(
+    int total,
+    int paid,
+    int pending,
+    ThemeData theme,
+  ) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.all(12),
@@ -300,9 +378,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: _buildHeaderItem('کل رقم', total, Colors.white),
-              ),
+              Expanded(child: _buildHeaderItem('کل رقم', total, Colors.white)),
               Container(width: 1, height: 40, color: Colors.white30),
               Expanded(
                 child: _buildHeaderItem('ادا شدہ', paid, Colors.greenAccent),
@@ -326,7 +402,8 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
           style: const TextStyle(color: Colors.white60, fontSize: 13),
         ),
         const SizedBox(height: 4),
-        DigitText(Money(amount).format(),
+        DigitText(
+          Money(amount).format(),
           style: TextStyle(
             color: color,
             fontSize: 17,
@@ -346,7 +423,8 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
           style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
         ),
         const SizedBox(height: 2),
-        DigitText(Money(amount).format(),
+        DigitText(
+          Money(amount).format(),
           style: TextStyle(
             color: amountColor,
             fontWeight: FontWeight.bold,

@@ -29,21 +29,24 @@ void main() {
       expect(locale.code, 'ur');
     });
 
-    test('setLocale ignores unsupported codes and persists supported ones',
-        () async {
-      SharedPreferences.setMockInitialValues({});
-      final locale = AppLocale();
-      await locale.load();
-      await locale.setLocale('xx');
-      expect(locale.code, 'ur');
-      // 'ur' is the only supported locale today; setting it is a no-op
-      // that must not throw.
-      await locale.setLocale('ur');
-      expect(locale.code, 'ur');
-    });
+    test(
+      'setLocale ignores unsupported codes and persists supported ones',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final locale = AppLocale();
+        await locale.load();
+        await locale.setLocale('xx');
+        expect(locale.code, 'ur');
+        // 'ur' is the only supported locale today; setting it is a no-op
+        // that must not throw.
+        await locale.setLocale('ur');
+        expect(locale.code, 'ur');
+      },
+    );
 
-    testWidgets('MaterialApp gets RTL directionality from the ur locale',
-        (tester) async {
+    testWidgets('MaterialApp gets RTL directionality from the ur locale', (
+      tester,
+    ) async {
       // The whole point of the locale-driven architecture: direction
       // comes from the locale via flutter_localizations, not from a
       // forced Directionality widget.
@@ -51,11 +54,9 @@ void main() {
         MaterialApp(
           locale: const Locale('ur'),
           supportedLocales: const [Locale('ur'), Locale('en')],
-          localizationsDelegates:
-              GlobalMaterialLocalizations.delegates,
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
           home: Builder(
-            builder: (context) =>
-                Text('${Directionality.of(context)}'),
+            builder: (context) => Text('${Directionality.of(context)}'),
           ),
         ),
       );

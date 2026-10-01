@@ -11,7 +11,7 @@ class FarmProvider extends ChangeNotifier {
   /// Last load failure, if any. Sections show it as a retryable Urdu error.
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
-  
+
   List<Field> getFieldsForFarm(int farmId) {
     return _farmFields[farmId] ?? [];
   }
@@ -28,9 +28,12 @@ class FarmProvider extends ChangeNotifier {
 
   Future<void> _fetchFarms() async {
     final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> maps = await db.query('farms', orderBy: 'id DESC');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'farms',
+      orderBy: 'id DESC',
+    );
     _farms = List.generate(maps.length, (i) => Farm.fromMap(maps[i]));
-    
+
     // Fetch fields for all fetched farms
     for (var farm in _farms) {
       if (farm.id != null) {
@@ -59,7 +62,10 @@ class FarmProvider extends ChangeNotifier {
       whereArgs: [farmId],
       orderBy: 'id DESC',
     );
-    _farmFields[farmId] = List.generate(maps.length, (i) => Field.fromMap(maps[i]));
+    _farmFields[farmId] = List.generate(
+      maps.length,
+      (i) => Field.fromMap(maps[i]),
+    );
     notifyListeners();
   }
 
@@ -88,10 +94,7 @@ class FarmProvider extends ChangeNotifier {
     final db = await DatabaseHelper.instance.database;
     await db.update(
       'farms',
-      {
-        'name': name,
-        'total_area': totalArea,
-      },
+      {'name': name, 'total_area': totalArea},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -100,11 +103,7 @@ class FarmProvider extends ChangeNotifier {
 
   Future<void> deleteFarm(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete(
-      'farms',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('farms', where: 'id = ?', whereArgs: [id]);
     await fetchFarms();
   }
 
@@ -135,11 +134,7 @@ class FarmProvider extends ChangeNotifier {
 
   Future<void> deleteField(int id, int farmId) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete(
-      'fields',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('fields', where: 'id = ?', whereArgs: [id]);
     await fetchFields(farmId);
   }
 }

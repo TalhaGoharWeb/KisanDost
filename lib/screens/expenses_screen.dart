@@ -41,109 +41,142 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         },
         child: Column(
           children: [
-          // 1. Highlight Total Expense Summary Card
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [theme.colorScheme.error, Colors.red.shade700],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            // 1. Highlight Total Expense Summary Card
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [theme.colorScheme.error, Colors.red.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.error.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.colorScheme.error.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                const Text(
-                  'کل اخراجات (خرچے)',
-                  style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                DigitText(Money(expenseProvider.totalExpensesPaisa).format(),
-                  style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-
-          // 2. List of recorded expenses
-          Expanded(
-            child: expenseProvider.expenses.isEmpty
-                ? SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.5,
-                      child: const EmptyStateWidget(
-                        message: 'کوئی خرچہ ریکارڈ نہیں ہے',
-                        subtitle: 'نیا خرچہ درج کرنے کے لیے نیچے بٹن دبائیں',
-                        fallbackIcon: Icons.trending_down,
-                        imageAsset: 'assets/images/wheat.png',
-                      ),
+              child: Column(
+                children: [
+                  const Text(
+                    'کل اخراجات (خرچے)',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: expenseProvider.expenses.length,
-                    itemBuilder: (context, index) {
-                      final exp = expenseProvider.expenses[index];
-                      final catUrdu = expenseProvider.expenseCategories[exp.category] ?? exp.category;
+                  ),
+                  const SizedBox(height: 8),
+                  DigitText(
+                    Money(expenseProvider.totalExpensesPaisa).format(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.red.shade50,
-                            child: const Icon(Icons.trending_down, color: Colors.red),
+            // 2. List of recorded expenses
+            Expanded(
+              child:
+                  expenseProvider.expenses.isEmpty
+                      ? SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: const EmptyStateWidget(
+                            message: 'کوئی خرچہ ریکارڈ نہیں ہے',
+                            subtitle:
+                                'نیا خرچہ درج کرنے کے لیے نیچے بٹن دبائیں',
+                            fallbackIcon: Icons.trending_down,
+                            imageAsset: 'assets/images/wheat.png',
                           ),
-                          title: Text(
-                            catUrdu,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (exp.description != null && exp.description!.isNotEmpty)
-                                Text(exp.description!),
-                              Text(
-                                DateFormat('yyyy-MM-dd').format(DateTime.parse(exp.date)),
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              DigitText(Money(exp.amountPaisa).format(),
-                                style: const TextStyle(
+                        ),
+                      )
+                      : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: expenseProvider.expenses.length,
+                        itemBuilder: (context, index) {
+                          final exp = expenseProvider.expenses[index];
+                          final catUrdu =
+                              expenseProvider.expenseCategories[exp.category] ??
+                              exp.category;
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.red.shade50,
+                                child: const Icon(
+                                  Icons.trending_down,
                                   color: Colors.red,
+                                ),
+                              ),
+                              title: Text(
+                                catUrdu,
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                                onPressed: () => _confirmDeleteExpense(context, exp.id!),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (exp.description != null &&
+                                      exp.description!.isNotEmpty)
+                                    Text(exp.description!),
+                                  Text(
+                                    DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(DateTime.parse(exp.date)),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  DigitText(
+                                    Money(exp.amountPaisa).format(),
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.grey,
+                                    ),
+                                    onPressed:
+                                        () => _confirmDeleteExpense(
+                                          context,
+                                          exp.id!,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+            ),
+          ],
+        ),
       ),
-    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddExpenseDialog(context),
         icon: const Icon(Icons.add),
@@ -155,9 +188,15 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }
 
   void _showAddExpenseDialog(BuildContext context) {
-    final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
+    final expenseProvider = Provider.of<ExpenseProvider>(
+      context,
+      listen: false,
+    );
     final cropProvider = Provider.of<CropProvider>(context, listen: false);
-    final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
+    final activityProvider = Provider.of<ActivityProvider>(
+      context,
+      listen: false,
+    );
     final farmProvider = Provider.of<FarmProvider>(context, listen: false);
     final formKey = GlobalKey<FormState>();
 
@@ -175,9 +214,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             // Cascading pickers: Farm -> Field -> Crop season. All optional.
-            final List<Field> fieldsForFarm = selectedFarmId == null
-                ? <Field>[]
-                : farmProvider.getFieldsForFarm(selectedFarmId!);
+            final List<Field> fieldsForFarm =
+                selectedFarmId == null
+                    ? <Field>[]
+                    : farmProvider.getFieldsForFarm(selectedFarmId!);
             final List<CropSeasonWithDetails> allSeasons = [
               ...cropProvider.activeCropSeasons,
               ...cropProvider.harvestedCropSeasons,
@@ -186,8 +226,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 selectedFieldId == null
                     ? <CropSeasonWithDetails>[]
                     : allSeasons
-                        .where((d) =>
-                            d.fields.any((f) => f.id == selectedFieldId))
+                        .where(
+                          (d) => d.fields.any((f) => f.id == selectedFieldId),
+                        )
                         .toList();
 
             return AlertDialog(
@@ -204,12 +245,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           labelText: 'خرچے کا زمرہ (Category)',
                           border: OutlineInputBorder(),
                         ),
-                        items: expenseProvider.expenseCategories.entries.map((e) {
-                          return DropdownMenuItem<String>(
-                            value: e.key,
-                            child: Text(e.value),
-                          );
-                        }).toList(),
+                        items:
+                            expenseProvider.expenseCategories.entries.map((e) {
+                              return DropdownMenuItem<String>(
+                                value: e.key,
+                                child: Text(e.value),
+                              );
+                            }).toList(),
                         onChanged: (val) {
                           setState(() {
                             selectedCategory = val!;
@@ -264,14 +306,15 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             );
                           }),
                         ],
-                        onChanged: selectedFarmId == null
-                            ? null
-                            : (val) {
-                                setState(() {
-                                  selectedFieldId = val;
-                                  selectedCropSeasonId = null;
-                                });
-                              },
+                        onChanged:
+                            selectedFarmId == null
+                                ? null
+                                : (val) {
+                                  setState(() {
+                                    selectedFieldId = val;
+                                    selectedCropSeasonId = null;
+                                  });
+                                },
                       ),
                       const SizedBox(height: 16),
                       // 3. Crop season picker (optional; needs a field first)
@@ -288,20 +331,23 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                           ...seasonsForField.map((details) {
                             final season = details.cropSeason;
-                            final nameUrdu = cropProvider.predefinedCrops[season.cropName] ?? season.cropName;
+                            final nameUrdu =
+                                cropProvider.predefinedCrops[season.cropName] ??
+                                season.cropName;
                             return DropdownMenuItem<int?>(
                               value: season.id,
                               child: Text('$nameUrdu (${season.status})'),
                             );
                           }),
                         ],
-                        onChanged: selectedFieldId == null
-                            ? null
-                            : (val) {
-                                setState(() {
-                                  selectedCropSeasonId = val;
-                                });
-                              },
+                        onChanged:
+                            selectedFieldId == null
+                                ? null
+                                : (val) {
+                                  setState(() {
+                                    selectedCropSeasonId = val;
+                                  });
+                                },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -331,7 +377,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       ),
                       const SizedBox(height: 16),
                       ListTile(
-                        title: Text('تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
+                        title: Text(
+                          'تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final date = await showDatePicker(
@@ -373,10 +421,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         }
                         return;
                       }
-                      final String categoryUrdu = expenseProvider.expenseCategories[selectedCategory] ?? selectedCategory;
-                      final String finalDesc = descController.text.isNotEmpty 
-                          ? descController.text 
-                          : 'خرچہ برائے $categoryUrdu';
+                      final String categoryUrdu =
+                          expenseProvider.expenseCategories[selectedCategory] ??
+                          selectedCategory;
+                      final String finalDesc =
+                          descController.text.isNotEmpty
+                              ? descController.text
+                              : 'خرچہ برائے $categoryUrdu';
 
                       // 1. Add general expense entry to SQL table
                       final int expenseId = await expenseProvider.addExpense(
@@ -403,7 +454,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       if (context.mounted) {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('خرچہ کامیابی سے محفوظ ہو گیا!')),
+                          const SnackBar(
+                            content: Text('خرچہ کامیابی سے محفوظ ہو گیا!'),
+                          ),
                         );
                       }
                     }
@@ -421,24 +474,31 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   void _confirmDeleteExpense(BuildContext context, int id) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('خرچہ حذف کریں؟'),
-        content: const Text('کیا آپ واقعی یہ خرچہ حذف کرنا چاہتے ہیں؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(Strings.cancel),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('خرچہ حذف کریں؟'),
+            content: const Text('کیا آپ واقعی یہ خرچہ حذف کرنا چاہتے ہیں؟'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(Strings.cancel),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  Provider.of<ExpenseProvider>(
+                    context,
+                    listen: false,
+                  ).deleteExpense(id);
+                  Navigator.pop(ctx);
+                },
+                child: const Text(
+                  Strings.delete,
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Provider.of<ExpenseProvider>(context, listen: false).deleteExpense(id);
-              Navigator.pop(ctx);
-            },
-            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 }

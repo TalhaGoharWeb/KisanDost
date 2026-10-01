@@ -30,18 +30,19 @@ Future<Uint8List> captureReportPng(
   final key = GlobalKey();
   final overlay = Overlay.of(context);
   final entry = OverlayEntry(
-    builder: (_) => Positioned(
-      // Far offscreen: laid out and painted, but never visible.
-      top: -20000,
-      left: 0,
-      child: Material(
-        color: Colors.white,
-        child: SizedBox(
-          width: width,
-          child: RepaintBoundary(key: key, child: child),
+    builder:
+        (_) => Positioned(
+          // Far offscreen: laid out and painted, but never visible.
+          top: -20000,
+          left: 0,
+          child: Material(
+            color: Colors.white,
+            child: SizedBox(
+              width: width,
+              child: RepaintBoundary(key: key, child: child),
+            ),
+          ),
         ),
-      ),
-    ),
   );
   overlay.insert(entry);
   try {
@@ -76,9 +77,7 @@ Future<Uint8List> pngToPdfBytes(Uint8List pngBytes) async {
     pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: pw.EdgeInsets.zero,
-      build: (_) => pw.Center(
-        child: pw.Image(image, fit: pw.BoxFit.contain),
-      ),
+      build: (_) => pw.Center(child: pw.Image(image, fit: pw.BoxFit.contain)),
     ),
   );
   return doc.save();

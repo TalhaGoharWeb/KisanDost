@@ -384,12 +384,16 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       try {
-        await db.execute("ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'");
+        await db.execute(
+          "ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'",
+        );
       } catch (e) {
         // Column might already exist
       }
       try {
-        await db.execute("ALTER TABLE tasks ADD COLUMN reminders TEXT NOT NULL DEFAULT '0'");
+        await db.execute(
+          "ALTER TABLE tasks ADD COLUMN reminders TEXT NOT NULL DEFAULT '0'",
+        );
       } catch (e) {
         // Column might already exist
       }
@@ -594,9 +598,12 @@ class DatabaseHelper {
     }
 
     // Backfill opening balances (idempotent).
-    final int existing = Sqflite.firstIntValue(await db.rawQuery(
-          "SELECT COUNT(*) FROM inventory_transactions WHERE type = 'opening_balance'",
-        )) ??
+    final int existing =
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+            "SELECT COUNT(*) FROM inventory_transactions WHERE type = 'opening_balance'",
+          ),
+        ) ??
         0;
     if (existing == 0) {
       final String now = DateTime.now().toIso8601String();
@@ -657,10 +664,10 @@ class DatabaseHelper {
   /// Non-money REAL columns (quantities, weights, percentages) are untouched.
   @visibleForTesting
   static Future<void> migrateV11ToV12(Database db) async {
-    final tables = (await db
-            .rawQuery("SELECT name FROM sqlite_master WHERE type = 'table'"))
-        .map((r) => r['name'] as String)
-        .toSet();
+    final tables =
+        (await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table'",
+        )).map((r) => r['name'] as String).toSet();
 
     // Rebuilds one money table. Skips silently when the table is absent
     // (minimal test schemas) or when it already carries paisa columns
@@ -676,9 +683,10 @@ class DatabaseHelper {
     ) async {
       if (!tables.contains(table)) return;
       assert(newColumns.length == selectExprs.length);
-      final cols = (await db.rawQuery('PRAGMA table_info($table)'))
-          .map((c) => c['name'] as String)
-          .toSet();
+      final cols =
+          (await db.rawQuery(
+            'PRAGMA table_info($table)',
+          )).map((c) => c['name'] as String).toSet();
       if (cols.any((c) => c.endsWith('_paisa'))) return; // Already v12.
       // legacy_alter_table=ON: RENAME must NOT rewrite FK references in
       // other tables to the backup name (the rebuilt table keeps the
@@ -700,8 +708,7 @@ class DatabaseHelper {
       }
     }
 
-    String paisa(String oldCol) =>
-        'CAST(ROUND($oldCol * 100) AS INTEGER)';
+    String paisa(String oldCol) => 'CAST(ROUND($oldCol * 100) AS INTEGER)';
 
     await rebuildMoneyTable(
       'expenses',
@@ -715,8 +722,26 @@ class DatabaseHelper {
         field_id INTEGER REFERENCES fields (id) ON DELETE SET NULL,
         crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL
       )''',
-      ['id', 'category', 'amount_paisa', 'date', 'description', 'farm_id', 'field_id', 'crop_season_id'],
-      ['id', 'category', paisa('amount'), 'date', 'description', 'farm_id', 'field_id', 'crop_season_id'],
+      [
+        'id',
+        'category',
+        'amount_paisa',
+        'date',
+        'description',
+        'farm_id',
+        'field_id',
+        'crop_season_id',
+      ],
+      [
+        'id',
+        'category',
+        paisa('amount'),
+        'date',
+        'description',
+        'farm_id',
+        'field_id',
+        'crop_season_id',
+      ],
     );
 
     await rebuildMoneyTable(
@@ -730,8 +755,24 @@ class DatabaseHelper {
         cost_per_unit_paisa INTEGER NOT NULL,
         weight_per_unit_kg REAL
       )''',
-      ['id', 'category', 'name', 'unit', 'quantity', 'cost_per_unit_paisa', 'weight_per_unit_kg'],
-      ['id', 'category', 'name', 'unit', 'quantity', paisa('cost_per_unit'), 'weight_per_unit_kg'],
+      [
+        'id',
+        'category',
+        'name',
+        'unit',
+        'quantity',
+        'cost_per_unit_paisa',
+        'weight_per_unit_kg',
+      ],
+      [
+        'id',
+        'category',
+        'name',
+        'unit',
+        'quantity',
+        paisa('cost_per_unit'),
+        'weight_per_unit_kg',
+      ],
     );
 
     await rebuildMoneyTable(
@@ -749,8 +790,32 @@ class DatabaseHelper {
         notes TEXT,
         created_at TEXT NOT NULL
       )''',
-      ['id', 'inventory_id', 'type', 'quantity', 'unit', 'unit_price_paisa', 'total_amount_paisa', 'activity_id', 'date', 'notes', 'created_at'],
-      ['id', 'inventory_id', 'type', 'quantity', 'unit', paisa('unit_price'), paisa('total_amount'), 'activity_id', 'date', 'notes', 'created_at'],
+      [
+        'id',
+        'inventory_id',
+        'type',
+        'quantity',
+        'unit',
+        'unit_price_paisa',
+        'total_amount_paisa',
+        'activity_id',
+        'date',
+        'notes',
+        'created_at',
+      ],
+      [
+        'id',
+        'inventory_id',
+        'type',
+        'quantity',
+        'unit',
+        paisa('unit_price'),
+        paisa('total_amount'),
+        'activity_id',
+        'date',
+        'notes',
+        'created_at',
+      ],
     );
     if (tables.contains('inventory_transactions')) {
       // The rebuild drops indexes; recreate the v11 one.
@@ -780,8 +845,40 @@ class DatabaseHelper {
         expense_id INTEGER,
         FOREIGN KEY (crop_season_id) REFERENCES crop_seasons (id) ON DELETE CASCADE
       )''',
-      ['id', 'crop_season_id', 'quantity', 'unit', 'date', 'rate_per_unit_paisa', 'transportation_expense_paisa', 'labour_expense_paisa', 'harvesting_expense_paisa', 'commission_expense_paisa', 'other_expense_paisa', 'buyer_name', 'payment_status', 'notes', 'expense_id'],
-      ['id', 'crop_season_id', 'quantity', 'unit', 'date', paisa('rate_per_unit'), paisa('transportation_expense'), paisa('labour_expense'), paisa('harvesting_expense'), paisa('commission_expense'), paisa('other_expense'), 'buyer_name', 'payment_status', 'notes', 'expense_id'],
+      [
+        'id',
+        'crop_season_id',
+        'quantity',
+        'unit',
+        'date',
+        'rate_per_unit_paisa',
+        'transportation_expense_paisa',
+        'labour_expense_paisa',
+        'harvesting_expense_paisa',
+        'commission_expense_paisa',
+        'other_expense_paisa',
+        'buyer_name',
+        'payment_status',
+        'notes',
+        'expense_id',
+      ],
+      [
+        'id',
+        'crop_season_id',
+        'quantity',
+        'unit',
+        'date',
+        paisa('rate_per_unit'),
+        paisa('transportation_expense'),
+        paisa('labour_expense'),
+        paisa('harvesting_expense'),
+        paisa('commission_expense'),
+        paisa('other_expense'),
+        'buyer_name',
+        'payment_status',
+        'notes',
+        'expense_id',
+      ],
     );
 
     await rebuildMoneyTable(
@@ -807,8 +904,42 @@ class DatabaseHelper {
         FOREIGN KEY (harvest_id) REFERENCES harvests (id) ON DELETE SET NULL,
         FOREIGN KEY (expense_id) REFERENCES expenses (id) ON DELETE SET NULL
       )''',
-      ['id', 'crop_season_id', 'harvest_id', 'harvest_qty', 'market_value_paisa', 'ushr_method', 'ushr_percentage', 'ushr_amount_paisa', 'status', 'date_paid', 'notes', 'expense_id', 'pay_method', 'qty_paid', 'cash_paid_paisa', 'rate_per_unit_paisa'],
-      ['id', 'crop_season_id', 'harvest_id', 'harvest_qty', paisa('market_value'), 'ushr_method', 'ushr_percentage', paisa('ushr_amount'), 'status', 'date_paid', 'notes', 'expense_id', 'pay_method', 'qty_paid', paisa('cash_paid'), paisa('rate_per_unit')],
+      [
+        'id',
+        'crop_season_id',
+        'harvest_id',
+        'harvest_qty',
+        'market_value_paisa',
+        'ushr_method',
+        'ushr_percentage',
+        'ushr_amount_paisa',
+        'status',
+        'date_paid',
+        'notes',
+        'expense_id',
+        'pay_method',
+        'qty_paid',
+        'cash_paid_paisa',
+        'rate_per_unit_paisa',
+      ],
+      [
+        'id',
+        'crop_season_id',
+        'harvest_id',
+        'harvest_qty',
+        paisa('market_value'),
+        'ushr_method',
+        'ushr_percentage',
+        paisa('ushr_amount'),
+        'status',
+        'date_paid',
+        'notes',
+        'expense_id',
+        'pay_method',
+        'qty_paid',
+        paisa('cash_paid'),
+        paisa('rate_per_unit'),
+      ],
     );
 
     await rebuildMoneyTable(
@@ -823,8 +954,24 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         FOREIGN KEY (harvest_id) REFERENCES harvests (id) ON DELETE CASCADE
       )''',
-      ['id', 'harvest_id', 'buyer_name', 'quantity', 'price_per_unit_paisa', 'total_amount_paisa', 'date'],
-      ['id', 'harvest_id', 'buyer_name', 'quantity', paisa('price_per_unit'), paisa('total_amount'), 'date'],
+      [
+        'id',
+        'harvest_id',
+        'buyer_name',
+        'quantity',
+        'price_per_unit_paisa',
+        'total_amount_paisa',
+        'date',
+      ],
+      [
+        'id',
+        'harvest_id',
+        'buyer_name',
+        'quantity',
+        paisa('price_per_unit'),
+        paisa('total_amount'),
+        'date',
+      ],
     );
 
     await rebuildMoneyTable(
@@ -843,8 +990,30 @@ class DatabaseHelper {
         FOREIGN KEY (farm_id) REFERENCES farms (id) ON DELETE CASCADE,
         FOREIGN KEY (field_id) REFERENCES fields (id) ON DELETE CASCADE
       )''',
-      ['id', 'farm_id', 'field_id', 'total_amount_paisa', 'duration_type', 'duration_details', 'payment_method', 'start_date', 'end_date', 'created_at'],
-      ['id', 'farm_id', 'field_id', paisa('total_amount'), 'duration_type', 'duration_details', 'payment_method', 'start_date', 'end_date', 'created_at'],
+      [
+        'id',
+        'farm_id',
+        'field_id',
+        'total_amount_paisa',
+        'duration_type',
+        'duration_details',
+        'payment_method',
+        'start_date',
+        'end_date',
+        'created_at',
+      ],
+      [
+        'id',
+        'farm_id',
+        'field_id',
+        paisa('total_amount'),
+        'duration_type',
+        'duration_details',
+        'payment_method',
+        'start_date',
+        'end_date',
+        'created_at',
+      ],
     );
 
     await rebuildMoneyTable(
@@ -861,8 +1030,26 @@ class DatabaseHelper {
         FOREIGN KEY (theka_id) REFERENCES thekas (id) ON DELETE CASCADE,
         FOREIGN KEY (expense_id) REFERENCES expenses (id) ON DELETE SET NULL
       )''',
-      ['id', 'theka_id', 'amount_paisa', 'due_date', 'status', 'paid_amount_paisa', 'paid_date', 'expense_id'],
-      ['id', 'theka_id', paisa('amount'), 'due_date', 'status', paisa('paid_amount'), 'paid_date', 'expense_id'],
+      [
+        'id',
+        'theka_id',
+        'amount_paisa',
+        'due_date',
+        'status',
+        'paid_amount_paisa',
+        'paid_date',
+        'expense_id',
+      ],
+      [
+        'id',
+        'theka_id',
+        paisa('amount'),
+        'due_date',
+        'status',
+        paisa('paid_amount'),
+        'paid_date',
+        'expense_id',
+      ],
     );
   }
 
@@ -963,13 +1150,7 @@ class DatabaseHelper {
   /// devices), table creation uses IF NOT EXISTS.
   @visibleForTesting
   static Future<void> migrateV14ToV15(Database db) async {
-    for (final table in [
-      'expenses',
-      'sales',
-      'harvests',
-      'tasks',
-      'parties',
-    ]) {
+    for (final table in ['expenses', 'sales', 'harvests', 'tasks', 'parties']) {
       try {
         await db.execute('ALTER TABLE $table ADD COLUMN deleted_at TEXT');
       } catch (_) {
@@ -1006,27 +1187,38 @@ class DatabaseHelper {
   @visibleForTesting
   static Future<void> migrateV9ToV10(Database db) async {
     await db.execute(
-        'DELETE FROM theka_installments WHERE theka_id NOT IN (SELECT id FROM thekas)');
+      'DELETE FROM theka_installments WHERE theka_id NOT IN (SELECT id FROM thekas)',
+    );
     await db.execute(
-        'DELETE FROM ushr_records WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)');
+      'DELETE FROM ushr_records WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)',
+    );
     await db.execute(
-        'DELETE FROM ushr_records WHERE harvest_id IS NOT NULL AND harvest_id NOT IN (SELECT id FROM harvests)');
+      'DELETE FROM ushr_records WHERE harvest_id IS NOT NULL AND harvest_id NOT IN (SELECT id FROM harvests)',
+    );
     await db.execute(
-        'DELETE FROM sales WHERE harvest_id NOT IN (SELECT id FROM harvests)');
+      'DELETE FROM sales WHERE harvest_id NOT IN (SELECT id FROM harvests)',
+    );
     await db.execute(
-        'DELETE FROM activities WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)');
+      'DELETE FROM activities WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)',
+    );
     await db.execute(
-        'DELETE FROM harvests WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)');
+      'DELETE FROM harvests WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons)',
+    );
     await db.execute(
-        'DELETE FROM crop_season_fields WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons) OR field_id NOT IN (SELECT id FROM fields)');
+      'DELETE FROM crop_season_fields WHERE crop_season_id NOT IN (SELECT id FROM crop_seasons) OR field_id NOT IN (SELECT id FROM fields)',
+    );
     await db.execute(
-        'DELETE FROM crop_seasons WHERE field_id NOT IN (SELECT id FROM fields)');
+      'DELETE FROM crop_seasons WHERE field_id NOT IN (SELECT id FROM fields)',
+    );
     await db.execute(
-        'DELETE FROM thekas WHERE farm_id NOT IN (SELECT id FROM farms)');
+      'DELETE FROM thekas WHERE farm_id NOT IN (SELECT id FROM farms)',
+    );
     await db.execute(
-        'DELETE FROM thekas WHERE field_id IS NOT NULL AND field_id NOT IN (SELECT id FROM fields)');
+      'DELETE FROM thekas WHERE field_id IS NOT NULL AND field_id NOT IN (SELECT id FROM fields)',
+    );
     await db.execute(
-        'DELETE FROM fields WHERE farm_id NOT IN (SELECT id FROM farms)');
+      'DELETE FROM fields WHERE farm_id NOT IN (SELECT id FROM farms)',
+    );
 
     final List<String> statements = [
       'ALTER TABLE expenses ADD COLUMN farm_id INTEGER REFERENCES farms (id) ON DELETE SET NULL',

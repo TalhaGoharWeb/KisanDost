@@ -75,7 +75,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('ایپ فائل (APK) شیئر کرنے کی تیاری ہو رہی ہے...', style: TextStyle(fontSize: 16)),
+          content: Text(
+            'ایپ فائل (APK) شیئر کرنے کی تیاری ہو رہی ہے...',
+            style: TextStyle(fontSize: 16),
+          ),
           duration: Duration(seconds: 2),
         ),
       );
@@ -83,7 +86,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } on PlatformException catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('ایپ شیئرنگ میں خرابی پیش آئی: ${e.message}', style: const TextStyle(fontSize: 16)),
+          content: Text(
+            'ایپ شیئرنگ میں خرابی پیش آئی: ${e.message}',
+            style: const TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -94,11 +100,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('کسان دوست', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'کسان دوست',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             onSelected: (value) {
               if (value == 'about') {
                 Navigator.push(
@@ -122,7 +133,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Icon(Icons.info_outline, color: Colors.black87),
                       SizedBox(width: 12),
-                      Text('ایپ کے بارے میں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        'ایپ کے بارے میں',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -132,7 +149,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Icon(Icons.settings_outlined, color: Colors.black87),
                       SizedBox(width: 12),
-                      Text('ترتیبات', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        'ترتیبات',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -142,7 +165,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Icon(Icons.share_outlined, color: Colors.black87),
                       SizedBox(width: 12),
-                      Text('ایپ شیئر کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        'ایپ شیئر کریں',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -243,41 +272,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: 'آج کے کام',
           icon: Icons.checklist_rtl,
           seeAllLabel: 'تمام کام',
-          onSeeAll: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const TasksScreen()),
-          ),
-          child: items.isEmpty
-              ? _emptyLine('آج کے لیے کوئی کام شیڈول نہیں ہے — آپ کی ڈائری اپ ٹو ڈیٹ ہے!')
-              : Column(
-                  children: [
-                    for (final t in items) _taskRow(context, taskProvider, t, now),
-                    if (todaysTasks(taskProvider.tasks, now).length > 5)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 4),
-                        child: Text('…اور مزید', style: TextStyle(color: Colors.grey)),
-                      ),
-                  ],
-                ),
+          onSeeAll:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TasksScreen()),
+              ),
+          child:
+              items.isEmpty
+                  ? _emptyLine(
+                    'آج کے لیے کوئی کام شیڈول نہیں ہے — آپ کی ڈائری اپ ٹو ڈیٹ ہے!',
+                  )
+                  : Column(
+                    children: [
+                      for (final t in items)
+                        _taskRow(context, taskProvider, t, now),
+                      if (todaysTasks(taskProvider.tasks, now).length > 5)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4),
+                          child: Text(
+                            '…اور مزید',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                    ],
+                  ),
         );
       },
     );
   }
 
-  Widget _taskRow(BuildContext context, TaskProvider taskProvider, TaskItem task, DateTime now) {
+  Widget _taskRow(
+    BuildContext context,
+    TaskProvider taskProvider,
+    TaskItem task,
+    DateTime now,
+  ) {
     final overdue = isTaskOverdue(task, now);
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => TaskFormScreen(task: task)),
-      ),
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => TaskFormScreen(task: task)),
+          ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
           children: [
             InkWell(
-              onTap: () => taskProvider.toggleTaskCompletion(task.id, task.isCompleted),
+              onTap:
+                  () => taskProvider.toggleTaskCompletion(
+                    task.id,
+                    task.isCompleted,
+                  ),
               borderRadius: BorderRadius.circular(24),
               child: Container(
                 width: 40,
@@ -290,9 +337,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   color: task.isCompleted ? Colors.green : Colors.transparent,
                 ),
-                child: task.isCompleted
-                    ? const Icon(Icons.check, size: 24, color: Colors.white)
-                    : null,
+                child:
+                    task.isCompleted
+                        ? const Icon(Icons.check, size: 24, color: Colors.white)
+                        : null,
               ),
             ),
             const SizedBox(width: 12),
@@ -305,13 +353,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                      decoration:
+                          task.isCompleted ? TextDecoration.lineThrough : null,
                     ),
                   ),
                   const SizedBox(height: 4),
                   if (overdue)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(10),
@@ -329,7 +381,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   else
                     Text(
                       urduTimeOfDay(task.dateTime),
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                 ],
               ),
@@ -343,11 +398,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ---------- 3. Money snapshot ----------
 
   Widget _buildMoneySection() {
-    return Consumer4<ExpenseProvider, HarvestProvider, ThekaProvider,
-        PartyProvider>(
-      builder:
-          (context, expenseProvider, harvestProvider, thekaProvider, partyProvider, _) {
-        final error = expenseProvider.errorMessage ??
+    return Consumer4<
+      ExpenseProvider,
+      HarvestProvider,
+      ThekaProvider,
+      PartyProvider
+    >(
+      builder: (
+        context,
+        expenseProvider,
+        harvestProvider,
+        thekaProvider,
+        partyProvider,
+        _,
+      ) {
+        final error =
+            expenseProvider.errorMessage ??
             harvestProvider.errorMessage ??
             thekaProvider.errorMessage ??
             partyProvider.errorMessage;
@@ -361,12 +427,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
         final now = DateTime.now();
         final todayPaisa = expensesOnDayPaisa(expenseProvider.expenses, now);
-        final monthExpensePaisa = expensesInMonthPaisa(expenseProvider.expenses, now);
+        final monthExpensePaisa = expensesInMonthPaisa(
+          expenseProvider.expenses,
+          now,
+        );
         final monthIncomePaisa = salesInMonthPaisa(harvestProvider.sales, now);
         final dueSoon = dueSoonInstallments(thekaProvider.allInstallments, now);
         final receivablePaisa = partyProvider.totalReceivablePaisa;
         final payablePaisa = partyProvider.totalPayablePaisa;
-        final hasAnyData = expenseProvider.expenses.isNotEmpty ||
+        final hasAnyData =
+            expenseProvider.expenses.isNotEmpty ||
             harvestProvider.sales.isNotEmpty ||
             thekaProvider.allInstallments.isNotEmpty ||
             receivablePaisa > 0 ||
@@ -375,45 +445,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return _sectionCard(
           title: 'رقم کی صورتحال',
           icon: Icons.account_balance_wallet_outlined,
-          child: !hasAnyData
-              ? _emptyLine('ابھی کوئی لین دین ریکارڈ نہیں — پہلا خرچ لکھ کر شروع کریں۔')
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _moneyStat('آج کے خرچے', todayPaisa, Colors.red.shade600),
-                        const SizedBox(width: 10),
-                        _moneyStat('اس ماہ خرچے', monthExpensePaisa, Colors.orange.shade700),
-                        const SizedBox(width: 10),
-                        _moneyStat('اس ماہ آمدنی', monthIncomePaisa, Colors.green.shade700),
-                      ],
-                    ),
-                    if (dueSoon.isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      const Divider(height: 1),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'جلد واجب الادا ٹھیکہ قسطیں',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          child:
+              !hasAnyData
+                  ? _emptyLine(
+                    'ابھی کوئی لین دین ریکارڈ نہیں — پہلا خرچ لکھ کر شروع کریں۔',
+                  )
+                  : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _moneyStat(
+                            'آج کے خرچے',
+                            todayPaisa,
+                            Colors.red.shade600,
+                          ),
+                          const SizedBox(width: 10),
+                          _moneyStat(
+                            'اس ماہ خرچے',
+                            monthExpensePaisa,
+                            Colors.orange.shade700,
+                          ),
+                          const SizedBox(width: 10),
+                          _moneyStat(
+                            'اس ماہ آمدنی',
+                            monthIncomePaisa,
+                            Colors.green.shade700,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      for (final inst in dueSoon.take(3))
-                        _installmentRow(context, thekaProvider, inst, now),
+                      if (dueSoon.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        const Divider(height: 1),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'جلد واجب الادا ٹھیکہ قسطیں',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        for (final inst in dueSoon.take(3))
+                          _installmentRow(context, thekaProvider, inst, now),
+                      ],
+                      if (receivablePaisa > 0 || payablePaisa > 0) ...[
+                        const SizedBox(height: 14),
+                        const Divider(height: 1),
+                        const SizedBox(height: 10),
+                        if (receivablePaisa > 0)
+                          _partyBalanceLine(
+                            'لوگوں سے لینا ہے',
+                            receivablePaisa,
+                            Colors.green.shade700,
+                          ),
+                        if (payablePaisa > 0)
+                          _partyBalanceLine(
+                            'لوگوں کو دینا ہے',
+                            payablePaisa,
+                            Colors.red.shade700,
+                          ),
+                      ],
                     ],
-                    if (receivablePaisa > 0 || payablePaisa > 0) ...[
-                      const SizedBox(height: 14),
-                      const Divider(height: 1),
-                      const SizedBox(height: 10),
-                      if (receivablePaisa > 0)
-                        _partyBalanceLine('لوگوں سے لینا ہے', receivablePaisa,
-                            Colors.green.shade700),
-                      if (payablePaisa > 0)
-                        _partyBalanceLine('لوگوں کو دینا ہے', payablePaisa,
-                            Colors.red.shade700),
-                    ],
-                  ],
-                ),
+                  ),
         );
       },
     );
@@ -428,9 +522,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(fontSize: 15)),
           const Spacer(),
-          DigitText(Money(paisa).format(),
+          DigitText(
+            Money(paisa).format(),
             style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: color),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -448,10 +546,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         child: Column(
           children: [
-            Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            Text(
+              label,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+            ),
             const SizedBox(height: 6),
-            DigitText(Money(paisa).format(),
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+            DigitText(
+              Money(paisa).format(),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -485,7 +591,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(Icons.event_note, color: overdue ? Colors.red : Colors.orange.shade700),
+          Icon(
+            Icons.event_note,
+            color: overdue ? Colors.red : Colors.orange.shade700,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -493,7 +602,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   'ٹھیکہ قسط${farmName != null ? ' — $farmName' : ''}',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   dueDay == null
@@ -508,7 +620,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          DigitText(Money(remainingPaisa(inst)).format(),
+          DigitText(
+            Money(remainingPaisa(inst)).format(),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -560,64 +673,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: 'فصلوں کی صورتحال',
           icon: Icons.grass,
           seeAllLabel: 'تمام فصلیں',
-          onSeeAll: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MyCropsScreen()),
-          ),
-          child: !hasContent
-              ? _emptyLine('ابھی کوئی فصل درج نہیں — نئے سیزن کی فصل لکھ کر شروع کریں۔')
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final s in active)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
+          onSeeAll:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyCropsScreen()),
+              ),
+          child:
+              !hasContent
+                  ? _emptyLine(
+                    'ابھی کوئی فصل درج نہیں — نئے سیزن کی فصل لکھ کر شروع کریں۔',
+                  )
+                  : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final s in active)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              Icon(Icons.spa, color: Colors.green.shade700),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  s.cropSeason.cropName,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                s.farmDisplayName.isNotEmpty
+                                    ? s.farmDisplayName
+                                    : s.fieldDisplayName,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (latestSale != null) ...[
+                        const Divider(height: 20),
+                        Row(
                           children: [
-                            Icon(Icons.spa, color: Colors.green.shade700),
+                            Icon(
+                              Icons.sell_outlined,
+                              color: Colors.teal.shade700,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                s.cropSeason.cropName,
-                                style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
+                                'آخری فروخت${latestCropName != null ? ': $latestCropName' : ''}',
+                                style: const TextStyle(fontSize: 15),
                               ),
                             ),
-                            Text(
-                              s.farmDisplayName.isNotEmpty
-                                  ? s.farmDisplayName
-                                  : s.fieldDisplayName,
+                            DigitText(
+                              Money(latestSale.totalAmountPaisa).format(),
                               style: TextStyle(
-                                  fontSize: 13, color: Colors.grey.shade600),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal.shade800,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    if (latestSale != null) ...[
-                      const Divider(height: 20),
-                      Row(
-                        children: [
-                          Icon(Icons.sell_outlined,
-                              color: Colors.teal.shade700),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'آخری فروخت${latestCropName != null ? ': $latestCropName' : ''}',
-                              style: const TextStyle(fontSize: 15),
-                            ),
-                          ),
-                          DigitText(Money(latestSale.totalAmountPaisa).format(),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.teal.shade800,
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ],
-                  ],
-                ),
+                  ),
         );
       },
     );
@@ -632,30 +756,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: Icons.add_card,
           label: 'خرچ لکھیں',
           color: Colors.red.shade600,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ExpensesScreen()),
-          ),
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ExpensesScreen()),
+              ),
         ),
         const SizedBox(width: 12),
         _quickAction(
           icon: Icons.add_task,
           label: 'کام لکھیں',
           color: Colors.deepPurple.shade600,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const TaskFormScreen()),
-          ),
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TaskFormScreen()),
+              ),
         ),
         const SizedBox(width: 12),
         _quickAction(
           icon: Icons.grass,
           label: 'فصل دیکھیں',
           color: Colors.green.shade700,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MyCropsScreen()),
-          ),
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyCropsScreen()),
+              ),
         ),
       ],
     );
@@ -676,7 +803,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withValues(alpha: 0.30), width: 1.5),
+            border: Border.all(
+              color: color.withValues(alpha: 0.30),
+              width: 1.5,
+            ),
           ),
           child: Column(
             children: [
@@ -701,32 +831,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildAllFeatures() {
     final tiles = [
-      _FeatureTile(Icons.landscape, 'میری زمینیں', Colors.brown.shade600,
-          () => _push(const MyFarmsScreen())),
-      _FeatureTile(Icons.grass, 'میری فصلیں', Colors.green.shade600,
-          () => _push(const MyCropsScreen())),
-      _FeatureTile(Icons.add_circle, 'آج کا کام', Colors.blue.shade600,
-          () => _push(const TodaysWorkScreen())),
-      _FeatureTile(Icons.money_off, 'خرچے', Colors.red.shade500,
-          () => _push(const ExpensesScreen())),
-      _FeatureTile(Icons.agriculture, 'پیداوار', Colors.orange.shade600,
-          () => _push(const HarvestScreen())),
-      _FeatureTile(Icons.inventory, 'گودام (اسٹاک)', Colors.blueGrey.shade600,
-          () => _push(const InventoryScreen())),
-      _FeatureTile(Icons.account_balance_wallet, 'منافع و نقصان',
-          Colors.teal.shade600, () => _push(const ProfitLossScreen())),
-      _FeatureTile(Icons.checklist_rtl, 'کام کی منصوبہ بندی',
-          Colors.deepPurple.shade600, () => _push(const TasksScreen())),
-      _FeatureTile(Icons.description_outlined, 'ٹھیکہ مینجمنٹ',
-          Colors.brown.shade800, () => _push(const ThekaListScreen())),
-      _FeatureTile(Icons.volunteer_activism, 'عشر مینجمنٹ',
-          Colors.green.shade800, () => _push(const UshrScreen())),
-      _FeatureTile(Icons.people_outline, 'پارٹی کھاتہ',
-          Colors.indigo.shade600, () => _push(const PartiesScreen())),
-      _FeatureTile(Icons.handshake_outlined, 'بٹائی',
-          Colors.amber.shade800, () => _push(const BataiScreen())),
-      _FeatureTile(Icons.summarize_outlined, 'رپورٹ',
-          Colors.cyan.shade700, () => _push(const ReportsScreen())),
+      _FeatureTile(
+        Icons.landscape,
+        'میری زمینیں',
+        Colors.brown.shade600,
+        () => _push(const MyFarmsScreen()),
+      ),
+      _FeatureTile(
+        Icons.grass,
+        'میری فصلیں',
+        Colors.green.shade600,
+        () => _push(const MyCropsScreen()),
+      ),
+      _FeatureTile(
+        Icons.add_circle,
+        'آج کا کام',
+        Colors.blue.shade600,
+        () => _push(const TodaysWorkScreen()),
+      ),
+      _FeatureTile(
+        Icons.money_off,
+        'خرچے',
+        Colors.red.shade500,
+        () => _push(const ExpensesScreen()),
+      ),
+      _FeatureTile(
+        Icons.agriculture,
+        'پیداوار',
+        Colors.orange.shade600,
+        () => _push(const HarvestScreen()),
+      ),
+      _FeatureTile(
+        Icons.inventory,
+        'گودام (اسٹاک)',
+        Colors.blueGrey.shade600,
+        () => _push(const InventoryScreen()),
+      ),
+      _FeatureTile(
+        Icons.account_balance_wallet,
+        'منافع و نقصان',
+        Colors.teal.shade600,
+        () => _push(const ProfitLossScreen()),
+      ),
+      _FeatureTile(
+        Icons.checklist_rtl,
+        'کام کی منصوبہ بندی',
+        Colors.deepPurple.shade600,
+        () => _push(const TasksScreen()),
+      ),
+      _FeatureTile(
+        Icons.description_outlined,
+        'ٹھیکہ مینجمنٹ',
+        Colors.brown.shade800,
+        () => _push(const ThekaListScreen()),
+      ),
+      _FeatureTile(
+        Icons.volunteer_activism,
+        'عشر مینجمنٹ',
+        Colors.green.shade800,
+        () => _push(const UshrScreen()),
+      ),
+      _FeatureTile(
+        Icons.people_outline,
+        'پارٹی کھاتہ',
+        Colors.indigo.shade600,
+        () => _push(const PartiesScreen()),
+      ),
+      _FeatureTile(
+        Icons.handshake_outlined,
+        'بٹائی',
+        Colors.amber.shade800,
+        () => _push(const BataiScreen()),
+      ),
+      _FeatureTile(
+        Icons.summarize_outlined,
+        'رپورٹ',
+        Colors.cyan.shade700,
+        () => _push(const ReportsScreen()),
+      ),
     ];
     return GridView.count(
       crossAxisCount: 3,
@@ -758,7 +940,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 8),
               Text(
                 tile.label,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -791,7 +976,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 if (onSeeAll != null)
@@ -842,7 +1030,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             child: Text(
               message,
-              style: TextStyle(fontSize: 15, color: Colors.grey.shade700, height: 1.6),
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey.shade700,
+                height: 1.6,
+              ),
             ),
           ),
         ],

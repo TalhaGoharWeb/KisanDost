@@ -17,7 +17,8 @@ class HarvestScreen extends StatefulWidget {
   State<HarvestScreen> createState() => _HarvestScreenState();
 }
 
-class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProviderStateMixin {
+class _HarvestScreenState extends State<HarvestScreen>
+    with SingleTickerProviderStateMixin {
   /// Parses an optional money field: blank means 0 paisa; garbage throws
   /// [MoneyParseException] (Urdu message, safe for a SnackBar).
   int _parsePaisaOrThrow(String text) {
@@ -163,13 +164,24 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8), fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: color.withValues(alpha: 0.8),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: DigitText(
               value,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -184,197 +196,318 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
   ) {
     return RefreshIndicator(
       onRefresh: () async {
-        await Provider.of<HarvestProvider>(context, listen: false).fetchHarvests();
+        await Provider.of<HarvestProvider>(
+          context,
+          listen: false,
+        ).fetchHarvests();
       },
-      child: harvests.isEmpty
-          ? SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - kToolbarHeight - kTextTabBarHeight - MediaQuery.of(context).padding.top,
-                child: const EmptyStateWidget(
-                  message: 'کوئی پیداوار ریکارڈ نہیں ہے',
-                  subtitle: 'پیداوار درج کرنے کے لیے نیچے بٹن دبائیں',
-                  fallbackIcon: Icons.agriculture,
-                  imageAsset: 'assets/images/wheat.png',
+      child:
+          harvests.isEmpty
+              ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height:
+                      MediaQuery.of(context).size.height -
+                      kToolbarHeight -
+                      kTextTabBarHeight -
+                      MediaQuery.of(context).padding.top,
+                  child: const EmptyStateWidget(
+                    message: 'کوئی پیداوار ریکارڈ نہیں ہے',
+                    subtitle: 'پیداوار درج کرنے کے لیے نیچے بٹن دبائیں',
+                    fallbackIcon: Icons.agriculture,
+                    imageAsset: 'assets/images/wheat.png',
+                  ),
                 ),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: harvests.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return _buildSummaryCards(harvests);
-                }
+              )
+              : ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: harvests.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _buildSummaryCards(harvests);
+                  }
 
-                final item = harvests[index - 1];
-                final h = item.harvest;
-                final cropNameUrdu = cropProvider.predefinedCrops[item.cropName] ?? item.cropName;
-                final double yieldPerAcre = h.quantity / item.fieldSize;
+                  final item = harvests[index - 1];
+                  final h = item.harvest;
+                  final cropNameUrdu =
+                      cropProvider.predefinedCrops[item.cropName] ??
+                      item.cropName;
+                  final double yieldPerAcre = h.quantity / item.fieldSize;
 
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '$cropNameUrdu - ${h.quantity.toStringAsFixed(0)} ${h.unit}',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              DateFormat('yyyy-MM-dd').format(DateTime.parse(h.date)),
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'زمین: ${item.farmName} - ${item.fieldName} (${item.fieldSize} ایکڑ)',
-                          style: TextStyle(color: Colors.grey.shade800),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green.shade200),
-                              ),
-                              child: Text(
-                                'پیداوار فی ایکڑ: ${yieldPerAcre.toStringAsFixed(1)} ${h.unit} / ایکڑ',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800, fontSize: 13),
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: h.paymentStatus == 'Paid'
-                                    ? Colors.green.shade50
-                                    : (h.paymentStatus == 'Partial' ? Colors.orange.shade50 : Colors.red.shade50),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: h.paymentStatus == 'Paid'
-                                      ? Colors.green.shade300
-                                      : (h.paymentStatus == 'Partial' ? Colors.orange.shade300 : Colors.red.shade300),
-                                ),
-                              ),
-                              child: Text(
-                                h.paymentStatus == 'Paid'
-                                    ? 'ادائیگی مکمل (Paid)'
-                                    : (h.paymentStatus == 'Partial' ? 'جزوی ادائیگی (Partial)' : 'باقی (Pending)'),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: h.paymentStatus == 'Paid'
-                                      ? Colors.green.shade800
-                                      : (h.paymentStatus == 'Partial' ? Colors.orange.shade800 : Colors.red.shade800),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 24),
-                        // Financial Grid
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('کل فروخت', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  DigitText(Money(h.grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('کل اخراجات', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  DigitText(Money(h.totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('خالص آمدنی', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  DigitText(Money(h.netIncomePaisa).format(),
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: h.netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (h.ratePerUnitPaisa > 0) ...[
-                          const SizedBox(height: 8),
+                  return Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('ریٹ: ${Money(h.ratePerUnitPaisa).format()} فی ${h.unit}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
-                              if (h.buyerName != null && h.buyerName!.isNotEmpty)
-                                Text('خریدار: ${h.buyerName}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                              Text(
+                                '$cropNameUrdu - ${h.quantity.toStringAsFixed(0)} ${h.unit}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                DateFormat(
+                                  'yyyy-MM-dd',
+                                ).format(DateTime.parse(h.date)),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ],
                           ),
-                        ],
-                        if (h.notes != null && h.notes!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'زمین: ${item.farmName} - ${item.fieldName} (${item.fieldSize} ایکڑ)',
+                            style: TextStyle(color: Colors.grey.shade800),
+                          ),
                           const SizedBox(height: 8),
-                          Text('نوٹ: ${h.notes}', style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.grey)),
-                        ],
-                        const Divider(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (h.grossPaisa == 0)
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
                                 ),
-                                icon: const Icon(Icons.shopping_cart, size: 16),
-                                label: const Text('فروخت درج کریں'),
-                                onPressed: () => _showRecordSaleDialog(context, item),
-                              )
-                            else
-                              const SizedBox.shrink(),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.green.shade200,
+                                  ),
+                                ),
+                                child: Text(
+                                  'پیداوار فی ایکڑ: ${yieldPerAcre.toStringAsFixed(1)} ${h.unit} / ایکڑ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade800,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      h.paymentStatus == 'Paid'
+                                          ? Colors.green.shade50
+                                          : (h.paymentStatus == 'Partial'
+                                              ? Colors.orange.shade50
+                                              : Colors.red.shade50),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color:
+                                        h.paymentStatus == 'Paid'
+                                            ? Colors.green.shade300
+                                            : (h.paymentStatus == 'Partial'
+                                                ? Colors.orange.shade300
+                                                : Colors.red.shade300),
+                                  ),
+                                ),
+                                child: Text(
+                                  h.paymentStatus == 'Paid'
+                                      ? 'ادائیگی مکمل (Paid)'
+                                      : (h.paymentStatus == 'Partial'
+                                          ? 'جزوی ادائیگی (Partial)'
+                                          : 'باقی (Pending)'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        h.paymentStatus == 'Paid'
+                                            ? Colors.green.shade800
+                                            : (h.paymentStatus == 'Partial'
+                                                ? Colors.orange.shade800
+                                                : Colors.red.shade800),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          // Financial Grid
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'کل فروخت',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    DigitText(
+                                      Money(h.grossPaisa).format(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'کل اخراجات',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    DigitText(
+                                      Money(h.totalExpensePaisa).format(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'خالص آمدنی',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    DigitText(
+                                      Money(h.netIncomePaisa).format(),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            h.netIncomePaisa >= 0
+                                                ? Colors.green.shade800
+                                                : Colors.red.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (h.ratePerUnitPaisa > 0) ...[
+                            const SizedBox(height: 8),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                TextButton.icon(
-                                  style: TextButton.styleFrom(foregroundColor: Colors.blueGrey),
-                                  icon: const Icon(Icons.edit, size: 16),
-                                  label: const Text('تبدیلی'),
-                                  onPressed: () => _showEditHarvestDialog(context, item, cropProvider),
+                                Text(
+                                  'ریٹ: ${Money(h.ratePerUnitPaisa).format()} فی ${h.unit}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blueGrey,
+                                  ),
                                 ),
-                                const SizedBox(width: 8),
-                                TextButton.icon(
-                                  style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
-                                  icon: const Icon(Icons.delete, size: 16),
-                                  label: const Text('حذف'),
-                                  onPressed: () => _confirmDeleteHarvest(context, h.id!),
-                                ),
+                                if (h.buyerName != null &&
+                                    h.buyerName!.isNotEmpty)
+                                  Text(
+                                    'خریدار: ${h.buyerName}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.blueGrey,
+                                    ),
+                                  ),
                               ],
                             ),
                           ],
-                        ),
-                      ],
+                          if (h.notes != null && h.notes!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'نوٹ: ${h.notes}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              if (h.grossPaisa == 0)
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.shopping_cart,
+                                    size: 16,
+                                  ),
+                                  label: const Text('فروخت درج کریں'),
+                                  onPressed:
+                                      () =>
+                                          _showRecordSaleDialog(context, item),
+                                )
+                              else
+                                const SizedBox.shrink(),
+                              Row(
+                                children: [
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.blueGrey,
+                                    ),
+                                    icon: const Icon(Icons.edit, size: 16),
+                                    label: const Text('تبدیلی'),
+                                    onPressed:
+                                        () => _showEditHarvestDialog(
+                                          context,
+                                          item,
+                                          cropProvider,
+                                        ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red.shade700,
+                                    ),
+                                    icon: const Icon(Icons.delete, size: 16),
+                                    label: const Text('حذف'),
+                                    onPressed:
+                                        () => _confirmDeleteHarvest(
+                                          context,
+                                          h.id!,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
     );
   }
 
@@ -387,113 +520,157 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
 
     return RefreshIndicator(
       onRefresh: () async {
-        await Provider.of<HarvestProvider>(context, listen: false).fetchHarvests();
+        await Provider.of<HarvestProvider>(
+          context,
+          listen: false,
+        ).fetchHarvests();
       },
-      child: soldItems.isEmpty
-          ? SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - kToolbarHeight - kTextTabBarHeight - MediaQuery.of(context).padding.top,
-                child: const EmptyStateWidget(
-                  message: 'کوئی فروخت ریکارڈ نہیں ہے',
-                  subtitle: 'پیداوار ریکارڈ کے کارڈ پر "فروخت درج کریں" دبائیں',
-                  fallbackIcon: Icons.shopping_bag,
-                  imageAsset: 'assets/images/wheat.png',
-                ),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: soldItems.length,
-              itemBuilder: (context, index) {
-                final item = soldItems[index];
-                final s = item.sale!;
-                final cropNameUrdu = cropProvider.predefinedCrops[item.cropName] ?? item.cropName;
-
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '$cropNameUrdu (فروخت)',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
-                            ),
-                            Text(
-                              DateFormat('yyyy-MM-dd').format(DateTime.parse(s.date)),
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text('زمین: ${item.farmName} - ${item.fieldName}'),
-                        const SizedBox(height: 4),
-                        Text('مقدار: ${s.quantity.toStringAsFixed(0)} ${item.harvest.unit} | ریٹ: ${Money(s.pricePerUnitPaisa).format()} فی ${item.harvest.unit}'),
-                        const Divider(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            DigitText(Money(s.totalAmountPaisa).format(),
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
-                            ),
-                            Text(
-                              'خریدار: ${s.buyerName ?? "عام بازار / نامعلوم"}',
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton.icon(
-                              style: TextButton.styleFrom(foregroundColor: Colors.blueGrey),
-                              icon: const Icon(Icons.edit, size: 16),
-                              label: const Text('ترمیم'),
-                              onPressed: () => _showEditSaleDialog(context, item),
-                            ),
-                            const SizedBox(width: 8),
-                            TextButton.icon(
-                              style: TextButton.styleFrom(foregroundColor: Colors.red),
-                              icon: const Icon(Icons.delete, size: 16),
-                              label: const Text('حذف'),
-                              onPressed: () => _confirmDeleteSale(context, s.id!),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+      child:
+          soldItems.isEmpty
+              ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height:
+                      MediaQuery.of(context).size.height -
+                      kToolbarHeight -
+                      kTextTabBarHeight -
+                      MediaQuery.of(context).padding.top,
+                  child: const EmptyStateWidget(
+                    message: 'کوئی فروخت ریکارڈ نہیں ہے',
+                    subtitle:
+                        'پیداوار ریکارڈ کے کارڈ پر "فروخت درج کریں" دبائیں',
+                    fallbackIcon: Icons.shopping_bag,
+                    imageAsset: 'assets/images/wheat.png',
                   ),
-                );
-              },
-            ),
+                ),
+              )
+              : ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: soldItems.length,
+                itemBuilder: (context, index) {
+                  final item = soldItems[index];
+                  final s = item.sale!;
+                  final cropNameUrdu =
+                      cropProvider.predefinedCrops[item.cropName] ??
+                      item.cropName;
+
+                  return Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '$cropNameUrdu (فروخت)',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                              Text(
+                                DateFormat(
+                                  'yyyy-MM-dd',
+                                ).format(DateTime.parse(s.date)),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text('زمین: ${item.farmName} - ${item.fieldName}'),
+                          const SizedBox(height: 4),
+                          Text(
+                            'مقدار: ${s.quantity.toStringAsFixed(0)} ${item.harvest.unit} | ریٹ: ${Money(s.pricePerUnitPaisa).format()} فی ${item.harvest.unit}',
+                          ),
+                          const Divider(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              DigitText(
+                                Money(s.totalAmountPaisa).format(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                              Text(
+                                'خریدار: ${s.buyerName ?? "عام بازار / نامعلوم"}',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.blueGrey,
+                                ),
+                                icon: const Icon(Icons.edit, size: 16),
+                                label: const Text('ترمیم'),
+                                onPressed:
+                                    () => _showEditSaleDialog(context, item),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                ),
+                                icon: const Icon(Icons.delete, size: 16),
+                                label: const Text('حذف'),
+                                onPressed:
+                                    () => _confirmDeleteSale(context, s.id!),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
     );
   }
 
   void _showAddHarvestDialog(BuildContext context, CropProvider cropProvider) {
-    final harvestProvider = Provider.of<HarvestProvider>(context, listen: false);
+    final harvestProvider = Provider.of<HarvestProvider>(
+      context,
+      listen: false,
+    );
     final activeSeasons = cropProvider.activeCropSeasons;
 
     if (activeSeasons.isEmpty) {
       showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('کوئی فعال فصل نہیں ہے'),
-          content: const Text('پیداوار درج کرنے کے لیے پہلے "میری فصلیں" میں جا کر فصل شروع کریں۔'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('ٹھیک ہے'),
+        builder:
+            (ctx) => AlertDialog(
+              title: const Text('کوئی فعال فصل نہیں ہے'),
+              content: const Text(
+                'پیداوار درج کرنے کے لیے پہلے "میری فصلیں" میں جا کر فصل شروع کریں۔',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('ٹھیک ہے'),
+                ),
+              ],
             ),
-          ],
-        ),
       );
       return;
     }
@@ -525,13 +702,21 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
             final int ratePaisa = _parsePaisaOrZero(rateController.text);
             final int transPaisa = _parsePaisaOrZero(transController.text);
             final int labourPaisa = _parsePaisaOrZero(labourController.text);
-            final int harvestingPaisa = _parsePaisaOrZero(harvestController.text);
-            final int commissionPaisa = _parsePaisaOrZero(commissionController.text);
+            final int harvestingPaisa = _parsePaisaOrZero(
+              harvestController.text,
+            );
+            final int commissionPaisa = _parsePaisaOrZero(
+              commissionController.text,
+            );
             final int otherPaisa = _parsePaisaOrZero(otherController.text);
 
             final int grossPaisa = (qty * ratePaisa).round();
             final int totalExpensePaisa =
-                transPaisa + labourPaisa + harvestingPaisa + commissionPaisa + otherPaisa;
+                transPaisa +
+                labourPaisa +
+                harvestingPaisa +
+                commissionPaisa +
+                otherPaisa;
             final int netIncomePaisa = grossPaisa - totalExpensePaisa;
 
             return AlertDialog(
@@ -549,14 +734,20 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           labelText: Strings.selectCrop,
                           border: OutlineInputBorder(),
                         ),
-                        items: activeSeasons.map((details) {
-                          final season = details.cropSeason;
-                          final nameUrdu = cropProvider.predefinedCrops[season.cropName] ?? season.cropName;
-                          return DropdownMenuItem<int>(
-                            value: season.id,
-                            child: Text('${details.farmDisplayName} - ${details.fieldDisplayName} ($nameUrdu - ${season.variety})'),
-                          );
-                        }).toList(),
+                        items:
+                            activeSeasons.map((details) {
+                              final season = details.cropSeason;
+                              final nameUrdu =
+                                  cropProvider.predefinedCrops[season
+                                      .cropName] ??
+                                  season.cropName;
+                              return DropdownMenuItem<int>(
+                                value: season.id,
+                                child: Text(
+                                  '${details.farmDisplayName} - ${details.fieldDisplayName} ($nameUrdu - ${season.variety})',
+                                ),
+                              );
+                            }).toList(),
                         onChanged: (val) {
                           setState(() {
                             selectedCropSeasonId = val;
@@ -570,14 +761,19 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                             flex: 3,
                             child: TextFormField(
                               controller: qtyController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: const InputDecoration(
                                 labelText: 'کل پیداوار کی مقدار',
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (v) => setState(() {}),
                               validator: (value) {
-                                if (value == null || value.isEmpty) return Strings.quantityRequired;
+                                if (value == null || value.isEmpty) {
+                                  return Strings.quantityRequired;
+                                }
                                 try {
                                   Quantity.parsePositive(value);
                                 } on QuantityParseException catch (e) {
@@ -597,9 +793,13 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 labelText: 'اکائی',
                                 border: OutlineInputBorder(),
                               ),
-                              items: unitsList.map((u) {
-                                return DropdownMenuItem(value: u, child: Text(u));
-                              }).toList(),
+                              items:
+                                  unitsList.map((u) {
+                                    return DropdownMenuItem(
+                                      value: u,
+                                      child: Text(u),
+                                    );
+                                  }).toList(),
                               onChanged: (val) {
                                 setState(() {
                                   selectedUnit = val!;
@@ -615,7 +815,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           Expanded(
                             child: TextFormField(
                               controller: rateController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: InputDecoration(
                                 labelText: 'ریٹ (فی $selectedUnit)',
                                 border: const OutlineInputBorder(),
@@ -633,9 +836,18 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'Paid', child: Text('ادائیگی مکمل (Paid)')),
-                                DropdownMenuItem(value: 'Partial', child: Text('جزوی ادائیگی (Partial)')),
-                                DropdownMenuItem(value: 'Pending', child: Text('باقی (Pending)')),
+                                DropdownMenuItem(
+                                  value: 'Paid',
+                                  child: Text('ادائیگی مکمل (Paid)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Partial',
+                                  child: Text('جزوی ادائیگی (Partial)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Pending',
+                                  child: Text('باقی (Pending)'),
+                                ),
                               ],
                               onChanged: (val) {
                                 setState(() {
@@ -659,7 +871,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         alignment: Alignment.centerRight,
                         child: Text(
                           'کٹائی کے اخراجات (روپے)',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown, fontSize: 14),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.brown,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -739,7 +955,9 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       ),
                       const SizedBox(height: 12),
                       ListTile(
-                        title: Text('تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
+                        title: Text(
+                          'تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final date = await showDatePicker(
@@ -759,35 +977,71 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       // Realtime Financial Card
                       Card(
                         color: Colors.orange.shade50,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('کل آمدنی:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  DigitText(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                                ],
-                              ),
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('کل اخراجات:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  DigitText(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                                ],
-                              ),
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('خالص نفع/نقصان:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  DigitText(Money(netIncomePaisa).format(),
+                                  const Text(
+                                    'کل آمدنی:',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800,
+                                    ),
+                                  ),
+                                  DigitText(
+                                    Money(grossPaisa).format(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Divider(),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'کل اخراجات:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  DigitText(
+                                    Money(totalExpensePaisa).format(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Divider(),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'خالص نفع/نقصان:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  DigitText(
+                                    Money(netIncomePaisa).format(),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          netIncomePaisa >= 0
+                                              ? Colors.green.shade800
+                                              : Colors.red.shade800,
                                     ),
                                   ),
                                 ],
@@ -806,7 +1060,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                   child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange.shade800,
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       final int ratePaisa;
@@ -819,8 +1076,12 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         ratePaisa = _parsePaisaOrThrow(rateController.text);
                         transPaisa = _parsePaisaOrThrow(transController.text);
                         labourPaisa = _parsePaisaOrThrow(labourController.text);
-                        harvestingPaisa = _parsePaisaOrThrow(harvestController.text);
-                        commissionPaisa = _parsePaisaOrThrow(commissionController.text);
+                        harvestingPaisa = _parsePaisaOrThrow(
+                          harvestController.text,
+                        );
+                        commissionPaisa = _parsePaisaOrThrow(
+                          commissionController.text,
+                        );
                         otherPaisa = _parsePaisaOrThrow(otherController.text);
                       } on MoneyParseException catch (e) {
                         _showMoneyError(ctx, e);
@@ -843,7 +1104,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       );
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('پیداوار کا ریکارڈ کامیابی سے شامل ہو گیا!')),
+                        const SnackBar(
+                          content: Text(
+                            'پیداوار کا ریکارڈ کامیابی سے شامل ہو گیا!',
+                          ),
+                        ),
                       );
                     }
                   },
@@ -857,8 +1122,15 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
     );
   }
 
-  void _showEditHarvestDialog(BuildContext context, HarvestWithDetails item, CropProvider cropProvider) {
-    final harvestProvider = Provider.of<HarvestProvider>(context, listen: false);
+  void _showEditHarvestDialog(
+    BuildContext context,
+    HarvestWithDetails item,
+    CropProvider cropProvider,
+  ) {
+    final harvestProvider = Provider.of<HarvestProvider>(
+      context,
+      listen: false,
+    );
     final formKey = GlobalKey<FormState>();
     final h = item.harvest;
     final activeSeasons = cropProvider.activeCropSeasons;
@@ -866,23 +1138,33 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
     int? selectedCropSeasonId = h.cropSeasonId;
     final qtyController = TextEditingController(text: h.quantity.toString());
     final rateController = TextEditingController(
-        text: h.ratePerUnitPaisa == 0 ? '' : Money(h.ratePerUnitPaisa).format());
+      text: h.ratePerUnitPaisa == 0 ? '' : Money(h.ratePerUnitPaisa).format(),
+    );
     final transController = TextEditingController(
-        text: h.transportationExpensePaisa == 0
-            ? ''
-            : Money(h.transportationExpensePaisa).format());
+      text:
+          h.transportationExpensePaisa == 0
+              ? ''
+              : Money(h.transportationExpensePaisa).format(),
+    );
     final labourController = TextEditingController(
-        text: h.labourExpensePaisa == 0 ? '' : Money(h.labourExpensePaisa).format());
+      text:
+          h.labourExpensePaisa == 0 ? '' : Money(h.labourExpensePaisa).format(),
+    );
     final harvestController = TextEditingController(
-        text: h.harvestingExpensePaisa == 0
-            ? ''
-            : Money(h.harvestingExpensePaisa).format());
+      text:
+          h.harvestingExpensePaisa == 0
+              ? ''
+              : Money(h.harvestingExpensePaisa).format(),
+    );
     final commissionController = TextEditingController(
-        text: h.commissionExpensePaisa == 0
-            ? ''
-            : Money(h.commissionExpensePaisa).format());
+      text:
+          h.commissionExpensePaisa == 0
+              ? ''
+              : Money(h.commissionExpensePaisa).format(),
+    );
     final otherController = TextEditingController(
-        text: h.otherExpensePaisa == 0 ? '' : Money(h.otherExpensePaisa).format());
+      text: h.otherExpensePaisa == 0 ? '' : Money(h.otherExpensePaisa).format(),
+    );
     final buyerNameController = TextEditingController(text: h.buyerName ?? '');
     final notesController = TextEditingController(text: h.notes ?? '');
 
@@ -901,13 +1183,21 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
             final int ratePaisa = _parsePaisaOrZero(rateController.text);
             final int transPaisa = _parsePaisaOrZero(transController.text);
             final int labourPaisa = _parsePaisaOrZero(labourController.text);
-            final int harvestingPaisa = _parsePaisaOrZero(harvestController.text);
-            final int commissionPaisa = _parsePaisaOrZero(commissionController.text);
+            final int harvestingPaisa = _parsePaisaOrZero(
+              harvestController.text,
+            );
+            final int commissionPaisa = _parsePaisaOrZero(
+              commissionController.text,
+            );
             final int otherPaisa = _parsePaisaOrZero(otherController.text);
 
             final int grossPaisa = (qty * ratePaisa).round();
             final int totalExpensePaisa =
-                transPaisa + labourPaisa + harvestingPaisa + commissionPaisa + otherPaisa;
+                transPaisa +
+                labourPaisa +
+                harvestingPaisa +
+                commissionPaisa +
+                otherPaisa;
             final int netIncomePaisa = grossPaisa - totalExpensePaisa;
 
             return AlertDialog(
@@ -925,14 +1215,20 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           labelText: Strings.selectCrop,
                           border: OutlineInputBorder(),
                         ),
-                        items: activeSeasons.map((details) {
-                          final season = details.cropSeason;
-                          final nameUrdu = cropProvider.predefinedCrops[season.cropName] ?? season.cropName;
-                          return DropdownMenuItem<int>(
-                            value: season.id,
-                            child: Text('${details.farmDisplayName} - ${details.fieldDisplayName} ($nameUrdu - ${season.variety})'),
-                          );
-                        }).toList(),
+                        items:
+                            activeSeasons.map((details) {
+                              final season = details.cropSeason;
+                              final nameUrdu =
+                                  cropProvider.predefinedCrops[season
+                                      .cropName] ??
+                                  season.cropName;
+                              return DropdownMenuItem<int>(
+                                value: season.id,
+                                child: Text(
+                                  '${details.farmDisplayName} - ${details.fieldDisplayName} ($nameUrdu - ${season.variety})',
+                                ),
+                              );
+                            }).toList(),
                         onChanged: (val) {
                           setState(() {
                             selectedCropSeasonId = val;
@@ -946,14 +1242,19 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                             flex: 3,
                             child: TextFormField(
                               controller: qtyController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: const InputDecoration(
                                 labelText: 'کل پیداوار کی مقدار',
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (v) => setState(() {}),
                               validator: (value) {
-                                if (value == null || value.isEmpty) return Strings.quantityRequired;
+                                if (value == null || value.isEmpty) {
+                                  return Strings.quantityRequired;
+                                }
                                 try {
                                   Quantity.parsePositive(value);
                                 } on QuantityParseException catch (e) {
@@ -973,9 +1274,13 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 labelText: 'اکائی',
                                 border: OutlineInputBorder(),
                               ),
-                              items: unitsList.map((u) {
-                                return DropdownMenuItem(value: u, child: Text(u));
-                              }).toList(),
+                              items:
+                                  unitsList.map((u) {
+                                    return DropdownMenuItem(
+                                      value: u,
+                                      child: Text(u),
+                                    );
+                                  }).toList(),
                               onChanged: (val) {
                                 setState(() {
                                   selectedUnit = val!;
@@ -991,7 +1296,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           Expanded(
                             child: TextFormField(
                               controller: rateController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: InputDecoration(
                                 labelText: 'ریٹ (فی $selectedUnit)',
                                 border: const OutlineInputBorder(),
@@ -1009,9 +1317,18 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'Paid', child: Text('ادائیگی مکمل (Paid)')),
-                                DropdownMenuItem(value: 'Partial', child: Text('جزوی ادائیگی (Partial)')),
-                                DropdownMenuItem(value: 'Pending', child: Text('باقی (Pending)')),
+                                DropdownMenuItem(
+                                  value: 'Paid',
+                                  child: Text('ادائیگی مکمل (Paid)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Partial',
+                                  child: Text('جزوی ادائیگی (Partial)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Pending',
+                                  child: Text('باقی (Pending)'),
+                                ),
                               ],
                               onChanged: (val) {
                                 setState(() {
@@ -1035,7 +1352,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         alignment: Alignment.centerRight,
                         child: Text(
                           'کٹائی کے اخراجات (روپے)',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.brown, fontSize: 14),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.brown,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1115,7 +1436,9 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       ),
                       const SizedBox(height: 12),
                       ListTile(
-                        title: Text('تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
+                        title: Text(
+                          'تاریخ: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final date = await showDatePicker(
@@ -1134,35 +1457,71 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       const SizedBox(height: 12),
                       Card(
                         color: Colors.orange.shade50,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('کل آمدنی:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  DigitText(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                                ],
-                              ),
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('کل اخراجات:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  DigitText(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                                ],
-                              ),
-                              const Divider(),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('خالص نفع/نقصان:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  DigitText(Money(netIncomePaisa).format(),
+                                  const Text(
+                                    'کل آمدنی:',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800,
+                                    ),
+                                  ),
+                                  DigitText(
+                                    Money(grossPaisa).format(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Divider(),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'کل اخراجات:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  DigitText(
+                                    Money(totalExpensePaisa).format(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Divider(),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'خالص نفع/نقصان:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  DigitText(
+                                    Money(netIncomePaisa).format(),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          netIncomePaisa >= 0
+                                              ? Colors.green.shade800
+                                              : Colors.red.shade800,
                                     ),
                                   ),
                                 ],
@@ -1181,7 +1540,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                   child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange.shade800,
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       final int ratePaisa;
@@ -1194,8 +1556,12 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         ratePaisa = _parsePaisaOrThrow(rateController.text);
                         transPaisa = _parsePaisaOrThrow(transController.text);
                         labourPaisa = _parsePaisaOrThrow(labourController.text);
-                        harvestingPaisa = _parsePaisaOrThrow(harvestController.text);
-                        commissionPaisa = _parsePaisaOrThrow(commissionController.text);
+                        harvestingPaisa = _parsePaisaOrThrow(
+                          harvestController.text,
+                        );
+                        commissionPaisa = _parsePaisaOrThrow(
+                          commissionController.text,
+                        );
                         otherPaisa = _parsePaisaOrThrow(otherController.text);
                       } on MoneyParseException catch (e) {
                         _showMoneyError(ctx, e);
@@ -1219,7 +1585,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       );
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('پیداوار کا ریکارڈ کامیابی سے تبدیل ہو گیا!')),
+                        const SnackBar(
+                          content: Text(
+                            'پیداوار کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
+                          ),
+                        ),
                       );
                     }
                   },
@@ -1234,7 +1604,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
   }
 
   void _showRecordSaleDialog(BuildContext context, HarvestWithDetails item) {
-    final harvestProvider = Provider.of<HarvestProvider>(context, listen: false);
+    final harvestProvider = Provider.of<HarvestProvider>(
+      context,
+      listen: false,
+    );
     final formKey = GlobalKey<FormState>();
 
     final priceController = TextEditingController();
@@ -1248,7 +1621,9 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('پیداوار فروخت کریں (${item.harvest.quantity} ${item.harvest.unit})'),
+              title: Text(
+                'پیداوار فروخت کریں (${item.harvest.quantity} ${item.harvest.unit})',
+              ),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -1257,13 +1632,17 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                     children: [
                       TextFormField(
                         controller: priceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'ریٹ فی ${item.harvest.unit} (روپے)',
                           border: const OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'ریٹ درج کریں';
+                          if (value == null || value.isEmpty) {
+                            return 'ریٹ درج کریں';
+                          }
                           try {
                             Money.parse(value);
                           } on MoneyParseException catch (e) {
@@ -1291,7 +1670,9 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       ),
                       const SizedBox(height: 16),
                       ListTile(
-                        title: Text('تاریخ فروخت: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
+                        title: Text(
+                          'تاریخ فروخت: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final date = await showDatePicker(
@@ -1318,7 +1699,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         ),
                         child: Text(
                           'کل رقم: ${Money(totalAmountPaisa).format()}',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800, fontSize: 16),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade800,
+                            fontSize: 16,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -1332,7 +1717,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                   child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       final int pricePaisa;
@@ -1363,12 +1751,16 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
   }
 
   void _showEditSaleDialog(BuildContext context, HarvestWithDetails item) {
-    final harvestProvider = Provider.of<HarvestProvider>(context, listen: false);
+    final harvestProvider = Provider.of<HarvestProvider>(
+      context,
+      listen: false,
+    );
     final formKey = GlobalKey<FormState>();
     final sale = item.sale!;
 
-    final priceController =
-        TextEditingController(text: Money(sale.pricePerUnitPaisa).format());
+    final priceController = TextEditingController(
+      text: Money(sale.pricePerUnitPaisa).format(),
+    );
     final buyerController = TextEditingController(text: sale.buyerName ?? '');
     int totalAmountPaisa = sale.totalAmountPaisa;
     DateTime selectedDate = DateTime.parse(sale.date);
@@ -1379,7 +1771,9 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('فروخت کے ریکارڈ میں تبدیلی (${item.harvest.quantity} ${item.harvest.unit})'),
+              title: Text(
+                'فروخت کے ریکارڈ میں تبدیلی (${item.harvest.quantity} ${item.harvest.unit})',
+              ),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -1388,13 +1782,17 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                     children: [
                       TextFormField(
                         controller: priceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'ریٹ فی ${item.harvest.unit} (روپے)',
                           border: const OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'ریٹ درج کریں';
+                          if (value == null || value.isEmpty) {
+                            return 'ریٹ درج کریں';
+                          }
                           try {
                             Money.parse(value);
                           } on MoneyParseException catch (e) {
@@ -1422,7 +1820,9 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       ),
                       const SizedBox(height: 16),
                       ListTile(
-                        title: Text('تاریخ فروخت: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
+                        title: Text(
+                          'تاریخ فروخت: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final date = await showDatePicker(
@@ -1449,7 +1849,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         ),
                         child: Text(
                           'کل رقم: ${Money(totalAmountPaisa).format()}',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800, fontSize: 16),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade800,
+                            fontSize: 16,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -1482,7 +1886,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                       );
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('فروخت کا ریکارڈ کامیابی سے تبدیل ہو گیا!')),
+                        const SnackBar(
+                          content: Text(
+                            'فروخت کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
+                          ),
+                        ),
                       );
                     }
                   },
@@ -1499,54 +1907,76 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
   void _confirmDeleteSale(BuildContext context, int id) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('فروخت حذف کریں؟'),
-        content: const Text('کیا آپ واقعی یہ فروخت کا ریکارڈ حذف کرنا چاہتے ہیں؟ اس سے پیداوار کا بنیادی ریکارڈ حذف نہیں ہوگا۔'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(Strings.cancel),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('فروخت حذف کریں؟'),
+            content: const Text(
+              'کیا آپ واقعی یہ فروخت کا ریکارڈ حذف کرنا چاہتے ہیں؟ اس سے پیداوار کا بنیادی ریکارڈ حذف نہیں ہوگا۔',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(Strings.cancel),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  Provider.of<HarvestProvider>(
+                    context,
+                    listen: false,
+                  ).deleteSale(id);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('فروخت کا ریکارڈ کامیابی سے حذف ہو گیا!'),
+                    ),
+                  );
+                },
+                child: const Text(
+                  Strings.delete,
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Provider.of<HarvestProvider>(context, listen: false).deleteSale(id);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('فروخت کا ریکارڈ کامیابی سے حذف ہو گیا!')),
-              );
-            },
-            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 
   void _confirmDeleteHarvest(BuildContext context, int id) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('پیداوار حذف کریں؟'),
-        content: const Text('کیا آپ واقعی یہ پیداوار اور اس کی تمام فروخت کی معلومات حذف کرنا چاہتے ہیں؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(Strings.cancel),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('پیداوار حذف کریں؟'),
+            content: const Text(
+              'کیا آپ واقعی یہ پیداوار اور اس کی تمام فروخت کی معلومات حذف کرنا چاہتے ہیں؟',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(Strings.cancel),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  Provider.of<HarvestProvider>(
+                    context,
+                    listen: false,
+                  ).deleteHarvest(id);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('پیداوار کامیابی سے حذف ہو گئی!'),
+                    ),
+                  );
+                },
+                child: const Text(
+                  Strings.delete,
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Provider.of<HarvestProvider>(context, listen: false).deleteHarvest(id);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('پیداوار کامیابی سے حذف ہو گئی!')),
-              );
-            },
-            child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 }

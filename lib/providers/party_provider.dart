@@ -99,10 +99,14 @@ class PartyProvider extends ChangeNotifier {
     );
     _balances
       ..clear()
-      ..addEntries(balMaps.map((m) => MapEntry(
+      ..addEntries(
+        balMaps.map(
+          (m) => MapEntry(
             (m['party_id'] as int),
             ((m['bal'] as num?) ?? 0).toInt(),
-          )));
+          ),
+        ),
+      );
     notifyListeners();
   }
 
@@ -210,9 +214,8 @@ class PartyProvider extends ChangeNotifier {
         table: 'parties',
         rowId: partyId,
         action: AuditService.softDelete,
-        details: existing.isEmpty
-            ? 'پارٹی حذف'
-            : 'پارٹی: ${existing.first['name']}',
+        details:
+            existing.isEmpty ? 'پارٹی حذف' : 'پارٹی: ${existing.first['name']}',
       );
     });
     await fetchParties();
@@ -293,8 +296,7 @@ class PartyProvider extends ChangeNotifier {
         table: 'party_ledger_entries',
         rowId: newId,
         action: AuditService.create,
-        details:
-            '${partyEntryTypeUrdu(type)} — ${Money(amountPaisa).format()}',
+        details: '${partyEntryTypeUrdu(type)} — ${Money(amountPaisa).format()}',
       );
       return newId;
     });

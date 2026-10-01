@@ -68,17 +68,23 @@ void main() {
     // but this test only exercises the farm/field/season/expense paths.
     // They stay empty, so the DELETEs are no-ops here.
     await db.execute(
-        'CREATE TABLE thekas (id INTEGER PRIMARY KEY AUTOINCREMENT, farm_id INTEGER, field_id INTEGER)');
+      'CREATE TABLE thekas (id INTEGER PRIMARY KEY AUTOINCREMENT, farm_id INTEGER, field_id INTEGER)',
+    );
     await db.execute(
-        'CREATE TABLE theka_installments (id INTEGER PRIMARY KEY AUTOINCREMENT, theka_id INTEGER)');
+      'CREATE TABLE theka_installments (id INTEGER PRIMARY KEY AUTOINCREMENT, theka_id INTEGER)',
+    );
     await db.execute(
-        'CREATE TABLE ushr_records (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER, harvest_id INTEGER)');
+      'CREATE TABLE ushr_records (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER, harvest_id INTEGER)',
+    );
     await db.execute(
-        'CREATE TABLE harvests (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER)');
+      'CREATE TABLE harvests (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER)',
+    );
     await db.execute(
-        'CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, harvest_id INTEGER)');
+      'CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, harvest_id INTEGER)',
+    );
     await db.execute(
-        'CREATE TABLE activities (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER)');
+      'CREATE TABLE activities (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER)',
+    );
   }
 
   Future<Database> openV9Db() {
@@ -121,120 +127,130 @@ void main() {
       await db.close();
     });
 
-    test('v10 migration cleans orphans and links expenses to farm/field/crop',
-        () async {
-      // FK off: orphans could only accumulate on devices where FK
-      // enforcement was disabled (pre-9b5f7f0 production).
-      final db = await openV9DbWithoutFk();
-      await createV9Schema(db);
+    test(
+      'v10 migration cleans orphans and links expenses to farm/field/crop',
+      () async {
+        // FK off: orphans could only accumulate on devices where FK
+        // enforcement was disabled (pre-9b5f7f0 production).
+        final db = await openV9DbWithoutFk();
+        await createV9Schema(db);
 
-      // Valid parent chain.
-      final farmId = await db.insert('farms', {
-        'name': 'Good Farm',
-        'total_area': 10.0,
-        'created_at': '2026-01-01',
-      });
-      final fieldId = await db.insert('fields', {
-        'farm_id': farmId,
-        'name': 'Good Field',
-        'size_acres': 5.0,
-      });
-      final seasonId = await db.insert('crop_seasons', {
-        'field_id': fieldId,
-        'crop_name': 'Wheat',
-        'variety': 'Local',
-        'status': 'Active',
-        'start_date': '2026-01-01',
-      });
+        // Valid parent chain.
+        final farmId = await db.insert('farms', {
+          'name': 'Good Farm',
+          'total_area': 10.0,
+          'created_at': '2026-01-01',
+        });
+        final fieldId = await db.insert('fields', {
+          'farm_id': farmId,
+          'name': 'Good Field',
+          'size_acres': 5.0,
+        });
+        final seasonId = await db.insert('crop_seasons', {
+          'field_id': fieldId,
+          'crop_name': 'Wheat',
+          'variety': 'Local',
+          'status': 'Active',
+          'start_date': '2026-01-01',
+        });
 
-      // Orphans accumulated before FK enforcement existed.
-      await db.insert('fields', {
-        'farm_id': 9999,
-        'name': 'Orphan Field',
-        'size_acres': 1.0,
-      });
-      await db.insert('crop_seasons', {
-        'field_id': 9999,
-        'crop_name': 'Rice',
-        'variety': 'X',
-        'status': 'Active',
-        'start_date': '2026-01-01',
-      });
-      await db.insert('crop_season_fields', {
-        'crop_season_id': 9999,
-        'field_id': fieldId,
-      });
-
-      // A pre-migration expense (no link columns yet).
-      await db.insert('expenses', {
-        'category': 'Seeds',
-        'amount': 100.0,
-        'date': '2026-01-01',
-        'description': 'old expense',
-      });
-
-      // Run the real v10 migration.
-      await DatabaseHelper.migrateV9ToV10(db);
-
-      // Orphans are gone; valid rows survive.
-      final fields = await db.query('fields');
-      expect(fields.map((f) => f['name']), ['Good Field']);
-      expect(await db.query('crop_seasons'), hasLength(1));
-      expect(await db.query('crop_season_fields'), isEmpty);
-
-      // Enable FK enforcement like the app's _initDatabase does, so the
-      // new REFERENCES clauses added by the migration are actually
-      // enforced for the assertions below.
-      await db.execute('PRAGMA foreign_keys = ON');
-
-      // New link columns exist on expenses.
-      final columns = await db.rawQuery("PRAGMA table_info('expenses')");
-      final columnNames = columns.map((c) => c['name'] as String).toSet();
-      expect(
-          columnNames, containsAll(['farm_id', 'field_id', 'crop_season_id']));
-
-      // Old expense survived with NULL links.
-      final oldExpense = (await db.query('expenses',
-              where: 'description = ?', whereArgs: ['old expense']))
-          .single;
-      expect(oldExpense['farm_id'], isNull);
-      expect(oldExpense['crop_season_id'], isNull);
-
-      // A new expense can be linked to farm/field/crop.
-      final linkedId = await db.insert('expenses', {
-        'category': 'Fertilizer',
-        'amount': 250.0,
-        'date': '2026-02-01',
-        'farm_id': farmId,
-        'field_id': fieldId,
-        'crop_season_id': seasonId,
-      });
-      expect(linkedId, isNotNull);
-
-      // A link to a non-existent parent is rejected (FK enforced on the
-      // columns added via ALTER TABLE).
-      await expectLater(
-        db.insert('expenses', {
-          'category': 'Fertilizer',
-          'amount': 1.0,
-          'date': '2026-02-01',
+        // Orphans accumulated before FK enforcement existed.
+        await db.insert('fields', {
           'farm_id': 9999,
-        }),
-        throwsException,
-      );
+          'name': 'Orphan Field',
+          'size_acres': 1.0,
+        });
+        await db.insert('crop_seasons', {
+          'field_id': 9999,
+          'crop_name': 'Rice',
+          'variety': 'X',
+          'status': 'Active',
+          'start_date': '2026-01-01',
+        });
+        await db.insert('crop_season_fields', {
+          'crop_season_id': 9999,
+          'field_id': fieldId,
+        });
 
-      // Deleting the farm SET NULLs the expense links instead of deleting
-      // the financial record.
-      await db.delete('farms', where: 'id = ?', whereArgs: [farmId]);
-      final kept = (await db
-              .query('expenses', where: 'id = ?', whereArgs: [linkedId]))
-          .single;
-      expect(kept['farm_id'], isNull);
-      expect(kept['field_id'], isNull);
-      expect(kept['crop_season_id'], isNull);
-      expect(kept['amount'], 250.0);
+        // A pre-migration expense (no link columns yet).
+        await db.insert('expenses', {
+          'category': 'Seeds',
+          'amount': 100.0,
+          'date': '2026-01-01',
+          'description': 'old expense',
+        });
 
-      await db.close();
-    });
+        // Run the real v10 migration.
+        await DatabaseHelper.migrateV9ToV10(db);
+
+        // Orphans are gone; valid rows survive.
+        final fields = await db.query('fields');
+        expect(fields.map((f) => f['name']), ['Good Field']);
+        expect(await db.query('crop_seasons'), hasLength(1));
+        expect(await db.query('crop_season_fields'), isEmpty);
+
+        // Enable FK enforcement like the app's _initDatabase does, so the
+        // new REFERENCES clauses added by the migration are actually
+        // enforced for the assertions below.
+        await db.execute('PRAGMA foreign_keys = ON');
+
+        // New link columns exist on expenses.
+        final columns = await db.rawQuery("PRAGMA table_info('expenses')");
+        final columnNames = columns.map((c) => c['name'] as String).toSet();
+        expect(
+          columnNames,
+          containsAll(['farm_id', 'field_id', 'crop_season_id']),
+        );
+
+        // Old expense survived with NULL links.
+        final oldExpense =
+            (await db.query(
+              'expenses',
+              where: 'description = ?',
+              whereArgs: ['old expense'],
+            )).single;
+        expect(oldExpense['farm_id'], isNull);
+        expect(oldExpense['crop_season_id'], isNull);
+
+        // A new expense can be linked to farm/field/crop.
+        final linkedId = await db.insert('expenses', {
+          'category': 'Fertilizer',
+          'amount': 250.0,
+          'date': '2026-02-01',
+          'farm_id': farmId,
+          'field_id': fieldId,
+          'crop_season_id': seasonId,
+        });
+        expect(linkedId, isNotNull);
+
+        // A link to a non-existent parent is rejected (FK enforced on the
+        // columns added via ALTER TABLE).
+        await expectLater(
+          db.insert('expenses', {
+            'category': 'Fertilizer',
+            'amount': 1.0,
+            'date': '2026-02-01',
+            'farm_id': 9999,
+          }),
+          throwsException,
+        );
+
+        // Deleting the farm SET NULLs the expense links instead of deleting
+        // the financial record.
+        await db.delete('farms', where: 'id = ?', whereArgs: [farmId]);
+        final kept =
+            (await db.query(
+              'expenses',
+              where: 'id = ?',
+              whereArgs: [linkedId],
+            )).single;
+        expect(kept['farm_id'], isNull);
+        expect(kept['field_id'], isNull);
+        expect(kept['crop_season_id'], isNull);
+        expect(kept['amount'], 250.0);
+
+        await db.close();
+      },
+    );
   });
 }

@@ -4,7 +4,12 @@ class Farm {
   final double totalArea;
   final String createdAt;
 
-  Farm({this.id, required this.name, required this.totalArea, required this.createdAt});
+  Farm({
+    this.id,
+    required this.name,
+    required this.totalArea,
+    required this.createdAt,
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -112,6 +117,7 @@ class CropSeason {
 class Expense {
   final int? id;
   final String category;
+
   /// Amount in INTEGER paisa. Never a double: exact money arithmetic.
   final int amountPaisa;
   final String date;
@@ -175,6 +181,7 @@ class Inventory {
   final String name;
   final String unit;
   final double quantity;
+
   /// Cost of one unit in INTEGER paisa. Never a double.
   final int costPerUnitPaisa;
 
@@ -212,9 +219,10 @@ class Inventory {
       unit: map['unit'],
       quantity: map['quantity'],
       costPerUnitPaisa: map['cost_per_unit_paisa'] as int,
-      weightPerUnitKg: map['weight_per_unit_kg'] == null
-          ? null
-          : (map['weight_per_unit_kg'] as num).toDouble(),
+      weightPerUnitKg:
+          map['weight_per_unit_kg'] == null
+              ? null
+              : (map['weight_per_unit_kg'] as num).toDouble(),
     );
   }
 }
@@ -227,8 +235,10 @@ class InventoryTransaction {
   final String type; // purchase | usage | adjustment | opening_balance
   final double quantity;
   final String unit;
+
   /// Unit price in INTEGER paisa (nullable: adjustments may carry no price).
   final int? unitPricePaisa;
+
   /// Total in INTEGER paisa (signed like [quantity]).
   final int? totalAmountPaisa;
   final int? activityId;
@@ -365,9 +375,10 @@ class Activity {
       inventoryCategory: map['inventory_category'],
       inventoryName: map['inventory_name'],
       inventoryUnit: map['inventory_unit'],
-      inventoryQuantity: map['inventory_quantity'] == null
-          ? null
-          : (map['inventory_quantity'] as num).toDouble(),
+      inventoryQuantity:
+          map['inventory_quantity'] == null
+              ? null
+              : (map['inventory_quantity'] as num).toDouble(),
       inventoryItemId: map['inventory_item_id'],
       isCompleted: (map['is_completed'] ?? 0) == 1,
     );
@@ -380,8 +391,10 @@ class Harvest {
   final double quantity;
   final String unit;
   final String date;
+
   /// Rate per unit in INTEGER paisa.
   final int ratePerUnitPaisa;
+
   /// The five expense buckets in INTEGER paisa.
   final int transportationExpensePaisa;
   final int labourExpensePaisa;
@@ -458,8 +471,7 @@ class Harvest {
       transportationExpensePaisa:
           (map['transportation_expense_paisa'] ?? 0) as int,
       labourExpensePaisa: (map['labour_expense_paisa'] ?? 0) as int,
-      harvestingExpensePaisa:
-          (map['harvesting_expense_paisa'] ?? 0) as int,
+      harvestingExpensePaisa: (map['harvesting_expense_paisa'] ?? 0) as int,
       commissionExpensePaisa: (map['commission_expense_paisa'] ?? 0) as int,
       otherExpensePaisa: (map['other_expense_paisa'] ?? 0) as int,
       buyerName: map['buyer_name'],
@@ -476,8 +488,10 @@ class Sale {
   final int harvestId;
   final String? buyerName;
   final double quantity;
+
   /// Price per unit in INTEGER paisa.
   final int pricePerUnitPaisa;
+
   /// Total in INTEGER paisa.
   final int totalAmountPaisa;
   final String date;
@@ -526,6 +540,7 @@ class Theka {
   final int? id;
   final int farmId;
   final int? fieldId;
+
   /// Total in INTEGER paisa.
   final int totalAmountPaisa;
   final String durationType; // 'Seasonal', 'Yearly', 'Custom'
@@ -582,6 +597,7 @@ class Theka {
 class ThekaInstallment {
   final int? id;
   final int thekaId;
+
   /// Installment amount in INTEGER paisa.
   final int amountPaisa;
   final String dueDate;
@@ -623,7 +639,9 @@ class ThekaInstallment {
       dueDate: map['due_date'],
       status: map['status'],
       paidAmountPaisa:
-          map['paid_amount_paisa'] == null ? 0 : map['paid_amount_paisa'] as int,
+          map['paid_amount_paisa'] == null
+              ? 0
+              : map['paid_amount_paisa'] as int,
       paidDate: map['paid_date'],
       expenseId: map['expense_id'],
     );
@@ -635,10 +653,12 @@ class UshrRecord {
   final int cropSeasonId;
   final int? harvestId;
   final double harvestQty;
+
   /// Market value in INTEGER paisa.
   final int marketValuePaisa;
   final String ushrMethod; // 'Natural', 'Artificial', 'Custom'
   final double ushrPercentage;
+
   /// Ushr due in INTEGER paisa.
   final int ushrAmountPaisa;
   final String status; // 'Paid', 'Pending'
@@ -647,8 +667,10 @@ class UshrRecord {
   final int? expenseId;
   final String payMethod; // 'Cash', 'Crop', 'Mixed'
   final double qtyPaid;
+
   /// Cash paid in INTEGER paisa.
   final int cashPaidPaisa;
+
   /// Rate per unit for crop-paid ushr, in INTEGER paisa.
   final int ratePerUnitPaisa;
 
@@ -719,4 +741,3 @@ class UshrRecord {
     );
   }
 }
-

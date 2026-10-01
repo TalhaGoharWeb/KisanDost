@@ -34,12 +34,7 @@ void main() {
   /// DatabaseHelper._onCreate, FK clauses omitted for hermeticity.
   Future<Database> openThekaDb() async {
     final db = await openDatabase(inMemoryDatabasePath);
-    for (final t in [
-      'theka_installments',
-      'thekas',
-      'expenses',
-      'audit_log',
-    ]) {
+    for (final t in ['theka_installments', 'thekas', 'expenses', 'audit_log']) {
       await db.execute('DROP TABLE IF EXISTS $t');
     }
     await db.execute('''
@@ -117,49 +112,54 @@ void main() {
   }
 
   Future<Map<String, dynamic>> installmentRow(Database db, int id) async =>
-      (await db.query('theka_installments',
-          where: 'id = ?', whereArgs: [id])).first;
+      (await db.query(
+        'theka_installments',
+        where: 'id = ?',
+        whereArgs: [id],
+      )).first;
 
   group('theka pay / overpay', () {
-    test('partial then full payment accumulates into ONE cumulative expense',
-        () async {
-      final db = await openThekaDb();
-      final instId = await seedThekaWithOneInstallment(db);
-      final p = ThekaProvider(testExecutor: db);
+    test(
+      'partial then full payment accumulates into ONE cumulative expense',
+      () async {
+        final db = await openThekaDb();
+        final instId = await seedThekaWithOneInstallment(db);
+        final p = ThekaProvider(testExecutor: db);
 
-      // Partial payment: 40,000 of 100,000 paisa.
-      await p.payInstallment(
-        installmentId: instId,
-        paidAmountPaisa: 40000,
-        paidDate: '2026-02-01',
-        farmName: 'ٹیسٹ فارم',
-        installmentIndex: 1,
-      );
-      var inst = await installmentRow(db, instId);
-      expect(inst['status'], 'Partially Paid');
-      expect(inst['paid_amount_paisa'], 40000);
-      var expenses = await db.query('expenses');
-      expect(expenses, hasLength(1));
-      expect(expenses.first['amount_paisa'], 40000);
+        // Partial payment: 40,000 of 100,000 paisa.
+        await p.payInstallment(
+          installmentId: instId,
+          paidAmountPaisa: 40000,
+          paidDate: '2026-02-01',
+          farmName: 'ٹیسٹ فارم',
+          installmentIndex: 1,
+        );
+        var inst = await installmentRow(db, instId);
+        expect(inst['status'], 'Partially Paid');
+        expect(inst['paid_amount_paisa'], 40000);
+        var expenses = await db.query('expenses');
+        expect(expenses, hasLength(1));
+        expect(expenses.first['amount_paisa'], 40000);
 
-      // Completing payment: expense row is UPDATED to the cumulative total,
-      // never duplicated.
-      await p.payInstallment(
-        installmentId: instId,
-        paidAmountPaisa: 60000,
-        paidDate: '2026-03-01',
-        farmName: 'ٹیسٹ فارم',
-        installmentIndex: 1,
-      );
-      inst = await installmentRow(db, instId);
-      expect(inst['status'], 'Paid');
-      expect(inst['paid_amount_paisa'], 100000);
-      expenses = await db.query('expenses');
-      expect(expenses, hasLength(1));
-      expect(expenses.first['amount_paisa'], 100000);
+        // Completing payment: expense row is UPDATED to the cumulative total,
+        // never duplicated.
+        await p.payInstallment(
+          installmentId: instId,
+          paidAmountPaisa: 60000,
+          paidDate: '2026-03-01',
+          farmName: 'ٹیسٹ فارم',
+          installmentIndex: 1,
+        );
+        inst = await installmentRow(db, instId);
+        expect(inst['status'], 'Paid');
+        expect(inst['paid_amount_paisa'], 100000);
+        expenses = await db.query('expenses');
+        expect(expenses, hasLength(1));
+        expect(expenses.first['amount_paisa'], 100000);
 
-      await db.close();
-    });
+        await db.close();
+      },
+    );
 
     test('overpayment throws an Urdu error and records nothing', () async {
       final db = await openThekaDb();
@@ -183,8 +183,7 @@ void main() {
           farmName: 'ٹیسٹ فارم',
           installmentIndex: 1,
         ),
-        throwsA(predicate(
-            (e) => e.toString().contains('ادا شدہ رقم'))),
+        throwsA(predicate((e) => e.toString().contains('ادا شدہ رقم'))),
       );
 
       // The failed payment changed nothing: still exactly 100,000 paid and
@@ -230,11 +229,14 @@ void main() {
       }
       // Minimal join parents for fetchUshrRecords()'s query (FKs omitted).
       await db.execute(
-          'CREATE TABLE farms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)');
+        'CREATE TABLE farms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)',
+      );
       await db.execute(
-          'CREATE TABLE fields (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, size_acres REAL, farm_id INTEGER)');
+        'CREATE TABLE fields (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, size_acres REAL, farm_id INTEGER)',
+      );
       await db.execute(
-          'CREATE TABLE crop_seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_name TEXT NOT NULL, field_id INTEGER)');
+        'CREATE TABLE crop_seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_name TEXT NOT NULL, field_id INTEGER)',
+      );
       await db.execute('''
         CREATE TABLE expenses (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -267,10 +269,15 @@ void main() {
         )
       ''');
       final farmId = await db.insert('farms', {'name': 'ٹیسٹ فارم'});
-      final fieldId = await db.insert(
-          'fields', {'name': 'کھیت 1', 'size_acres': 5.0, 'farm_id': farmId});
-      final seasonId = await db.insert(
-          'crop_seasons', {'crop_name': 'Wheat', 'field_id': fieldId});
+      final fieldId = await db.insert('fields', {
+        'name': 'کھیت 1',
+        'size_acres': 5.0,
+        'farm_id': farmId,
+      });
+      final seasonId = await db.insert('crop_seasons', {
+        'crop_name': 'Wheat',
+        'field_id': fieldId,
+      });
 
       final p = UshrProvider(testExecutor: db);
       await p.addUshrRecord(
@@ -288,8 +295,9 @@ void main() {
       );
 
       // The exact integer the screen computed is what landed in the row.
-      final rows =
-          await db.rawQuery('SELECT ushr_amount_paisa FROM ushr_records');
+      final rows = await db.rawQuery(
+        'SELECT ushr_amount_paisa FROM ushr_records',
+      );
       expect(rows, hasLength(1));
       expect(rows.first['ushr_amount_paisa'], 10000);
       // The provider's own reload sees it too (join over minimal parents).

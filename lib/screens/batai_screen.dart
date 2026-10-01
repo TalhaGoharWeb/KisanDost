@@ -56,9 +56,11 @@ class _BataiScreenState extends State<BataiScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(provider.errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16)),
+                    Text(
+                      provider.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
+                    ),
                     const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: _refresh,
@@ -70,11 +72,10 @@ class _BataiScreenState extends State<BataiScreen> {
             );
           }
           final all = provider.agreements;
-          final shown = _filter == null
-              ? all
-              : all
-                  .where((s) => s.agreement.status == _filter)
-                  .toList();
+          final shown =
+              _filter == null
+                  ? all
+                  : all.where((s) => s.agreement.status == _filter).toList();
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
@@ -108,13 +109,14 @@ class _BataiScreenState extends State<BataiScreen> {
 
   Widget _filterRow(List<BataiAgreementSummary> all) {
     int count(BataiStatus? s) =>
-        s == null ? all.length : all.where((x) => x.agreement.status == s).length;
+        s == null
+            ? all.length
+            : all.where((x) => x.agreement.status == s).length;
     final chips = <Widget>[
       _filterChip(null, 'تمام', count(null)),
       _filterChip(BataiStatus.active, 'فعال', count(BataiStatus.active)),
       _filterChip(BataiStatus.settled, 'چکتا شدہ', count(BataiStatus.settled)),
-      _filterChip(
-          BataiStatus.cancelled, 'منسوخ', count(BataiStatus.cancelled)),
+      _filterChip(BataiStatus.cancelled, 'منسوخ', count(BataiStatus.cancelled)),
     ];
     return Wrap(spacing: 8, runSpacing: 4, children: chips);
   }
@@ -140,12 +142,13 @@ class _BataiScreenState extends State<BataiScreen> {
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BataiDetailScreen(agreementId: a.id!),
-          ),
-        ).then((_) => _refresh()),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BataiDetailScreen(agreementId: a.id!),
+              ),
+            ).then((_) => _refresh()),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -157,7 +160,9 @@ class _BataiScreenState extends State<BataiScreen> {
                     child: Text(
                       s.partyName ?? 'نامعلوم فریق',
                       style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   BataiStatusChip(status: a.status),
@@ -166,14 +171,14 @@ class _BataiScreenState extends State<BataiScreen> {
               const SizedBox(height: 6),
               Text(
                 farmerRoleUrdu(a.farmerRole),
-                style:
-                    TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
               ),
               if (place.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(place,
-                    style: TextStyle(
-                        fontSize: 14, color: Colors.grey.shade700)),
+                Text(
+                  place,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                ),
               ],
               const SizedBox(height: 8),
               Text(
@@ -198,18 +203,19 @@ class _BataiScreenState extends State<BataiScreen> {
   Future<void> _openForm({BataiAgreementSummary? existing}) async {
     int settlements = 0;
     if (existing != null) {
-      settlements = (await context
-              .read<BataiProvider>()
-              .getSettlements(existing.agreement.id!))
-          .length;
+      settlements =
+          (await context.read<BataiProvider>().getSettlements(
+            existing.agreement.id!,
+          )).length;
     }
     if (!mounted) return;
     final saved = await showDialog<bool>(
       context: context,
-      builder: (_) => BataiAgreementDialog(
-        existing: existing,
-        settlementCount: settlements,
-      ),
+      builder:
+          (_) => BataiAgreementDialog(
+            existing: existing,
+            settlementCount: settlements,
+          ),
     );
     if (saved == true && mounted) _refresh();
   }
@@ -223,8 +229,11 @@ class _BataiScreenState extends State<BataiScreen> {
 class BataiAgreementDialog extends StatefulWidget {
   final BataiAgreementSummary? existing;
   final int settlementCount;
-  const BataiAgreementDialog(
-      {super.key, this.existing, required this.settlementCount});
+  const BataiAgreementDialog({
+    super.key,
+    this.existing,
+    required this.settlementCount,
+  });
 
   @override
   State<BataiAgreementDialog> createState() => BataiAgreementDialogState();
@@ -256,10 +265,12 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
     _farmId = e?.farmId;
     _fieldId = e?.fieldId;
     _cropId = e?.cropSeasonId;
-    _ownerCtrl =
-        TextEditingController(text: (e?.ownerSharePercent ?? 50).toString());
+    _ownerCtrl = TextEditingController(
+      text: (e?.ownerSharePercent ?? 50).toString(),
+    );
     _cultCtrl = TextEditingController(
-        text: (e?.cultivatorSharePercent ?? 50).toString());
+      text: (e?.cultivatorSharePercent ?? 50).toString(),
+    );
     _expenseCtrl = TextEditingController(text: e?.expenseNote ?? '');
     _startCtrl = TextEditingController(text: e?.startDate ?? _today());
     _endCtrl = TextEditingController(text: e?.endDate ?? '');
@@ -276,8 +287,7 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
     return v.toInt();
   }
 
-  void _rebalance(
-      TextEditingController from, TextEditingController to) {
+  void _rebalance(TextEditingController from, TextEditingController to) {
     if (_balancing) return;
     final v = _wholePercent(from.text);
     if (v == null) return;
@@ -302,7 +312,8 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
       lastDate: DateTime(2100),
     );
     if (date != null) {
-      ctrl.text = '${date.year.toString().padLeft(4, '0')}-'
+      ctrl.text =
+          '${date.year.toString().padLeft(4, '0')}-'
           '${date.month.toString().padLeft(2, '0')}-'
           '${date.day.toString().padLeft(2, '0')}';
     }
@@ -313,57 +324,62 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
     final phoneCtrl = TextEditingController();
     final data = await showDialog<Map<String, String>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('نیا فریق'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'نام *',
-                hintText: 'مثلاً چوہدری صاحب',
-                border: OutlineInputBorder(),
-              ),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('نیا فریق'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'نام *',
+                    hintText: 'مثلاً چوہدری صاحب',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'فون نمبر (اختیاری)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'فون نمبر (اختیاری)',
-                border: OutlineInputBorder(),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('منسوخ کریں'),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('منسوخ کریں'),
+              ElevatedButton(
+                onPressed:
+                    () => Navigator.pop(ctx, {
+                      'name': nameCtrl.text,
+                      'phone': phoneCtrl.text,
+                    }),
+                child: const Text('شامل کریں'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(
-                ctx, {'name': nameCtrl.text, 'phone': phoneCtrl.text}),
-            child: const Text('شامل کریں'),
-          ),
-        ],
-      ),
     );
     if (data == null || !mounted) return;
     try {
-      final id = await context.read<PartyProvider>().addParty(Party(
-            name: data['name'] ?? '',
-            phone: (data['phone'] ?? '').trim().isEmpty
-                ? null
-                : data['phone'],
-            createdAt: DateTime.now().toIso8601String(),
-          ));
+      final id = await context.read<PartyProvider>().addParty(
+        Party(
+          name: data['name'] ?? '',
+          phone: (data['phone'] ?? '').trim().isEmpty ? null : data['phone'],
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
       setState(() => _partyId = id);
     } on PartyException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -373,13 +389,15 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
     final owner = _wholePercent(_ownerCtrl.text);
     final cult = _wholePercent(_cultCtrl.text);
     if (_partyId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('دوسرا فریق منتخب کریں۔')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('دوسرا فریق منتخب کریں۔')));
       return;
     }
     if (owner == null || cult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حصے درست اعداد میں درج کریں۔')));
+        const SnackBar(content: Text('حصے درست اعداد میں درج کریں۔')),
+      );
       return;
     }
     try {
@@ -410,8 +428,7 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
             ownerSharePercent: owner,
             cultivatorSharePercent: cult,
             startDate: _startCtrl.text.trim(),
-            endDate:
-                _endCtrl.text.trim().isEmpty ? null : _endCtrl.text.trim(),
+            endDate: _endCtrl.text.trim().isEmpty ? null : _endCtrl.text.trim(),
           );
         }
         await provider.updateNotes(
@@ -423,8 +440,9 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
       if (mounted) Navigator.pop(context, true);
     } on BataiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -444,9 +462,9 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
     ];
 
     return AlertDialog(
-      title: Text(widget.existing == null
-          ? 'نیا بٹائی معاہدہ'
-          : 'بٹائی معاہدے میں ترمیم'),
+      title: Text(
+        widget.existing == null ? 'نیا بٹائی معاہدہ' : 'بٹائی معاہدے میں ترمیم',
+      ),
       content: SingleChildScrollView(
         child: SizedBox(
           width: 420,
@@ -467,13 +485,17 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
                     style: TextStyle(fontSize: 13),
                   ),
                 ),
-              const Text('آپ کا کردار',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'آپ کا کردار',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               if (locked)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(farmerRoleUrdu(_role),
-                      style: const TextStyle(fontSize: 16)),
+                  child: Text(
+                    farmerRoleUrdu(_role),
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 )
               else
                 RadioGroup<FarmerRole>(
@@ -505,17 +527,20 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
                   for (final p in partyProvider.parties)
                     DropdownMenuItem(value: p.id, child: Text(p.name)),
                   const DropdownMenuItem(
-                      value: -1, child: Text('+ نیا فریق شامل کریں')),
+                    value: -1,
+                    child: Text('+ نیا فریق شامل کریں'),
+                  ),
                 ],
-                onChanged: locked
-                    ? null
-                    : (v) {
-                        if (v == -1) {
-                          _addPartyFlow();
-                        } else {
-                          setState(() => _partyId = v);
-                        }
-                      },
+                onChanged:
+                    locked
+                        ? null
+                        : (v) {
+                          if (v == -1) {
+                            _addPartyFlow();
+                          } else {
+                            setState(() => _partyId = v);
+                          }
+                        },
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
@@ -526,13 +551,16 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
                 ),
                 items: [
                   const DropdownMenuItem<int?>(
-                      value: null, child: Text('— کوئی نہیں —')),
+                    value: null,
+                    child: Text('— کوئی نہیں —'),
+                  ),
                   for (final f in farmProvider.farms)
                     DropdownMenuItem<int?>(value: f.id, child: Text(f.name)),
                 ],
-                onChanged: locked
-                    ? null
-                    : (v) => setState(() {
+                onChanged:
+                    locked
+                        ? null
+                        : (v) => setState(() {
                           _farmId = v;
                           _fieldId = null;
                         }),
@@ -546,13 +574,16 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
                 ),
                 items: [
                   const DropdownMenuItem<int?>(
-                      value: null, child: Text('— کوئی نہیں —')),
+                    value: null,
+                    child: Text('— کوئی نہیں —'),
+                  ),
                   for (final f in fields)
                     DropdownMenuItem<int?>(value: f.id, child: Text(f.name)),
                 ],
-                onChanged: locked || _farmId == null
-                    ? null
-                    : (v) => setState(() => _fieldId = v),
+                onChanged:
+                    locked || _farmId == null
+                        ? null
+                        : (v) => setState(() => _fieldId = v),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
@@ -563,16 +594,18 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
                 ),
                 items: [
                   const DropdownMenuItem<int?>(
-                      value: null, child: Text('— کوئی نہیں —')),
+                    value: null,
+                    child: Text('— کوئی نہیں —'),
+                  ),
                   for (final c in crops)
                     DropdownMenuItem<int?>(
                       value: c.cropSeason.id,
                       child: Text(
-                          '${c.cropSeason.cropName} (${c.cropSeason.variety})'),
+                        '${c.cropSeason.cropName} (${c.cropSeason.variety})',
+                      ),
                     ),
                 ],
-                onChanged:
-                    locked ? null : (v) => setState(() => _cropId = v),
+                onChanged: locked ? null : (v) => setState(() => _cropId = v),
               ),
               const SizedBox(height: 12),
               Row(
@@ -605,8 +638,7 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
               const SizedBox(height: 4),
               Text(
                 'ایک حصہ بدلیں تو دوسرا خود بخود متوازن ہو جائے گا (مجموعہ 100)',
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -666,10 +698,7 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('منسوخ کریں'),
         ),
-        ElevatedButton(
-          onPressed: _save,
-          child: const Text(Strings.save),
-        ),
+        ElevatedButton(onPressed: _save, child: const Text(Strings.save)),
       ],
     );
   }

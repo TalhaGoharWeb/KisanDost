@@ -1,0 +1,42 @@
+# Kisan Dost CI: static analysis, formatting, and the full test suite.
+#
+# Runs on every push and pull request to main. The job order is deliberate:
+# `flutter pub get` MUST run before `dart format`, because dart format picks
+# its style (old vs tall) from the package's LANGUAGE VERSION, which only
+# resolves correctly once .dart_tool/package_config.json exists.
+#
+# The FFI database tests (test/db/*) call sqfliteFfiInit(), which dlopens the
+# system libsqlite3 — present on ubuntu-latest, no extra setup needed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze-format-test:
+    name: Analyze, format & test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Run tests
+        run: flutter test

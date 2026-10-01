@@ -46,15 +46,20 @@ void main() {
     // REFERENCES target to EXIST (even for a plain DELETE on the child),
     // so the harness creates them; production always has the real ones.
     await db.execute(
-        'CREATE TABLE IF NOT EXISTS farms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, total_area REAL NOT NULL, created_at TEXT NOT NULL)');
+      'CREATE TABLE IF NOT EXISTS farms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, total_area REAL NOT NULL, created_at TEXT NOT NULL)',
+    );
     await db.execute(
-        'CREATE TABLE IF NOT EXISTS fields (id INTEGER PRIMARY KEY AUTOINCREMENT, farm_id INTEGER NOT NULL, name TEXT NOT NULL, size_acres REAL NOT NULL, canal_water_available INTEGER NOT NULL DEFAULT 0, tube_well_available INTEGER NOT NULL DEFAULT 0, location TEXT)');
+      'CREATE TABLE IF NOT EXISTS fields (id INTEGER PRIMARY KEY AUTOINCREMENT, farm_id INTEGER NOT NULL, name TEXT NOT NULL, size_acres REAL NOT NULL, canal_water_available INTEGER NOT NULL DEFAULT 0, tube_well_available INTEGER NOT NULL DEFAULT 0, location TEXT)',
+    );
     await db.execute(
-        'CREATE TABLE IF NOT EXISTS crop_seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, field_id INTEGER NOT NULL, crop_name TEXT NOT NULL, variety TEXT NOT NULL, status TEXT NOT NULL, start_date TEXT NOT NULL)');
+      'CREATE TABLE IF NOT EXISTS crop_seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, field_id INTEGER NOT NULL, crop_name TEXT NOT NULL, variety TEXT NOT NULL, status TEXT NOT NULL, start_date TEXT NOT NULL)',
+    );
     await db.execute(
-        'CREATE TABLE IF NOT EXISTS harvests (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER NOT NULL, quantity REAL NOT NULL, unit TEXT NOT NULL, date TEXT NOT NULL)');
+      'CREATE TABLE IF NOT EXISTS harvests (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER NOT NULL, quantity REAL NOT NULL, unit TEXT NOT NULL, date TEXT NOT NULL)',
+    );
     await db.execute(
-        'CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, harvest_id INTEGER NOT NULL, quantity REAL NOT NULL, price_per_unit_paisa INTEGER NOT NULL, total_amount_paisa INTEGER NOT NULL, date TEXT NOT NULL)');
+      'CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, harvest_id INTEGER NOT NULL, quantity REAL NOT NULL, price_per_unit_paisa INTEGER NOT NULL, total_amount_paisa INTEGER NOT NULL, date TEXT NOT NULL)',
+    );
     // FFI in-memory databases are shared across openDatabase() calls in one
     // test run: start every test from empty tables (children first — FKs
     // are enforced).
@@ -69,10 +74,9 @@ void main() {
   /// FK from batai_agreements.other_party_id resolves.
   Future<int> addPartyOn(BataiProvider p, String name) {
     final parties = PartyProvider(testExecutor: p.testExecutor);
-    return parties.addParty(Party(
-      name: name,
-      createdAt: DateTime.now().toIso8601String(),
-    ));
+    return parties.addParty(
+      Party(name: name, createdAt: DateTime.now().toIso8601String()),
+    );
   }
 
   Future<int> addAgreement(
@@ -102,67 +106,70 @@ void main() {
       // Second run must be a no-op, not an error.
       await DatabaseHelper.migrateV13ToV14(db);
 
-      final tables = (await db.rawQuery(
-              "SELECT name FROM sqlite_master WHERE type = 'table'"))
-          .map((r) => r['name'] as String)
-          .toSet();
+      final tables =
+          (await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type = 'table'",
+          )).map((r) => r['name'] as String).toSet();
       expect(tables, containsAll(['batai_agreements', 'batai_settlements']));
 
-      final agrCols = (await db.rawQuery(
-              'PRAGMA table_info(batai_agreements)'))
-          .map((c) => c['name'] as String)
-          .toSet();
+      final agrCols =
+          (await db.rawQuery(
+            'PRAGMA table_info(batai_agreements)',
+          )).map((c) => c['name'] as String).toSet();
       expect(
-          agrCols,
-          containsAll([
-            'id',
-            'farmer_role',
-            'other_party_id',
-            'farm_id',
-            'field_id',
-            'crop_season_id',
-            'owner_share_percent',
-            'cultivator_share_percent',
-            'expense_note',
-            'start_date',
-            'end_date',
-            'status',
-            'notes',
-            'created_at',
-          ]));
+        agrCols,
+        containsAll([
+          'id',
+          'farmer_role',
+          'other_party_id',
+          'farm_id',
+          'field_id',
+          'crop_season_id',
+          'owner_share_percent',
+          'cultivator_share_percent',
+          'expense_note',
+          'start_date',
+          'end_date',
+          'status',
+          'notes',
+          'created_at',
+        ]),
+      );
 
-      final setCols = (await db.rawQuery(
-              'PRAGMA table_info(batai_settlements)'))
-          .map((c) => c['name'] as String)
-          .toSet();
+      final setCols =
+          (await db.rawQuery(
+            'PRAGMA table_info(batai_settlements)',
+          )).map((c) => c['name'] as String).toSet();
       expect(
-          setCols,
-          containsAll([
-            'id',
-            'agreement_id',
-            'harvest_id',
-            'sale_id',
-            'total_paisa',
-            'owner_paisa',
-            'cultivator_paisa',
-            'settle_date',
-            'note',
-            'created_at',
-          ]));
+        setCols,
+        containsAll([
+          'id',
+          'agreement_id',
+          'harvest_id',
+          'sale_id',
+          'total_paisa',
+          'owner_paisa',
+          'cultivator_paisa',
+          'settle_date',
+          'note',
+          'created_at',
+        ]),
+      );
 
-      final indexes = (await db.rawQuery(
-              "SELECT name FROM sqlite_master WHERE type = 'index'"))
-          .map((r) => r['name'] as String)
-          .toSet();
+      final indexes =
+          (await db.rawQuery(
+            "SELECT name FROM sqlite_master WHERE type = 'index'",
+          )).map((r) => r['name'] as String).toSet();
       expect(indexes, contains('idx_batai_settlements_agreement'));
 
       // The exactness CHECKs are in the schema.
       final sql = (await db.rawQuery(
-              "SELECT sql FROM sqlite_master WHERE type = 'table'"))
-          .map((r) => r['sql'] as String)
-          .join('\n');
-      expect(sql,
-          contains('owner_share_percent + cultivator_share_percent = 100'));
+        "SELECT sql FROM sqlite_master WHERE type = 'table'",
+      )).map((r) => r['sql'] as String).join('\n');
+      expect(
+        sql,
+        contains('owner_share_percent + cultivator_share_percent = 100'),
+      );
       expect(sql, contains('owner_paisa + cultivator_paisa = total_paisa'));
     });
 
@@ -246,15 +253,13 @@ void main() {
         throwsA(isA<BataiException>()),
       );
       expect(
-        () => addAgreement(p,
-            startDate: '2026-06-01', endDate: '2026-01-01'),
+        () => addAgreement(p, startDate: '2026-06-01', endDate: '2026-01-01'),
         throwsA(isA<BataiException>()),
       );
       expect(p.agreements, isEmpty);
     });
 
-    test('valid agreement appears in summaries with the party name',
-        () async {
+    test('valid agreement appears in summaries with the party name', () async {
       final p = await openProvider();
       final pid = await addPartyOn(p, 'چوہدری صاحب');
       await p.createAgreement(
@@ -289,8 +294,11 @@ void main() {
     test('summaries resolve crop/farm/field names via LEFT JOINs', () async {
       final p = await openProvider();
       final db = p.testExecutor as Database;
-      final farmId = await db.insert('farms',
-          {'name': 'چک نمبر 5', 'total_area': 10.0, 'created_at': 'x'});
+      final farmId = await db.insert('farms', {
+        'name': 'چک نمبر 5',
+        'total_area': 10.0,
+        'created_at': 'x',
+      });
       final fieldId = await db.insert('fields', {
         'farm_id': farmId,
         'name': 'مشرقی کھیت',
@@ -330,11 +338,14 @@ void main() {
       await p.setStatus(id1, BataiStatus.settled);
 
       expect((await p.getAgreementSummaries()).length, 2);
-      expect((await p.getAgreementSummaries(status: BataiStatus.active)).length,
-          1);
       expect(
-          (await p.getAgreementSummaries(status: BataiStatus.settled)).length,
-          1);
+        (await p.getAgreementSummaries(status: BataiStatus.active)).length,
+        1,
+      );
+      expect(
+        (await p.getAgreementSummaries(status: BataiStatus.settled)).length,
+        1,
+      );
     });
   });
 
@@ -434,23 +445,31 @@ void main() {
       expect(summary!.agreement.status, BataiStatus.active);
     });
 
-    test('multiple settlements per agreement are allowed (partial harvests)',
-        () async {
-      final p = await openProvider();
-      final agrId = await addAgreement(p);
+    test(
+      'multiple settlements per agreement are allowed (partial harvests)',
+      () async {
+        final p = await openProvider();
+        final agrId = await addAgreement(p);
 
-      await p.settleAgreement(
-          agreementId: agrId, totalPaisa: 500000, settleDate: '2026-06-01');
-      await p.settleAgreement(
-          agreementId: agrId, totalPaisa: 300000, settleDate: '2026-07-01');
+        await p.settleAgreement(
+          agreementId: agrId,
+          totalPaisa: 500000,
+          settleDate: '2026-06-01',
+        );
+        await p.settleAgreement(
+          agreementId: agrId,
+          totalPaisa: 300000,
+          settleDate: '2026-07-01',
+        );
 
-      final settlements = await p.getSettlements(agrId);
-      expect(settlements, hasLength(2));
-      // Newest first.
-      expect(settlements.first.settleDate, '2026-07-01');
-      final total = settlements.fold<int>(0, (sum, s) => sum + s.totalPaisa);
-      expect(total, 800000);
-    });
+        final settlements = await p.getSettlements(agrId);
+        expect(settlements, hasLength(2));
+        // Newest first.
+        expect(settlements.first.settleDate, '2026-07-01');
+        final total = settlements.fold<int>(0, (sum, s) => sum + s.totalPaisa);
+        expect(total, 800000);
+      },
+    );
 
     test('zero/negative totals and bad dates are rejected', () async {
       final p = await openProvider();
@@ -458,15 +477,19 @@ void main() {
       for (final bad in [0, -100]) {
         expect(
           () => p.settleAgreement(
-              agreementId: agrId,
-              totalPaisa: bad,
-              settleDate: '2026-06-01'),
+            agreementId: agrId,
+            totalPaisa: bad,
+            settleDate: '2026-06-01',
+          ),
           throwsA(isA<BataiException>()),
         );
       }
       expect(
         () => p.settleAgreement(
-            agreementId: agrId, totalPaisa: 100, settleDate: 'nope'),
+          agreementId: agrId,
+          totalPaisa: 100,
+          settleDate: 'nope',
+        ),
         throwsA(isA<BataiException>()),
       );
       expect(await p.getSettlements(agrId), isEmpty);
@@ -478,7 +501,10 @@ void main() {
       await p.setStatus(agrId, BataiStatus.cancelled);
       expect(
         () => p.settleAgreement(
-            agreementId: agrId, totalPaisa: 100, settleDate: '2026-06-01'),
+          agreementId: agrId,
+          totalPaisa: 100,
+          settleDate: '2026-06-01',
+        ),
         throwsA(isA<BataiException>()),
       );
     });
@@ -489,7 +515,10 @@ void main() {
       await p.setStatus(agrId, BataiStatus.settled);
       expect(
         () => p.settleAgreement(
-            agreementId: agrId, totalPaisa: 100, settleDate: '2026-06-01'),
+          agreementId: agrId,
+          totalPaisa: 100,
+          settleDate: '2026-06-01',
+        ),
         throwsA(isA<BataiException>()),
       );
     });
@@ -507,7 +536,10 @@ void main() {
       final p = await openProvider();
       final agrId = await addAgreement(p);
       await p.settleAgreement(
-          agreementId: agrId, totalPaisa: 100000, settleDate: '2026-06-01');
+        agreementId: agrId,
+        totalPaisa: 100000,
+        settleDate: '2026-06-01',
+      );
 
       expect(() => p.deleteAgreement(agrId), throwsA(isA<BataiException>()));
       // Agreement and its settlement survive.
@@ -529,7 +561,10 @@ void main() {
       final pid = await addPartyOn(p, 'فریق');
       final agrId = await addAgreement(p, partyId: pid);
       await p.settleAgreement(
-          agreementId: agrId, totalPaisa: 100000, settleDate: '2026-06-01');
+        agreementId: agrId,
+        totalPaisa: 100000,
+        settleDate: '2026-06-01',
+      );
 
       expect(
         () => p.updateTerms(
@@ -574,9 +609,15 @@ void main() {
       final p = await openProvider();
       final agrId = await addAgreement(p);
       await p.settleAgreement(
-          agreementId: agrId, totalPaisa: 100000, settleDate: '2026-06-01');
-      await p.updateNotes(agrId,
-          expenseNote: 'کھاد مزارع کی، بیج آدھا آدھا', notes: 'نیا نوٹ');
+        agreementId: agrId,
+        totalPaisa: 100000,
+        settleDate: '2026-06-01',
+      );
+      await p.updateNotes(
+        agrId,
+        expenseNote: 'کھاد مزارع کی، بیج آدھا آدھا',
+        notes: 'نیا نوٹ',
+      );
       final summary = await p.getAgreementSummary(agrId);
       expect(summary!.agreement.expenseNote, 'کھاد مزارع کی، بیج آدھا آدھا');
       expect(summary.agreement.notes, 'نیا نوٹ');
@@ -586,23 +627,33 @@ void main() {
       final p = await openProvider();
       final agrId = await addAgreement(p);
       await p.setStatus(agrId, BataiStatus.settled);
-      expect((await p.getAgreementSummary(agrId))!.agreement.status,
-          BataiStatus.settled);
+      expect(
+        (await p.getAgreementSummary(agrId))!.agreement.status,
+        BataiStatus.settled,
+      );
       await p.setStatus(agrId, BataiStatus.active);
-      expect((await p.getAgreementSummary(agrId))!.agreement.status,
-          BataiStatus.active);
+      expect(
+        (await p.getAgreementSummary(agrId))!.agreement.status,
+        BataiStatus.active,
+      );
     });
   });
 
   group('backup merge order', () {
     test('batai tables sit between party_ledger_entries and tasks', () {
       final order = RestoreService.mergeTableOrder;
-      expect(order.indexOf('parties'),
-          lessThan(order.indexOf('batai_agreements')));
-      expect(order.indexOf('batai_agreements'),
-          lessThan(order.indexOf('batai_settlements')));
-      expect(order.indexOf('batai_settlements'),
-          lessThan(order.indexOf('tasks')));
+      expect(
+        order.indexOf('parties'),
+        lessThan(order.indexOf('batai_agreements')),
+      );
+      expect(
+        order.indexOf('batai_agreements'),
+        lessThan(order.indexOf('batai_settlements')),
+      );
+      expect(
+        order.indexOf('batai_settlements'),
+        lessThan(order.indexOf('tasks')),
+      );
     });
   });
 }

@@ -45,8 +45,7 @@ class UnitDisplay {
   /// else as کلوگرام (sub-kilo as گرام). This is display-only — stored
   /// values keep the unit the farmer entered.
   static String formatWeightKg(double kg) {
-    if (kg >= UnitConverter.maundInKg &&
-        (kg % UnitConverter.maundInKg) == 0) {
+    if (kg >= UnitConverter.maundInKg && (kg % UnitConverter.maundInKg) == 0) {
       final maunds = kg ~/ UnitConverter.maundInKg;
       return '$maunds من';
     }

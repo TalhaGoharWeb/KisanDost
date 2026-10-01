@@ -20,9 +20,14 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<void> fetchInventory() async {
     final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> maps =
-        await db.query('inventory', orderBy: 'id DESC');
-    _inventoryList = List.generate(maps.length, (i) => Inventory.fromMap(maps[i]));
+    final List<Map<String, dynamic>> maps = await db.query(
+      'inventory',
+      orderBy: 'id DESC',
+    );
+    _inventoryList = List.generate(
+      maps.length,
+      (i) => Inventory.fromMap(maps[i]),
+    );
     notifyListeners();
   }
 
@@ -74,7 +79,9 @@ class InventoryProvider extends ChangeNotifier {
     DatabaseExecutor? executor,
   }) async {
     if (quantity <= 0) {
-      throw const InventoryException('خریداری کی مقدار صفر سے زیادہ ہونی چاہیے');
+      throw const InventoryException(
+        'خریداری کی مقدار صفر سے زیادہ ہونی چاہیے',
+      );
     }
     if (costPerUnitPaisa < 0) {
       throw const InventoryException('فی اکائی قیمت منفی نہیں ہو سکتی');
@@ -84,16 +91,16 @@ class InventoryProvider extends ChangeNotifier {
     }
 
     Future<int> run(DatabaseExecutor ex) => _recordPurchaseTx(
-          ex,
-          category: category,
-          name: name,
-          unit: unit,
-          quantity: quantity,
-          costPerUnitPaisa: costPerUnitPaisa,
-          weightPerUnitKg: weightPerUnitKg,
-          date: date,
-          notes: notes,
-        );
+      ex,
+      category: category,
+      name: name,
+      unit: unit,
+      quantity: quantity,
+      costPerUnitPaisa: costPerUnitPaisa,
+      weightPerUnitKg: weightPerUnitKg,
+      date: date,
+      notes: notes,
+    );
     // Copy to a local so flow analysis can promote the null check.
     // The singleton DB is only resolved when no executor was supplied,
     // so tests can inject an in-memory database hermetically.
@@ -137,7 +144,8 @@ class InventoryProvider extends ChangeNotifier {
         // Legacy corrupted (negative) stock: adding stock must never leave
         // a non-positive total silently.
         throw const InventoryException(
-            'اسٹاک کی موجودہ مقدار درست نہیں؛ پہلے تصحیح کریں');
+          'اسٹاک کی موجودہ مقدار درست نہیں؛ پہلے تصحیح کریں',
+        );
       }
       // newQty > 0 guaranteed: the old divide-by-zero (Infinity cost) path
       // cannot happen.
@@ -208,17 +216,19 @@ class InventoryProvider extends ChangeNotifier {
     DatabaseExecutor? executor,
   }) async {
     if (quantity <= 0) {
-      throw const InventoryException('استعمال کی مقدار صفر سے زیادہ ہونی چاہیے');
+      throw const InventoryException(
+        'استعمال کی مقدار صفر سے زیادہ ہونی چاہیے',
+      );
     }
     Future<void> run(DatabaseExecutor ex) => _recordUsageTx(
-          ex,
-          itemId: itemId,
-          quantity: quantity,
-          fromUnit: fromUnit,
-          activityId: activityId,
-          date: date,
-          notes: notes,
-        );
+      ex,
+      itemId: itemId,
+      quantity: quantity,
+      fromUnit: fromUnit,
+      activityId: activityId,
+      date: date,
+      notes: notes,
+    );
     // Copy to a local so flow analysis can promote the null check.
     // The singleton DB is only resolved when no executor was supplied,
     // so tests can inject an in-memory database hermetically.
@@ -386,7 +396,9 @@ class InventoryProvider extends ChangeNotifier {
       whereArgs: [category, name, unit, id],
     );
     if (clash.isNotEmpty) {
-      throw const InventoryException('اس نام اور اکائی کا آئٹم پہلے سے موجود ہے');
+      throw const InventoryException(
+        'اس نام اور اکائی کا آئٹم پہلے سے موجود ہے',
+      );
     }
     await db.update(
       'inventory',
@@ -431,19 +443,14 @@ class InventoryProvider extends ChangeNotifier {
       where: 'id = ?',
       whereArgs: [id],
     );
-    await db.delete(
-      'inventory',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('inventory', where: 'id = ?', whereArgs: [id]);
     await AuditService.log(
       db,
       table: 'inventory',
       rowId: id,
       action: AuditService.delete,
-      details: existing.isEmpty
-          ? 'آئٹم حذف'
-          : 'آئٹم: ${existing.first['name']}',
+      details:
+          existing.isEmpty ? 'آئٹم حذف' : 'آئٹم: ${existing.first['name']}',
     );
     if (executor == null) await fetchInventory();
   }

@@ -22,15 +22,29 @@ void main() {
     test('throws Urdu error on empty input', () {
       expect(
         () => Quantity.parse(''),
-        throwsA(isA<QuantityParseException>().having(
-            (e) => e.message, 'message', 'مقدار درج کریں')),
+        throwsA(
+          isA<QuantityParseException>().having(
+            (e) => e.message,
+            'message',
+            'مقدار درج کریں',
+          ),
+        ),
       );
-      expect(() => Quantity.parse('   '), throwsA(isA<QuantityParseException>()));
+      expect(
+        () => Quantity.parse('   '),
+        throwsA(isA<QuantityParseException>()),
+      );
     });
 
     test('throws Urdu error on garbage', () {
-      expect(() => Quantity.parse('abc'), throwsA(isA<QuantityParseException>()));
-      expect(() => Quantity.parse('12.5.3'), throwsA(isA<QuantityParseException>()));
+      expect(
+        () => Quantity.parse('abc'),
+        throwsA(isA<QuantityParseException>()),
+      );
+      expect(
+        () => Quantity.parse('12.5.3'),
+        throwsA(isA<QuantityParseException>()),
+      );
     });
 
     test('allows zero and negatives in the base parse', () {
@@ -46,10 +60,14 @@ void main() {
     });
 
     test('rejects zero and negatives with Urdu error', () {
-      expect(() => Quantity.parsePositive('0'),
-          throwsA(isA<QuantityParseException>()));
-      expect(() => Quantity.parsePositive('-3'),
-          throwsA(isA<QuantityParseException>()));
+      expect(
+        () => Quantity.parsePositive('0'),
+        throwsA(isA<QuantityParseException>()),
+      );
+      expect(
+        () => Quantity.parsePositive('-3'),
+        throwsA(isA<QuantityParseException>()),
+      );
       try {
         Quantity.parsePositive('0');
         fail('should have thrown');
@@ -60,9 +78,13 @@ void main() {
 
     test('rejects empty and garbage', () {
       expect(
-          () => Quantity.parsePositive(''), throwsA(isA<QuantityParseException>()));
-      expect(() => Quantity.parsePositive('xyz'),
-          throwsA(isA<QuantityParseException>()));
+        () => Quantity.parsePositive(''),
+        throwsA(isA<QuantityParseException>()),
+      );
+      expect(
+        () => Quantity.parsePositive('xyz'),
+        throwsA(isA<QuantityParseException>()),
+      );
     });
   });
 

@@ -214,7 +214,8 @@ class UshrProvider extends ChangeNotifier {
             {
               'amount_paisa': totalPaidPaisa,
               'date': datePaid ?? DateTime.now().toString().split(' ')[0],
-              'description': 'عشر ادائیگی برائے فصل کٹائی (طریقہ: $payTypeUrdu)',
+              'description':
+                  'عشر ادائیگی برائے فصل کٹائی (طریقہ: $payTypeUrdu)',
             },
             where: 'id = ?',
             whereArgs: [expenseId],
@@ -255,7 +256,6 @@ class UshrProvider extends ChangeNotifier {
   }
 
   Future<void> deleteUshrRecord(int id) async {
-
     await _txn((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(
         'ushr_records',
@@ -269,11 +269,7 @@ class UshrProvider extends ChangeNotifier {
         }
       }
 
-      await txn.delete(
-        'ushr_records',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      await txn.delete('ushr_records', where: 'id = ?', whereArgs: [id]);
     });
 
     await fetchUshrRecords();

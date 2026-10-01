@@ -16,7 +16,8 @@ class AlarmScreen extends StatefulWidget {
   State<AlarmScreen> createState() => _AlarmScreenState();
 }
 
-class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStateMixin {
+class _AlarmScreenState extends State<AlarmScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   String _taskTitle = 'لوڈ ہو رہا ہے...';
@@ -84,11 +85,14 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('زرعی کام مکمل نشان زد کر دیا گیا ہے!', style: TextStyle(fontSize: 16)),
+          content: Text(
+            'زرعی کام مکمل نشان زد کر دیا گیا ہے!',
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.green,
         ),
       );
-      
+
       // Update TaskProvider
       try {
         context.read<TaskProvider>().fetchTasks();
@@ -110,7 +114,10 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('الارم بند کر دیا گیا ہے', style: TextStyle(fontSize: 16)),
+          content: Text(
+            'الارم بند کر دیا گیا ہے',
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.blueGrey,
         ),
       );
@@ -193,7 +200,10 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('الارم $minutes منٹ کے لیے ٹال دیا گیا ہے', style: const TextStyle(fontSize: 16)),
+          content: Text(
+            'الارم $minutes منٹ کے لیے ٹال دیا گیا ہے',
+            style: const TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.orange.shade800,
         ),
       );
@@ -219,7 +229,10 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -280,11 +293,18 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 20.0,
+                        ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.agriculture, size: 36, color: Colors.green),
+                            const Icon(
+                              Icons.agriculture,
+                              size: 36,
+                              color: Colors.green,
+                            ),
                             const SizedBox(height: 12),
                             // Task Title
                             Text(
@@ -297,7 +317,8 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                                 fontFamily: 'Jameel Noori Nastaleeq',
                               ),
                             ),
-                            if (_task?.description != null && _task!.description!.isNotEmpty) ...[
+                            if (_task?.description != null &&
+                                _task!.description!.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               // Description
                               Text(
@@ -315,11 +336,17 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.access_time, size: 18, color: Colors.grey.shade700),
+                                Icon(
+                                  Icons.access_time,
+                                  size: 18,
+                                  color: Colors.grey.shade700,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   _task != null
-                                      ? DateFormat('dd MMM yyyy hh:mm a').format(_task!.dateTime)
+                                      ? DateFormat(
+                                        'dd MMM yyyy hh:mm a',
+                                      ).format(_task!.dateTime)
                                       : '',
                                   style: TextStyle(
                                     color: Colors.grey.shade800,
@@ -336,8 +363,8 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                                   ? (_task!.recurrence == 'daily'
                                       ? 'دوبارہ یاد دہانی: روزانہ دہرایا جائے گا'
                                       : _task!.recurrence == 'weekly'
-                                          ? 'دوبارہ یاد دہانی: ہفتہ وار دہرایا جائے گا'
-                                          : 'دوبارہ یاد دہانی: بغیر دہرائے')
+                                      ? 'دوبارہ یاد دہانی: ہفتہ وار دہرایا جائے گا'
+                                      : 'دوبارہ یاد دہانی: بغیر دہرائے')
                                   : '',
                               style: TextStyle(
                                 color: Colors.deepPurple.shade700,
@@ -362,10 +389,18 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                       height: 64,
                       child: ElevatedButton.icon(
                         onPressed: _isLoading ? null : _completeTask,
-                        icon: const Icon(Icons.check_circle_outline, size: 28, color: Colors.white),
+                        icon: const Icon(
+                          Icons.check_circle_outline,
+                          size: 28,
+                          color: Colors.white,
+                        ),
                         label: const Text(
                           'کام مکمل ہو گیا',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green.shade500,
@@ -383,10 +418,18 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                       height: 60,
                       child: ElevatedButton.icon(
                         onPressed: _isLoading ? null : _dismissAlarm,
-                        icon: const Icon(Icons.alarm_off, size: 26, color: Colors.white),
+                        icon: const Icon(
+                          Icons.alarm_off,
+                          size: 26,
+                          color: Colors.white,
+                        ),
                         label: const Text(
                           'الارم بند کریں (ڈسمس)',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueGrey.shade700,
@@ -401,7 +444,11 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                     // Snooze row title
                     const Text(
                       'سوز کے اختیارات:',
-                      style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     // Snooze row
@@ -411,18 +458,28 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                           child: SizedBox(
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : () => _snoozeTask(5),
+                              onPressed:
+                                  _isLoading ? null : () => _snoozeTask(5),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.2,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  side: const BorderSide(color: Colors.white54, width: 1.5),
+                                  side: const BorderSide(
+                                    color: Colors.white54,
+                                    width: 1.5,
+                                  ),
                                 ),
                                 elevation: 0,
                               ),
                               child: const Text(
                                 '۵ منٹ',
-                                style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
@@ -432,18 +489,28 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                           child: SizedBox(
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : () => _snoozeTask(10),
+                              onPressed:
+                                  _isLoading ? null : () => _snoozeTask(10),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.2,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  side: const BorderSide(color: Colors.white54, width: 1.5),
+                                  side: const BorderSide(
+                                    color: Colors.white54,
+                                    width: 1.5,
+                                  ),
                                 ),
                                 elevation: 0,
                               ),
                               child: const Text(
                                 '۱۰ منٹ',
-                                style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
@@ -453,18 +520,28 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
                           child: SizedBox(
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : () => _snoozeTask(15),
+                              onPressed:
+                                  _isLoading ? null : () => _snoozeTask(15),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.2,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
-                                  side: const BorderSide(color: Colors.white54, width: 1.5),
+                                  side: const BorderSide(
+                                    color: Colors.white54,
+                                    width: 1.5,
+                                  ),
                                 ),
                                 elevation: 0,
                               ),
                               child: const Text(
                                 '۱۵ منٹ',
-                                style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),

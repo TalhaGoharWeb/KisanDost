@@ -17,57 +17,59 @@ import 'package:kisan_dost/services/pnl_summary.dart';
 import 'package:kisan_dost/widgets/report_widgets.dart';
 
 CropSeasonWithDetails _season(int id, String crop) => CropSeasonWithDetails(
-      cropSeason: CropSeason(
-        id: id,
-        fieldId: 1,
-        cropName: crop,
-        variety: 'v',
-        status: 'harvested',
-        startDate: '2025-11-01',
-      ),
-      fields: const [],
-      fieldNames: const ['f'],
-      farmNames: const ['farm'],
-      totalArea: 5,
-    );
+  cropSeason: CropSeason(
+    id: id,
+    fieldId: 1,
+    cropName: crop,
+    variety: 'v',
+    status: 'harvested',
+    startDate: '2025-11-01',
+  ),
+  fields: const [],
+  fieldNames: const ['f'],
+  farmNames: const ['farm'],
+  totalArea: 5,
+);
 
 CropPnlResult _crop(String crop, int income, int expenses) => CropPnlResult(
-      details: _season(1, crop),
-      incomePaisa: income,
-      expensesPaisa: expenses,
-      harvests: const [],
-      activities: const [],
-    );
+  details: _season(1, crop),
+  incomePaisa: income,
+  expensesPaisa: expenses,
+  harvests: const [],
+  activities: const [],
+);
 
 void main() {
-  testWidgets('P&L report captures offscreen to full-content PNG',
-      (tester) async {
+  testWidgets('P&L report captures offscreen to full-content PNG', (
+    tester,
+  ) async {
     // 8 crop lines make the report much taller than any test surface —
     // if the capture were viewport-clipped, height would be small.
     final data = PnlReportData(
       pnl: FarmPnl(
         totalSalesPaisa: 8000000,
         totalExpensesPaisa: 3200000,
-        crops: [
-          for (var i = 0; i < 8; i++) _crop('Wheat', 1000000, 400000),
-        ],
+        crops: [for (var i = 0; i < 8; i++) _crop('Wheat', 1000000, 400000)],
       ),
       cropNameUrdu: const {'Wheat': 'گندم'},
       generatedOn: '2026-10-01',
     );
 
     late BuildContext ctx;
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(builder: (c) {
-        ctx = c;
-        return const SizedBox();
-      }),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (c) {
+            ctx = c;
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
 
     // Start the capture (inserts the offscreen overlay synchronously), then
     // drive the two frames it waits for.
-    final captureFuture =
-        captureReportPng(ctx, PnlReportWidget(data: data));
+    final captureFuture = captureReportPng(ctx, PnlReportWidget(data: data));
     await tester.pump();
     await tester.pump();
     final png = await tester.runAsync(() => captureFuture);

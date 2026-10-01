@@ -81,11 +81,7 @@ class AuditService {
   }) async {
     try {
       final db = executor ?? await DatabaseHelper.instance.database;
-      return await db.query(
-        'audit_log',
-        orderBy: 'id DESC',
-        limit: limit,
-      );
+      return await db.query('audit_log', orderBy: 'id DESC', limit: limit);
     } on DatabaseException catch (e) {
       if (!e.toString().contains('no such table')) rethrow;
       return [];

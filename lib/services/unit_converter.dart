@@ -45,10 +45,7 @@ class UnitConverter {
   };
 
   /// Canonical volume units -> litre per unit.
-  static const Map<String, double> _volumeInLitre = {
-    'l': 1.0,
-    'ml': 0.001,
-  };
+  static const Map<String, double> _volumeInLitre = {'l': 1.0, 'ml': 0.001};
 
   /// Canonical package units. Their weight is per-item data, never assumed.
   static const Set<String> _packageUnits = {'bag', 'bottle', 'packet'};
@@ -192,9 +189,10 @@ class UnitConverter {
           'تب ہی اکائی تبدیل ہو سکتی ہے',
         );
       }
-      final double qtyInKg = fromPackage
-          ? quantity * weightPerUnitKg
-          : quantity * _weightInKg[from]!;
+      final double qtyInKg =
+          fromPackage
+              ? quantity * weightPerUnitKg
+              : quantity * _weightInKg[from]!;
       if (toPackage) return qtyInKg / weightPerUnitKg;
       return qtyInKg / _weightInKg[to]!;
     }

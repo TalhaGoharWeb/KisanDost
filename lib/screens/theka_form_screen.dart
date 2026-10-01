@@ -24,13 +24,14 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
   final _durationDetailsController = TextEditingController();
   final _totalAmountController = TextEditingController();
   String _selectedPaymentMethod = 'Full'; // 'Full', 'Installment'
-  
+
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 365));
 
   // Installment support
   final _numInstallmentsController = TextEditingController(text: '2');
-  List<Map<String, dynamic>> _installments = []; // List of { 'amount': int (paisa), 'dueDate': DateTime }
+  List<Map<String, dynamic>> _installments =
+      []; // List of { 'amount': int (paisa), 'dueDate': DateTime }
 
   @override
   void initState() {
@@ -51,10 +52,15 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
         final thekaProv = Provider.of<ThekaProvider>(context, listen: false);
         final instList = thekaProv.getInstallmentsForTheka(t.id!);
         setState(() {
-          _installments = instList.map((inst) => {
-            'amount': inst.amountPaisa,
-            'dueDate': DateTime.parse(inst.dueDate),
-          }).toList();
+          _installments =
+              instList
+                  .map(
+                    (inst) => {
+                      'amount': inst.amountPaisa,
+                      'dueDate': DateTime.parse(inst.dueDate),
+                    },
+                  )
+                  .toList();
         });
       });
     }
@@ -74,10 +80,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       totalPaisa = Money.parse(_totalAmountController.text).paisa;
     } on MoneyParseException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
       );
       return;
     }
@@ -97,7 +100,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
     int sum = 0;
 
     final List<Map<String, dynamic>> temp = [];
-    
+
     // Spacing logic: if yearly, space by 12/N months. If seasonal, space by 6/N months. Otherwise, space by 1 month.
     int intervalMonths = 1;
     if (_selectedDurationType == 'Yearly') {
@@ -122,10 +125,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
         _startDate.day,
       );
 
-      temp.add({
-        'amount': amt,
-        'dueDate': dueDate,
-      });
+      temp.add({'amount': amt, 'dueDate': dueDate});
     }
 
     setState(() {
@@ -155,10 +155,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       totalAmountPaisa = Money.parse(_totalAmountController.text).paisa;
     } on MoneyParseException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
       );
       return;
     }
@@ -167,12 +164,14 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
 
     if (_selectedPaymentMethod == 'Full') {
       // Create single installment equal to total amount
-      instModels.add(ThekaInstallment(
-        thekaId: 0,
-        amountPaisa: totalAmountPaisa,
-        dueDate: DateFormat('yyyy-MM-dd').format(_startDate),
-        status: 'Pending',
-      ));
+      instModels.add(
+        ThekaInstallment(
+          thekaId: 0,
+          amountPaisa: totalAmountPaisa,
+          dueDate: DateFormat('yyyy-MM-dd').format(_startDate),
+          status: 'Pending',
+        ),
+      );
     } else {
       if (_installments.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -188,7 +187,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       if (sum != totalAmountPaisa) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('اقساط کا مجموعہ (${Money(sum).format()}) کل رقم (${Money(totalAmountPaisa).format()}) کے برابر ہونا چاہیے۔'),
+            content: Text(
+              'اقساط کا مجموعہ (${Money(sum).format()}) کل رقم (${Money(totalAmountPaisa).format()}) کے برابر ہونا چاہیے۔',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -196,12 +197,14 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       }
 
       for (var inst in _installments) {
-        instModels.add(ThekaInstallment(
-          thekaId: 0,
-          amountPaisa: inst['amount'] as int,
-          dueDate: DateFormat('yyyy-MM-dd').format(inst['dueDate']),
-          status: 'Pending',
-        ));
+        instModels.add(
+          ThekaInstallment(
+            thekaId: 0,
+            amountPaisa: inst['amount'] as int,
+            dueDate: DateFormat('yyyy-MM-dd').format(inst['dueDate']),
+            status: 'Pending',
+          ),
+        );
       }
     }
 
@@ -236,7 +239,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
           if (hasPayments) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('معاہدے کی کسی قسط کی ادائیگی ہو چکی ہے، لہذا ترمیم نہیں کی جا سکتی۔ پہلے ادائیگی کو کینسل کریں۔'),
+                content: Text(
+                  'معاہدے کی کسی قسط کی ادائیگی ہو چکی ہے، لہذا ترمیم نہیں کی جا سکتی۔ پہلے ادائیگی کو کینسل کریں۔',
+                ),
                 backgroundColor: Colors.red,
               ),
             );
@@ -273,11 +278,16 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
     final farmProvider = Provider.of<FarmProvider>(context);
 
     // Get fields for selected farm
-    final fields = _selectedFarmId != null ? farmProvider.getFieldsForFarm(_selectedFarmId!) : <Field>[];
+    final fields =
+        _selectedFarmId != null
+            ? farmProvider.getFieldsForFarm(_selectedFarmId!)
+            : <Field>[];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.theka == null ? 'نیا ٹھیکہ معاہدہ' : 'ٹھیکہ معاہدے میں ترمیم'),
+        title: Text(
+          widget.theka == null ? 'نیا ٹھیکہ معاہدہ' : 'ٹھیکہ معاہدے میں ترمیم',
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -287,7 +297,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -295,7 +307,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                     children: [
                       const Text(
                         'زمین اور مدت کی تفصیلات',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.brown),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int>(
@@ -306,19 +322,22 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.landscape),
                         ),
-                        items: farmProvider.farms.map((f) {
-                          return DropdownMenuItem<int>(
-                            value: f.id,
-                            child: Text(f.name),
-                          );
-                        }).toList(),
+                        items:
+                            farmProvider.farms.map((f) {
+                              return DropdownMenuItem<int>(
+                                value: f.id,
+                                child: Text(f.name),
+                              );
+                            }).toList(),
                         onChanged: (val) {
                           setState(() {
                             _selectedFarmId = val;
                             _selectedFieldId = null; // Reset field
                           });
                         },
-                        validator: (val) => val == null ? 'براہ کرم فارم منتخب کریں' : null,
+                        validator:
+                            (val) =>
+                                val == null ? 'براہ کرم فارم منتخب کریں' : null,
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<int?>(
@@ -359,18 +378,36 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'Yearly', child: Text('سالانہ (Yearly)')),
-                                DropdownMenuItem(value: 'Seasonal', child: Text('سہ ماہی/فصلاتی (Seasonal)')),
-                                DropdownMenuItem(value: 'Custom', child: Text('کسٹم (Custom)')),
+                                DropdownMenuItem(
+                                  value: 'Yearly',
+                                  child: Text('سالانہ (Yearly)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Seasonal',
+                                  child: Text('سہ ماہی/فصلاتی (Seasonal)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Custom',
+                                  child: Text('کسٹم (Custom)'),
+                                ),
                               ],
                               onChanged: (val) {
                                 setState(() {
                                   _selectedDurationType = val!;
                                   // Update end date based on duration type
                                   if (_selectedDurationType == 'Yearly') {
-                                    _endDate = DateTime(_startDate.year + 1, _startDate.month, _startDate.day);
-                                  } else if (_selectedDurationType == 'Seasonal') {
-                                    _endDate = DateTime(_startDate.year, _startDate.month + 6, _startDate.day);
+                                    _endDate = DateTime(
+                                      _startDate.year + 1,
+                                      _startDate.month,
+                                      _startDate.day,
+                                    );
+                                  } else if (_selectedDurationType ==
+                                      'Seasonal') {
+                                    _endDate = DateTime(
+                                      _startDate.year,
+                                      _startDate.month + 6,
+                                      _startDate.day,
+                                    );
                                   }
                                 });
                               },
@@ -393,9 +430,23 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                         children: [
                           Expanded(
                             child: ListTile(
-                              title: const Text('شروع کی تاریخ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                              subtitle: Text(DateFormat('yyyy-MM-dd').format(_startDate), style: const TextStyle(fontWeight: FontWeight.bold)),
-                              trailing: const Icon(Icons.calendar_today, size: 20),
+                              title: const Text(
+                                'شروع کی تاریخ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              subtitle: Text(
+                                DateFormat('yyyy-MM-dd').format(_startDate),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              trailing: const Icon(
+                                Icons.calendar_today,
+                                size: 20,
+                              ),
                               onTap: () async {
                                 final date = await showDatePicker(
                                   context: context,
@@ -408,21 +459,48 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                     _startDate = date;
                                     // auto-adjust end date if yearly/seasonal
                                     if (_selectedDurationType == 'Yearly') {
-                                      _endDate = DateTime(_startDate.year + 1, _startDate.month, _startDate.day);
-                                    } else if (_selectedDurationType == 'Seasonal') {
-                                      _endDate = DateTime(_startDate.year, _startDate.month + 6, _startDate.day);
+                                      _endDate = DateTime(
+                                        _startDate.year + 1,
+                                        _startDate.month,
+                                        _startDate.day,
+                                      );
+                                    } else if (_selectedDurationType ==
+                                        'Seasonal') {
+                                      _endDate = DateTime(
+                                        _startDate.year,
+                                        _startDate.month + 6,
+                                        _startDate.day,
+                                      );
                                     }
                                   });
                                 }
                               },
                             ),
                           ),
-                          Container(width: 1, height: 40, color: Colors.grey.shade300),
+                          Container(
+                            width: 1,
+                            height: 40,
+                            color: Colors.grey.shade300,
+                          ),
                           Expanded(
                             child: ListTile(
-                              title: const Text('ختم کی تاریخ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                              subtitle: Text(DateFormat('yyyy-MM-dd').format(_endDate), style: const TextStyle(fontWeight: FontWeight.bold)),
-                              trailing: const Icon(Icons.calendar_today, size: 20),
+                              title: const Text(
+                                'ختم کی تاریخ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              subtitle: Text(
+                                DateFormat('yyyy-MM-dd').format(_endDate),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              trailing: const Icon(
+                                Icons.calendar_today,
+                                size: 20,
+                              ),
                               onTap: () async {
                                 final date = await showDatePicker(
                                   context: context,
@@ -446,7 +524,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
               ),
               const SizedBox(height: 16),
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -454,7 +534,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                     children: [
                       const Text(
                         'ٹھیکہ رقم اور ادائیگی کا طریقہ',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.brown),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -466,7 +550,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           prefixIcon: Icon(Icons.attach_money),
                         ),
                         validator: (value) {
-                          if (value!.isEmpty) return 'براہ کرم ٹھیکہ رقم درج کریں';
+                          if (value!.isEmpty) {
+                            return 'براہ کرم ٹھیکہ رقم درج کریں';
+                          }
                           try {
                             Money.parse(value);
                           } on MoneyParseException catch (e) {
@@ -488,13 +574,20 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'Full', child: Text('ایک بارگی ادائیگی (Lump-sum)')),
-                          DropdownMenuItem(value: 'Installment', child: Text('اقساط میں ادائیگی (Installments)')),
+                          DropdownMenuItem(
+                            value: 'Full',
+                            child: Text('ایک بارگی ادائیگی (Lump-sum)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Installment',
+                            child: Text('اقساط میں ادائیگی (Installments)'),
+                          ),
                         ],
                         onChanged: (val) {
                           setState(() {
                             _selectedPaymentMethod = val!;
-                            if (_selectedPaymentMethod == 'Installment' && _installments.isEmpty) {
+                            if (_selectedPaymentMethod == 'Installment' &&
+                                _installments.isEmpty) {
                               _generateInstallments();
                             }
                           });
@@ -507,7 +600,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
               if (_selectedPaymentMethod == 'Installment') ...[
                 const SizedBox(height: 16),
                 Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -518,10 +613,17 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           children: [
                             const Text(
                               'اقساط کا شیڈول تیار کریں',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.brown),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.brown,
+                              ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.refresh, color: Colors.brown),
+                              icon: const Icon(
+                                Icons.refresh,
+                                color: Colors.brown,
+                              ),
                               tooltip: 'اقساط دوبارہ تیار کریں',
                               onPressed: _generateInstallments,
                             ),
@@ -546,7 +648,10 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.brown.shade700,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 18,
+                                ),
                               ),
                               child: const Text('قسطیں تیار کریں'),
                             ),
@@ -559,7 +664,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           itemCount: _installments.length,
                           itemBuilder: (context, idx) {
                             final inst = _installments[idx];
-                            final amountController = TextEditingController(text: Money(inst['amount'] as int).format());
+                            final amountController = TextEditingController(
+                              text: Money(inst['amount'] as int).format(),
+                            );
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12.0),
@@ -567,7 +674,12 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                 children: [
                                   CircleAvatar(
                                     backgroundColor: Colors.brown.shade50,
-                                    child: Text('${idx + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    child: Text(
+                                      '${idx + 1}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -581,7 +693,8 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                       ),
                                       onChanged: (val) {
                                         try {
-                                          _installments[idx]['amount'] = Money.parse(val).paisa;
+                                          _installments[idx]['amount'] =
+                                              Money.parse(val).paisa;
                                           setState(() {}); // refresh sum check
                                         } on MoneyParseException {
                                           // Keep the previous valid amount.
@@ -594,9 +707,13 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                     flex: 4,
                                     child: OutlinedButton(
                                       style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                       ),
                                       onPressed: () async {
@@ -608,19 +725,27 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                         );
                                         if (date != null) {
                                           setState(() {
-                                            _installments[idx]['dueDate'] = date;
+                                            _installments[idx]['dueDate'] =
+                                                date;
                                           });
                                         }
                                       },
                                       child: Text(
-                                        DateFormat('yyyy-MM-dd').format(inst['dueDate']),
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        DateFormat(
+                                          'yyyy-MM-dd',
+                                        ).format(inst['dueDate']),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 4),
                                   IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                                    icon: const Icon(
+                                      Icons.remove_circle_outline,
+                                      color: Colors.red,
+                                    ),
                                     onPressed: () {
                                       setState(() {
                                         _installments.removeAt(idx);
@@ -638,7 +763,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                             setState(() {
                               _installments.add({
                                 'amount': 0,
-                                'dueDate': DateTime.now().add(const Duration(days: 30)),
+                                'dueDate': DateTime.now().add(
+                                  const Duration(days: 30),
+                                ),
                               });
                             });
                           },
@@ -692,7 +819,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       decoration: BoxDecoration(
         color: isMatched ? Colors.green.shade50 : Colors.red.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isMatched ? Colors.green.shade300 : Colors.red.shade300),
+        border: Border.all(
+          color: isMatched ? Colors.green.shade300 : Colors.red.shade300,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -719,7 +848,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
               diff > 0
                   ? 'رقم کم ہے: ${Money(diff).format()} اور تقسیم کریں'
                   : 'رقم زیادہ ہے: ${Money(diff.abs()).format()} اقساط سے کم کریں',
-              style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.red,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ],

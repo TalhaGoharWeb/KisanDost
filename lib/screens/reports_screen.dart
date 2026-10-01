@@ -98,13 +98,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   void _snack(String msg, Color color) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: color),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
-  String _stamp() =>
-      DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+  String _stamp() => DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
 
   Future<void> _saveAndShare(String filename, List<int> bytes) async {
     final docs = await getApplicationDocumentsDirectory();
@@ -124,15 +123,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 16),
-            Expanded(child: Text(label)),
-          ],
-        ),
-      ),
+      builder:
+          (_) => AlertDialog(
+            content: Row(
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                Expanded(child: Text(label)),
+              ],
+            ),
+          ),
     );
     try {
       await task();
@@ -146,14 +146,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // ---------------- CSV exports ----------------
 
-  Future<void> _exportExpensesCsv() => _withProgress('CSV تیار ہو رہا ہے...', () async {
+  Future<void> _exportExpensesCsv() =>
+      _withProgress('CSV تیار ہو رہا ہے...', () async {
         final expenses = context.read<ExpenseProvider>().expenses;
         final farms = context.read<FarmProvider>().farms;
-        final farmNames = {for (final f in farms) if (f.id != null) f.id!: f.name};
+        final farmNames = {
+          for (final f in farms)
+            if (f.id != null) f.id!: f.name,
+        };
         final fieldNames = <int, String>{};
         for (final f in farms) {
-          for (final fld
-              in context.read<FarmProvider>().getFieldsForFarm(f.id!)) {
+          for (final fld in context.read<FarmProvider>().getFieldsForFarm(
+            f.id!,
+          )) {
             if (fld.id != null) fieldNames[fld.id!] = fld.name;
           }
         }
@@ -164,7 +169,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final cropNames = {
           for (final c in crops)
             if (c.cropSeason.id != null)
-              c.cropSeason.id!: '${c.cropSeason.cropName} (${c.cropSeason.variety})'
+              c.cropSeason.id!:
+                  '${c.cropSeason.cropName} (${c.cropSeason.variety})',
         };
         final csv = expensesCsv(
           expenses,
@@ -173,36 +179,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
           cropNames: cropNames,
           categoryLabels: context.read<ExpenseProvider>().expenseCategories,
         );
-        await _saveAndShare(
-            'kisan_dost_expenses_${_stamp()}.csv', _utf8(csv));
+        await _saveAndShare('kisan_dost_expenses_${_stamp()}.csv', _utf8(csv));
         _snack('اخراجات کی CSV تیار ہے', Colors.green);
       });
 
-  Future<void> _exportSalesCsv() => _withProgress('CSV تیار ہو رہا ہے...', () async {
+  Future<void> _exportSalesCsv() =>
+      _withProgress('CSV تیار ہو رہا ہے...', () async {
         final harvests = context.read<HarvestProvider>().harvests;
         final csv = salesCsv(harvests);
         await _saveAndShare('kisan_dost_sales_${_stamp()}.csv', _utf8(csv));
         _snack('فروخت کی CSV تیار ہے', Colors.green);
       });
 
-  Future<void> _exportPartyCsv() => _withProgress('CSV تیار ہو رہا ہے...', () async {
-        final partyProvider = context.read<PartyProvider>();
-        final entries = <PartyLedgerEntry>[];
-        for (final p in partyProvider.parties) {
-          if (p.id != null) entries.addAll(await partyProvider.getEntries(p.id!));
-        }
-        entries.sort((a, b) => a.date.compareTo(b.date));
-        final csv = partyLedgerCsv(
-          entries,
-          {for (final p in partyProvider.parties) if (p.id != null) p.id!: p.name},
-          partyProvider.allBalances,
-        );
-        await _saveAndShare(
-            'kisan_dost_party_ledger_${_stamp()}.csv', _utf8(csv));
-        _snack('پارٹی کھاتے کی CSV تیار ہے', Colors.green);
-      });
+  Future<void> _exportPartyCsv() => _withProgress(
+    'CSV تیار ہو رہا ہے...',
+    () async {
+      final partyProvider = context.read<PartyProvider>();
+      final entries = <PartyLedgerEntry>[];
+      for (final p in partyProvider.parties) {
+        if (p.id != null) entries.addAll(await partyProvider.getEntries(p.id!));
+      }
+      entries.sort((a, b) => a.date.compareTo(b.date));
+      final csv = partyLedgerCsv(entries, {
+        for (final p in partyProvider.parties)
+          if (p.id != null) p.id!: p.name,
+      }, partyProvider.allBalances);
+      await _saveAndShare(
+        'kisan_dost_party_ledger_${_stamp()}.csv',
+        _utf8(csv),
+      );
+      _snack('پارٹی کھاتے کی CSV تیار ہے', Colors.green);
+    },
+  );
 
-  Future<void> _exportInventoryCsv() => _withProgress('CSV تیار ہو رہا ہے...', () async {
+  Future<void> _exportInventoryCsv() =>
+      _withProgress('CSV تیار ہو رہا ہے...', () async {
         final inventoryProvider = context.read<InventoryProvider>();
         final txns = <InventoryTransaction>[];
         final itemNames = <int, String>{};
@@ -213,27 +224,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
         }
         txns.sort((a, b) => b.date.compareTo(a.date));
         final csv = inventoryTransactionsCsv(txns, itemNames);
-        await _saveAndShare(
-            'kisan_dost_inventory_${_stamp()}.csv', _utf8(csv));
+        await _saveAndShare('kisan_dost_inventory_${_stamp()}.csv', _utf8(csv));
         _snack('گودام لین دین کی CSV تیار ہے', Colors.green);
       });
 
-  Future<void> _exportBataiCsv() => _withProgress('CSV تیار ہو رہا ہے...', () async {
-        final bataiProvider = context.read<BataiProvider>();
-        final settlements = <BataiSettlement>[];
-        final labels = <int, String>{};
-        for (final a in bataiProvider.agreements) {
-          final id = a.agreement.id;
-          if (id == null) continue;
-          labels[id] =
-              '${a.partyName ?? 'نامعلوم'} — ${a.agreement.ownerSharePercent}/${a.agreement.cultivatorSharePercent}';
-          settlements.addAll(await bataiProvider.getSettlements(id));
-        }
-        settlements.sort((a, b) => a.settleDate.compareTo(b.settleDate));
-        final csv = bataiSettlementsCsv(settlements, labels);
-        await _saveAndShare('kisan_dost_batai_${_stamp()}.csv', _utf8(csv));
-        _snack('بٹائی چکتائیوں کی CSV تیار ہے', Colors.green);
-      });
+  Future<void>
+  _exportBataiCsv() => _withProgress('CSV تیار ہو رہا ہے...', () async {
+    final bataiProvider = context.read<BataiProvider>();
+    final settlements = <BataiSettlement>[];
+    final labels = <int, String>{};
+    for (final a in bataiProvider.agreements) {
+      final id = a.agreement.id;
+      if (id == null) continue;
+      labels[id] =
+          '${a.partyName ?? 'نامعلوم'} — ${a.agreement.ownerSharePercent}/${a.agreement.cultivatorSharePercent}';
+      settlements.addAll(await bataiProvider.getSettlements(id));
+    }
+    settlements.sort((a, b) => a.settleDate.compareTo(b.settleDate));
+    final csv = bataiSettlementsCsv(settlements, labels);
+    await _saveAndShare('kisan_dost_batai_${_stamp()}.csv', _utf8(csv));
+    _snack('بٹائی چکتائیوں کی CSV تیار ہے', Colors.green);
+  });
 
   // ---------------- PDF ----------------
 
@@ -259,7 +270,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           generatedOn: DateFormat('yyyy-MM-dd').format(DateTime.now()),
         );
         final png = await captureReportPng(
-            captureContext, PnlReportWidget(data: data));
+          captureContext,
+          PnlReportWidget(data: data),
+        );
         final pdf = await pngToPdfBytes(png);
         await _saveAndShare('kisan_dost_farm_report_${_stamp()}.pdf', pdf);
         _snack('فارم رپورٹ PDF تیار ہے', Colors.green);
@@ -273,41 +286,52 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
     final party = await showDialog<Party>(
       context: context,
-      builder: (_) => SimpleDialog(
-        title: const Text('پارٹی منتخب کریں'),
-        children: [
-          for (final p in partyProvider.parties)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, p),
-              child: Text('${p.name} — ${Money(partyProvider.balanceOf(p.id!)).format()}'),
-            ),
-        ],
-      ),
+      builder:
+          (_) => SimpleDialog(
+            title: const Text('پارٹی منتخب کریں'),
+            children: [
+              for (final p in partyProvider.parties)
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context, p),
+                  child: Text(
+                    '${p.name} — ${Money(partyProvider.balanceOf(p.id!)).format()}',
+                  ),
+                ),
+            ],
+          ),
     );
     if (party == null || party.id == null || !mounted) return;
-    final entries = (await partyProvider.getEntries(party.id!))
-        .where((e) =>
-            e.type == PartyEntryType.wusooli ||
-            e.type == PartyEntryType.adaigi)
-        .toList();
+    final entries =
+        (await partyProvider.getEntries(party.id!))
+            .where(
+              (e) =>
+                  e.type == PartyEntryType.wusooli ||
+                  e.type == PartyEntryType.adaigi,
+            )
+            .toList();
     if (entries.isEmpty) {
-      _snack('اس پارٹی کی کوئی ادائیگی (وصولی/ادائیگی) نہیں ملی', Colors.orange);
+      _snack(
+        'اس پارٹی کی کوئی ادائیگی (وصولی/ادائیگی) نہیں ملی',
+        Colors.orange,
+      );
       return;
     }
     if (!mounted) return;
     final entry = await showDialog<PartyLedgerEntry>(
       context: context,
-      builder: (_) => SimpleDialog(
-        title: const Text('رسید کے لیے اندراج منتخب کریں'),
-        children: [
-          for (final e in entries)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, e),
-              child: Text(
-                  '${partyEntryTypeUrdu(e.type)} — ${Money(e.amountPaisa.abs()).format()} — ${e.date}'),
-            ),
-        ],
-      ),
+      builder:
+          (_) => SimpleDialog(
+            title: const Text('رسید کے لیے اندراج منتخب کریں'),
+            children: [
+              for (final e in entries)
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context, e),
+                  child: Text(
+                    '${partyEntryTypeUrdu(e.type)} — ${Money(e.amountPaisa.abs()).format()} — ${e.date}',
+                  ),
+                ),
+            ],
+          ),
     );
     if (entry == null || !mounted) return;
 
@@ -330,8 +354,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       generatedOn: DateFormat('yyyy-MM-dd').format(DateTime.now()),
     );
     await _withProgress('رسید تیار ہو رہی ہے...', () async {
-      final png =
-          await captureReportPng(captureContext, ReceiptWidget(data: data));
+      final png = await captureReportPng(
+        captureContext,
+        ReceiptWidget(data: data),
+      );
       final pdf = await pngToPdfBytes(png);
       await _saveAndShare('kisan_dost_receipt_${_stamp()}.pdf', pdf);
       _snack('رسید PDF تیار ہے', Colors.green);
@@ -352,49 +378,82 @@ class _ReportsScreenState extends State<ReportsScreen> {
             style: TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 8),
-          _csvRow('اخراجات', 'تمام اخراجات — زمین/کھیت/فصل کے ناموں سمیت',
-              _expenseCount, _exportExpensesCsv, Icons.money_off),
-          _csvRow('فروخت', 'تمام فروخت — فصل، مقدار اور رقم',
-              _saleCount, _exportSalesCsv, Icons.sell_outlined),
-          _csvRow('پارٹی کھاتہ', 'تمام اندراجات اور ہر پارٹی کا بیلنس',
-              _partyEntryCount, _exportPartyCsv, Icons.people_outline),
-          _csvRow('گودام لین دین', 'خریداری، استعمال اور تصحیح کا ریکارڈ',
-              _txnCount, _exportInventoryCsv, Icons.inventory_2_outlined),
-          _csvRow('بٹائی چکتائیاں', 'ہر معاہدے کی چکتائی اور حصے',
-              _settlementCount, _exportBataiCsv, Icons.handshake_outlined),
+          _csvRow(
+            'اخراجات',
+            'تمام اخراجات — زمین/کھیت/فصل کے ناموں سمیت',
+            _expenseCount,
+            _exportExpensesCsv,
+            Icons.money_off,
+          ),
+          _csvRow(
+            'فروخت',
+            'تمام فروخت — فصل، مقدار اور رقم',
+            _saleCount,
+            _exportSalesCsv,
+            Icons.sell_outlined,
+          ),
+          _csvRow(
+            'پارٹی کھاتہ',
+            'تمام اندراجات اور ہر پارٹی کا بیلنس',
+            _partyEntryCount,
+            _exportPartyCsv,
+            Icons.people_outline,
+          ),
+          _csvRow(
+            'گودام لین دین',
+            'خریداری، استعمال اور تصحیح کا ریکارڈ',
+            _txnCount,
+            _exportInventoryCsv,
+            Icons.inventory_2_outlined,
+          ),
+          _csvRow(
+            'بٹائی چکتائیاں',
+            'ہر معاہدے کی چکتائی اور حصے',
+            _settlementCount,
+            _exportBataiCsv,
+            Icons.handshake_outlined,
+          ),
           const SizedBox(height: 20),
           _sectionTitle('PDF رپورٹ'),
           const SizedBox(height: 8),
           Builder(
-            builder: (captureContext) => Column(
-              children: [
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.picture_as_pdf_outlined,
-                        size: 32, color: Colors.red),
-                    title: const Text('فارم رپورٹ (PDF)'),
-                    subtitle: const Text(
-                        'کل آمدنی/اخراجات اور فصل وار منافع و نقصان'),
-                    trailing: const Icon(Icons.share_outlined),
-                    onTap:
-                        _busy ? null : () => _exportPnlPdf(captureContext),
-                  ),
+            builder:
+                (captureContext) => Column(
+                  children: [
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.picture_as_pdf_outlined,
+                          size: 32,
+                          color: Colors.red,
+                        ),
+                        title: const Text('فارم رپورٹ (PDF)'),
+                        subtitle: const Text(
+                          'کل آمدنی/اخراجات اور فصل وار منافع و نقصان',
+                        ),
+                        trailing: const Icon(Icons.share_outlined),
+                        onTap:
+                            _busy ? null : () => _exportPnlPdf(captureContext),
+                      ),
+                    ),
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.receipt_long_outlined,
+                          size: 32,
+                          color: Colors.teal,
+                        ),
+                        title: const Text('رسید (PDF)'),
+                        subtitle: const Text('پارٹی کی وصولی/ادائیگی کی رسید'),
+                        trailing: const Icon(Icons.share_outlined),
+                        onTap:
+                            _busy
+                                ? null
+                                : () => _exportReceiptFlow(captureContext),
+                      ),
+                    ),
+                  ],
                 ),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.receipt_long_outlined,
-                        size: 32, color: Colors.teal),
-                    title: const Text('رسید (PDF)'),
-                    subtitle:
-                        const Text('پارٹی کی وصولی/ادائیگی کی رسید'),
-                    trailing: const Icon(Icons.share_outlined),
-                    onTap: _busy
-                        ? null
-                        : () => _exportReceiptFlow(captureContext),
-                  ),
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 24),
         ],
@@ -403,18 +462,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _sectionTitle(String t) => Text(
-        t,
-        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-      );
+    t,
+    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  );
 
-  Widget _csvRow(String title, String subtitle, int count,
-      VoidCallback onTap, IconData icon) {
+  Widget _csvRow(
+    String title,
+    String subtitle,
+    int count,
+    VoidCallback onTap,
+    IconData icon,
+  ) {
     return Card(
       child: ListTile(
         leading: Icon(icon, size: 32, color: Colors.green.shade700),
         title: Text(title),
         subtitle: Text(
-            '$subtitle\n${_loadingCounts ? 'گنتی ہو رہی ہے...' : 'ریکارڈ: $count'}'),
+          '$subtitle\n${_loadingCounts ? 'گنتی ہو رہی ہے...' : 'ریکارڈ: $count'}',
+        ),
         isThreeLine: true,
         trailing: const Icon(Icons.download_outlined),
         onTap: _busy ? null : onTap,
@@ -424,6 +489,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 }
 
 List<int> _utf8(String s) =>
-    // BOM char (U+FEFF) is already the first char of every CSV — utf8.encode
-    // emits it as EF BB BF so Excel detects UTF-8.
-    utf8.encode(s);
+// BOM char (U+FEFF) is already the first char of every CSV — utf8.encode
+// emits it as EF BB BF so Excel detects UTF-8.
+utf8.encode(s);

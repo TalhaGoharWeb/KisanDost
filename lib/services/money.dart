@@ -56,7 +56,8 @@ class Money {
     if (decimals.length > 2) {
       // Deliberate: never silently round the farmer's money.
       throw MoneyParseException(
-          'رقم میں دو سے زیادہ اعشاریہ نہیں ہو سکتے (مثلاً 1250.50)');
+        'رقم میں دو سے زیادہ اعشاریہ نہیں ہو سکتے (مثلاً 1250.50)',
+      );
     }
     final rupees = int.parse(match.group(1)!);
     final paisaPart = decimals.padRight(2, '0');
@@ -120,9 +121,8 @@ class Money {
     final whole = abs ~/ 100;
     final rest = abs % 100;
     final grouped = _groupThousands(whole);
-    final core = rest == 0
-        ? grouped
-        : '$grouped.${rest.toString().padLeft(2, '0')}';
+    final core =
+        rest == 0 ? grouped : '$grouped.${rest.toString().padLeft(2, '0')}';
     return '${negative ? '-' : ''}$core روپے';
   }
 

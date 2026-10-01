@@ -48,7 +48,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _checkBatteryIgnoreStatus() async {
     try {
-      final bool ignoring = await _channel.invokeMethod('isIgnoringBatteryOptimizations');
+      final bool ignoring = await _channel.invokeMethod(
+        'isIgnoringBatteryOptimizations',
+      );
       setState(() {
         _isIgnoringBattery = ignoring;
       });
@@ -75,7 +77,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _checkFullScreenStatus() async {
     try {
-      final bool canFullScreen = await _channel.invokeMethod('canUseFullScreenIntent');
+      final bool canFullScreen = await _channel.invokeMethod(
+        'canUseFullScreenIntent',
+      );
       setState(() {
         _canFullScreen = canFullScreen;
       });
@@ -166,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _wipeAllData() async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    
+
     final farmProvider = context.read<FarmProvider>();
     final cropProvider = context.read<CropProvider>();
     final inventoryProvider = context.read<InventoryProvider>();
@@ -178,9 +182,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      ),
+      builder:
+          (ctx) => const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          ),
     );
 
     try {
@@ -205,7 +210,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       navigator.pop(); // close loader dialog
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('آپ کا تمام زرعی ریکارڈ کامیابی سے حذف ہو گیا ہے!', style: TextStyle(fontSize: 16)),
+          content: Text(
+            'آپ کا تمام زرعی ریکارڈ کامیابی سے حذف ہو گیا ہے!',
+            style: TextStyle(fontSize: 16),
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -224,49 +232,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showWipeConfirmDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'تصدیق کریں',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          'کیا آپ واقعی اپنا تمام ریکارڈ (زمینیں، فصلیں، خرچے، پیداوار، الارم) ہمیشہ کے لیے حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں لیا جا سکتا۔',
-          style: TextStyle(fontSize: 16, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('منسوخ کریں', style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _wipeAllData();
-            },
-            child: const Text('جی ہاں، حذف کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            title: const Text(
+              'تصدیق کریں',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'کیا آپ واقعی اپنا تمام ریکارڈ (زمینیں، فصلیں، خرچے، پیداوار، الارم) ہمیشہ کے لیے حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں لیا جا سکتا۔',
+              style: TextStyle(fontSize: 16, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'منسوخ کریں',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _wipeAllData();
+                },
+                child: const Text(
+                  'جی ہاں، حذف کریں',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ترتیبات (Settings)', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'ترتیبات (Settings)',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.deepPurple.shade600,
         foregroundColor: Colors.white,
       ),
@@ -277,61 +297,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // Reminders Section Header
             _buildSectionHeader('یاد دہانیاں اور الارم (Reminders & Alarm)'),
-            
+
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8.0,
+                  horizontal: 4.0,
+                ),
                 child: Column(
                   children: [
                     // Reminders enable
                     SwitchListTile(
-                      title: const Text('زرعی یاد دہانیاں آن کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      title: const Text(
+                        'زرعی یاد دہانیاں آن کریں',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       subtitle: const Text('اہم سرگرمیوں کے الارم موصول کریں'),
                       value: _remindersEnabled,
                       activeColor: Colors.deepPurple,
                       onChanged: _toggleReminders,
                     ),
                     const Divider(),
-                    
+
                     // Sound enable
                     SwitchListTile(
-                      title: const Text('الارم کی آواز', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      title: const Text(
+                        'الارم کی آواز',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       subtitle: const Text('یاد دہانی پر مخصوص آواز بجائیں'),
                       value: _alarmSoundEnabled,
                       activeColor: Colors.deepPurple,
-                      onChanged: _remindersEnabled
-                          ? (value) async {
-                              setState(() {
-                                _alarmSoundEnabled = value;
-                              });
-                              await _setBoolPreference('alarm_sound_enabled', value);
-                            }
-                          : null,
+                      onChanged:
+                          _remindersEnabled
+                              ? (value) async {
+                                setState(() {
+                                  _alarmSoundEnabled = value;
+                                });
+                                await _setBoolPreference(
+                                  'alarm_sound_enabled',
+                                  value,
+                                );
+                              }
+                              : null,
                     ),
                     const Divider(),
 
                     // Vibration enable
                     SwitchListTile(
-                      title: const Text('وائبریشن (تھرتھراہٹ)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      title: const Text(
+                        'وائبریشن (تھرتھراہٹ)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       subtitle: const Text('یاد دہانی پر فون وائبریٹ کریں'),
                       value: _vibrationEnabled,
                       activeColor: Colors.deepPurple,
-                      onChanged: _remindersEnabled
-                          ? (value) async {
-                              setState(() {
-                                _vibrationEnabled = value;
-                              });
-                              await _setBoolPreference('vibration_enabled', value);
-                            }
-                          : null,
+                      onChanged:
+                          _remindersEnabled
+                              ? (value) async {
+                                setState(() {
+                                  _vibrationEnabled = value;
+                                });
+                                await _setBoolPreference(
+                                  'vibration_enabled',
+                                  value,
+                                );
+                              }
+                              : null,
                     ),
                     const Divider(),
 
                     // Snooze config
                     ListTile(
-                      title: const Text('الارم سوز کی مدت (Snooze Duration)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      title: const Text(
+                        'الارم سوز کی مدت (Snooze Duration)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       subtitle: const Text('کتنی دیر بعد الارم دوبارہ بجے'),
                       trailing: DropdownButton<int>(
                         value: _snoozeDuration,
@@ -340,16 +397,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           DropdownMenuItem(value: 10, child: Text('10 منٹ')),
                           DropdownMenuItem(value: 15, child: Text('15 منٹ')),
                         ],
-                        onChanged: _remindersEnabled
-                            ? (value) async {
-                                if (value != null) {
-                                  setState(() {
-                                    _snoozeDuration = value;
-                                  });
-                                  await _setIntPreference('snooze_duration', value);
+                        onChanged:
+                            _remindersEnabled
+                                ? (value) async {
+                                  if (value != null) {
+                                    setState(() {
+                                      _snoozeDuration = value;
+                                    });
+                                    await _setIntPreference(
+                                      'snooze_duration',
+                                      value,
+                                    );
+                                  }
                                 }
-                              }
-                            : null,
+                                : null,
                       ),
                     ),
                   ],
@@ -362,7 +423,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSectionHeader('پہلے سے طے شدہ ترجیحات (Reminder Defaults)'),
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
@@ -374,7 +437,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (val) async {
                         if (val != null) {
                           setState(() => _prefAtTime = val);
-                          await _setBoolPreference('reminder_pref_at_time', val);
+                          await _setBoolPreference(
+                            'reminder_pref_at_time',
+                            val,
+                          );
                         }
                       },
                     ),
@@ -407,68 +473,145 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
 
             // Battery & System Settings Section
-            _buildSectionHeader('بیٹری اور دیگر ترتیبات (Battery & System Settings)'),
+            _buildSectionHeader(
+              'بیٹری اور دیگر ترتیبات (Battery & System Settings)',
+            ),
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
                   children: [
                     ListTile(
-                      leading: const Icon(Icons.battery_saver, color: Colors.amber),
-                      title: const Text('بیٹری بچت سے استثنیٰ (Ignore Battery Saving)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      subtitle: Text(_isIgnoringBattery ? 'آن (صحیح الارم کے لیے موزوں)' : 'آف (الارم تاخیر کا شکار ہو سکتا ہے)'),
+                      leading: const Icon(
+                        Icons.battery_saver,
+                        color: Colors.amber,
+                      ),
+                      title: const Text(
+                        'بیٹری بچت سے استثنیٰ (Ignore Battery Saving)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _isIgnoringBattery
+                            ? 'آن (صحیح الارم کے لیے موزوں)'
+                            : 'آف (الارم تاخیر کا شکار ہو سکتا ہے)',
+                      ),
                       trailing: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isIgnoringBattery ? Colors.grey : Colors.amber.shade700,
+                          backgroundColor:
+                              _isIgnoringBattery
+                                  ? Colors.grey
+                                  : Colors.amber.shade700,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: _checkAndRequestBatteryBypass,
-                        child: Text(_isIgnoringBattery ? 'ترتیبات کھولیں' : 'اجازت دیں'),
+                        child: Text(
+                          _isIgnoringBattery ? 'ترتیبات کھولیں' : 'اجازت دیں',
+                        ),
                       ),
                     ),
                     const Divider(),
                     ListTile(
-                      leading: const Icon(Icons.fullscreen, color: Colors.deepPurple),
-                      title: const Text('فل اسکرین الارم کی اجازت (Full Screen Alarm)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      subtitle: Text(_canFullScreen ? 'آن (لاک اسکرین پر الارم بجے گا)' : 'آف (لاک اسکرین پر الارم نہیں بجے گا)'),
+                      leading: const Icon(
+                        Icons.fullscreen,
+                        color: Colors.deepPurple,
+                      ),
+                      title: const Text(
+                        'فل اسکرین الارم کی اجازت (Full Screen Alarm)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _canFullScreen
+                            ? 'آن (لاک اسکرین پر الارم بجے گا)'
+                            : 'آف (لاک اسکرین پر الارم نہیں بجے گا)',
+                      ),
                       trailing: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _canFullScreen ? Colors.grey : Colors.deepPurple.shade600,
+                          backgroundColor:
+                              _canFullScreen
+                                  ? Colors.grey
+                                  : Colors.deepPurple.shade600,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: _requestFullScreenPermission,
-                        child: Text(_canFullScreen ? 'ترتیبات کھولیں' : 'اجازت دیں'),
+                        child: Text(
+                          _canFullScreen ? 'ترتیبات کھولیں' : 'اجازت دیں',
+                        ),
                       ),
                     ),
                     const Divider(),
                     ListTile(
                       leading: const Icon(Icons.alarm, color: Colors.blue),
-                      title: const Text('صحیح وقت پر الارم کی اجازت (Exact Alarm)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      subtitle: Text(_canScheduleExact ? 'آن (صحیح وقت پر یاد دہانی ملے گی)' : 'آف (الارم تاخیر کا شکار ہو سکتا ہے)'),
+                      title: const Text(
+                        'صحیح وقت پر الارم کی اجازت (Exact Alarm)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _canScheduleExact
+                            ? 'آن (صحیح وقت پر یاد دہانی ملے گی)'
+                            : 'آف (الارم تاخیر کا شکار ہو سکتا ہے)',
+                      ),
                       trailing: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _canScheduleExact ? Colors.grey : Colors.blue.shade600,
+                          backgroundColor:
+                              _canScheduleExact
+                                  ? Colors.grey
+                                  : Colors.blue.shade600,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        onPressed: _canScheduleExact ? _openAppSettings : _requestExactAlarmPermission,
-                        child: Text(_canScheduleExact ? 'ترتیبات کھولیں' : 'اجازت دیں'),
+                        onPressed:
+                            _canScheduleExact
+                                ? _openAppSettings
+                                : _requestExactAlarmPermission,
+                        child: Text(
+                          _canScheduleExact ? 'ترتیبات کھولیں' : 'اجازت دیں',
+                        ),
                       ),
                     ),
                     const Divider(),
                     ListTile(
-                      leading: const Icon(Icons.settings_applications, color: Colors.blueGrey),
-                      title: const Text('ایپ کی دیگر اجازتیں (Other App Permissions)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      subtitle: const Text('لاک اسکرین پر الارم دکھانے کے لیے دیگر اجازتیں دیں'),
+                      leading: const Icon(
+                        Icons.settings_applications,
+                        color: Colors.blueGrey,
+                      ),
+                      title: const Text(
+                        'ایپ کی دیگر اجازتیں (Other App Permissions)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'لاک اسکرین پر الارم دکھانے کے لیے دیگر اجازتیں دیں',
+                      ),
                       trailing: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueGrey.shade600,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: _openAppSettings,
                         child: const Text('کھولیں'),
@@ -484,16 +627,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSectionHeader('بیک اپ اور ڈیٹا بحالی (Backup & Restore)'),
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
                     leading: const Icon(Icons.backup, color: Colors.deepPurple),
-                    title: const Text('ڈیٹا بیک اپ اور بحالی',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('بیک اپ بنائیں، بحال کریں یا شیئر کریں'),
-                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+                    title: const Text(
+                      'ڈیٹا بیک اپ اور بحالی',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'بیک اپ بنائیں، بحال کریں یا شیئر کریں',
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.deepPurple,
+                      size: 18,
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -503,29 +659,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.delete_outline, color: Colors.deepPurple),
-                    title: const Text('حذف شدہ',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('حذف شدہ ریکارڈ بحال کریں یا مستقل حذف کریں'),
-                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+                    leading: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.deepPurple,
+                    ),
+                    title: const Text(
+                      'حذف شدہ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'حذف شدہ ریکارڈ بحال کریں یا مستقل حذف کریں',
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.deepPurple,
+                      size: 18,
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const RecycleBinScreen(),
+                        ),
                       );
                     },
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.history, color: Colors.deepPurple),
-                    title: const Text('تبدیلیوں کا ریکارڈ',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    leading: const Icon(
+                      Icons.history,
+                      color: Colors.deepPurple,
+                    ),
+                    title: const Text(
+                      'تبدیلیوں کا ریکارڈ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     subtitle: const Text('ہر بنائی، تبدیلی اور حذف کا ریکارڈ'),
-                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.deepPurple,
+                      size: 18,
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AuditLogScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const AuditLogScreen(),
+                        ),
                       );
                     },
                   ),
@@ -537,10 +723,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Delete Data Section
             ElevatedButton.icon(
               onPressed: _showWipeConfirmDialog,
-              icon: const Icon(Icons.delete_forever, size: 24, color: Colors.white),
+              icon: const Icon(
+                Icons.delete_forever,
+                size: 24,
+                color: Colors.white,
+              ),
               label: const Text(
                 'تمام ڈیٹا ہمیشہ کے لیے حذف کریں',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
@@ -563,7 +757,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.only(left: 8, bottom: 8, top: 12),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.deepPurple,
+        ),
       ),
     );
   }

@@ -9,7 +9,16 @@ void main() {
       for (final u in ['من', 'کلوگرام', 'ٹن', 'بوری', 'کسٹم']) {
         expect(UnitDisplay.allUnits, contains(u), reason: 'harvest unit $u');
       }
-      for (final u in ['بوری', 'کلوگرام', 'لیٹر', 'بوتل', 'پیکٹ', 'گرام', 'ملی لیٹر', 'ٹن']) {
+      for (final u in [
+        'بوری',
+        'کلوگرام',
+        'لیٹر',
+        'بوتل',
+        'پیکٹ',
+        'گرام',
+        'ملی لیٹر',
+        'ٹن',
+      ]) {
         expect(UnitDisplay.allUnits, contains(u), reason: 'inventory unit $u');
       }
     });

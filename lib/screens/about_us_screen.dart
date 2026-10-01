@@ -7,7 +7,10 @@ class AboutUsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ایپ کے بارے میں', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'ایپ کے بارے میں',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.deepPurple.shade600,
         foregroundColor: Colors.white,
       ),
@@ -41,7 +44,7 @@ class AboutUsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // App Name
             const Text(
               'کسان دوست',
@@ -53,7 +56,7 @@ class AboutUsScreen extends StatelessWidget {
                 fontFamily: 'Jameel Noori Nastaleeq',
               ),
             ),
-            
+
             // Tagline
             Text(
               'آپ کا ڈیجیٹل زرعی روزنامچہ',
@@ -65,11 +68,14 @@ class AboutUsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            
+
             // Version Info
             const Center(
               child: Chip(
-                label: Text('ورژن 1.0.0 (مکمل آف لائن)', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: Text(
+                  'ورژن 1.0.0 (مکمل آف لائن)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 backgroundColor: deepPurpleHighlight,
                 labelStyle: TextStyle(color: Colors.deepPurple),
               ),
@@ -79,7 +85,9 @@ class AboutUsScreen extends StatelessWidget {
             // Main Info Card
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
@@ -87,24 +95,46 @@ class AboutUsScreen extends StatelessWidget {
                   children: [
                     const Text(
                       'ایپ کا مقصد:',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'کسان دوست ایپ خاص طور پر پاکستانی کسانوں کے لیے بنائی گئی ہے تاکہ وہ اپنی روزمرہ کی زرعی سرگرمیوں کا حساب کتاب آسانی سے رکھ سکیں۔',
-                      style: TextStyle(fontSize: 16, height: 1.6, color: Colors.grey.shade800),
+                      style: TextStyle(
+                        fontSize: 16,
+                        height: 1.6,
+                        color: Colors.grey.shade800,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'اس ایپ کے ذریعے آپ درج ذیل کام کر سکتے ہیں:',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    _buildFeatureItem('اپنی فصلوں اور کاشت کا مکمل ریکارڈ رکھنا۔'),
-                    _buildFeatureItem('روزمرہ کے تمام اخراجات اور آمدنی کا حساب۔'),
-                    _buildFeatureItem('گودام میں کھاد، بیج اور ادویات کا اسٹاک مینیج کرنا۔'),
-                    _buildFeatureItem('پیداوار، فروخت اور خالص منافع و نقصان کی خودکار کیلکولیشن۔'),
-                    _buildFeatureItem('اہم زرعی سرگرمیوں کے لیے الارم یاد دہانیاں سیٹ کرنا۔'),
+                    _buildFeatureItem(
+                      'اپنی فصلوں اور کاشت کا مکمل ریکارڈ رکھنا۔',
+                    ),
+                    _buildFeatureItem(
+                      'روزمرہ کے تمام اخراجات اور آمدنی کا حساب۔',
+                    ),
+                    _buildFeatureItem(
+                      'گودام میں کھاد، بیج اور ادویات کا اسٹاک مینیج کرنا۔',
+                    ),
+                    _buildFeatureItem(
+                      'پیداوار، فروخت اور خالص منافع و نقصان کی خودکار کیلکولیشن۔',
+                    ),
+                    _buildFeatureItem(
+                      'اہم زرعی سرگرمیوں کے لیے الارم یاد دہانیاں سیٹ کرنا۔',
+                    ),
                   ],
                 ),
               ),
@@ -114,14 +144,20 @@ class AboutUsScreen extends StatelessWidget {
             // Developer Card
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: const Padding(
                 padding: EdgeInsets.all(20.0),
                 child: Column(
                   children: [
                     Text(
                       'ڈیولپر کی تفصیلات:',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
                     ),
                     SizedBox(height: 12),
                     Text(
@@ -168,4 +204,5 @@ class AboutUsScreen extends StatelessWidget {
     );
   }
 }
+
 const deepPurpleHighlight = Color(0xFFF2E7FE);

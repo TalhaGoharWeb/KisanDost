@@ -148,25 +148,28 @@ void main() {
   }
 
   Future<Database> openDb() => openDatabase(
-        inMemoryDatabasePath,
-        onConfigure: (db) async {
-          // Same as DatabaseHelper._initDatabase.
-          await db.execute('PRAGMA foreign_keys = ON');
-        },
-      );
+    inMemoryDatabasePath,
+    onConfigure: (db) async {
+      // Same as DatabaseHelper._initDatabase.
+      await db.execute('PRAGMA foreign_keys = ON');
+    },
+  );
 
   test('backfills every money column to integer paisa', () async {
     final db = await openDb();
     await createV11MoneySchema(db);
 
-    await db.insert('expenses',
-        {'category': 'Labour', 'amount': 1250.75, 'date': '2026-01-05'});
+    await db.insert('expenses', {
+      'category': 'Labour',
+      'amount': 1250.75,
+      'date': '2026-01-05',
+    });
     await db.insert('inventory', {
       'category': 'Fertilizer',
       'name': 'یوریا',
       'unit': 'بوری',
       'quantity': 10.0,
-      'cost_per_unit': 2000.0
+      'cost_per_unit': 2000.0,
     });
     await db.insert('inventory_transactions', {
       'inventory_id': 1,
@@ -176,7 +179,7 @@ void main() {
       'unit_price': 2000.0,
       'total_amount': 20000.0,
       'date': '2026-01-05',
-      'created_at': '2026-01-05T00:00:00'
+      'created_at': '2026-01-05T00:00:00',
     });
     await db.insert('harvests', {
       'crop_season_id': 1,
@@ -212,34 +215,34 @@ void main() {
       'quantity': 10.0,
       'price_per_unit': 1500.5,
       'total_amount': 15005.0,
-      'date': '2026-01-05'
+      'date': '2026-01-05',
     });
     await db.insert('thekas', {
       'farm_id': 1,
       'total_amount': 500000.0,
       'duration_type': 'Yearly',
       'payment_method': 'Full',
-      'created_at': '2026-01-05T00:00:00'
+      'created_at': '2026-01-05T00:00:00',
     });
     await db.insert('theka_installments', {
       'theka_id': 1,
       'amount': 125000.0,
       'paid_amount': 62500.5,
       'due_date': '2026-06-05',
-      'status': 'Pending'
+      'status': 'Pending',
     });
 
     await DatabaseHelper.migrateV11ToV12(db);
 
     expect((await db.query('expenses')).single['amount_paisa'], 125075);
-    final expCols = (await db.rawQuery("PRAGMA table_info('expenses')"))
-        .map((c) => c['name'] as String)
-        .toSet();
+    final expCols =
+        (await db.rawQuery(
+          "PRAGMA table_info('expenses')",
+        )).map((c) => c['name'] as String).toSet();
     // No deprecated REAL money column survives the rebuild.
     expect(expCols, isNot(contains('amount')));
     expect(expCols, contains('amount_paisa'));
-    expect(
-        (await db.query('inventory')).single['cost_per_unit_paisa'], 200000);
+    expect((await db.query('inventory')).single['cost_per_unit_paisa'], 200000);
     final tx = (await db.query('inventory_transactions')).single;
     expect(tx['unit_price_paisa'], 200000);
     expect(tx['total_amount_paisa'], 2000000);
@@ -248,9 +251,10 @@ void main() {
     expect(h['rate_per_unit_paisa'], 150050);
     expect(h['transportation_expense_paisa'], 50000);
     expect(h['labour_expense_paisa'], 0);
-    final hCols = (await db.rawQuery("PRAGMA table_info('harvests')"))
-        .map((c) => c['name'] as String)
-        .toSet();
+    final hCols =
+        (await db.rawQuery(
+          "PRAGMA table_info('harvests')",
+        )).map((c) => c['name'] as String).toSet();
     expect(hCols, isNot(contains('gross_amount_paisa')));
     expect(hCols, isNot(contains('total_expense_paisa')));
     expect(hCols, isNot(contains('net_income_paisa')));
@@ -265,9 +269,10 @@ void main() {
     expect(u['ushr_amount_paisa'], 1000000);
     expect(u['cash_paid_paisa'], 250025);
     expect(u['rate_per_unit_paisa'], 300000);
-    final uCols = (await db.rawQuery("PRAGMA table_info('ushr_records')"))
-        .map((c) => c['name'] as String)
-        .toSet();
+    final uCols =
+        (await db.rawQuery(
+          "PRAGMA table_info('ushr_records')",
+        )).map((c) => c['name'] as String).toSet();
     expect(uCols, isNot(contains('remaining_balance_paisa')));
     expect(uCols, isNot(contains('market_value')));
     expect(uCols, isNot(contains('remaining_balance')));
@@ -289,12 +294,21 @@ void main() {
     final db = await openDb();
     await createV11MoneySchema(db);
 
-    await db.insert('expenses',
-        {'category': 'Labour', 'amount': 10.999, 'date': '2026-01-05'}); // -> 1100
-    await db.insert('expenses',
-        {'category': 'Labour', 'amount': 0.005, 'date': '2026-01-05'}); // -> 1
-    await db.insert('expenses',
-        {'category': 'Labour', 'amount': 0.004, 'date': '2026-01-05'}); // -> 0
+    await db.insert('expenses', {
+      'category': 'Labour',
+      'amount': 10.999,
+      'date': '2026-01-05',
+    }); // -> 1100
+    await db.insert('expenses', {
+      'category': 'Labour',
+      'amount': 0.005,
+      'date': '2026-01-05',
+    }); // -> 1
+    await db.insert('expenses', {
+      'category': 'Labour',
+      'amount': 0.004,
+      'date': '2026-01-05',
+    }); // -> 0
     await db.insert('inventory_transactions', {
       'inventory_id': 1,
       'type': 'purchase',
@@ -303,14 +317,13 @@ void main() {
       'unit_price': null,
       'total_amount': null,
       'date': '2026-01-05',
-      'created_at': '2026-01-05T00:00:00'
+      'created_at': '2026-01-05T00:00:00',
     });
 
     await DatabaseHelper.migrateV11ToV12(db);
 
     final amounts = await db.query('expenses', orderBy: 'id ASC');
-    expect(
-        amounts.map((r) => r['amount_paisa']).toList(), [1100, 1, 0]);
+    expect(amounts.map((r) => r['amount_paisa']).toList(), [1100, 1, 0]);
     final tx = (await db.query('inventory_transactions')).single;
     expect(tx['unit_price_paisa'], isNull);
     expect(tx['total_amount_paisa'], isNull);
@@ -321,8 +334,11 @@ void main() {
   test('migration is idempotent and tolerates missing tables', () async {
     final db = await openDb();
     await createV11MoneySchema(db);
-    await db.insert('expenses',
-        {'category': 'Labour', 'amount': 100.0, 'date': '2026-01-05'});
+    await db.insert('expenses', {
+      'category': 'Labour',
+      'amount': 100.0,
+      'date': '2026-01-05',
+    });
 
     await DatabaseHelper.migrateV11ToV12(db);
     // A second run detects the paisa columns and skips the rebuild —
@@ -336,12 +352,13 @@ void main() {
     // db is closed first: sqflite singleInstances :memory: by path.)
     final bare = await openDb();
     await bare.execute(
-        'CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL)');
+      'CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL)',
+    );
     await DatabaseHelper.migrateV11ToV12(bare);
-    final bareTables = (await bare
-            .rawQuery("SELECT name FROM sqlite_master WHERE type = 'table'"))
-        .map((r) => r['name'] as String)
-        .toSet();
+    final bareTables =
+        (await bare.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table'",
+        )).map((r) => r['name'] as String).toSet();
     expect(bareTables, contains('tasks'));
     expect(bareTables, isNot(contains('expenses')));
     await bare.close();

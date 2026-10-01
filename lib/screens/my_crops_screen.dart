@@ -16,7 +16,8 @@ class MyCropsScreen extends StatefulWidget {
   State<MyCropsScreen> createState() => _MyCropsScreenState();
 }
 
-class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProviderStateMixin {
+class _MyCropsScreenState extends State<MyCropsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -38,7 +39,10 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('میری فصلیں', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'میری فصلیں',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.green.shade700,
         foregroundColor: Colors.white,
         bottom: TabBar(
@@ -47,10 +51,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
           indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'فعال فصلیں'),
-            Tab(text: 'سابقہ فصلیں'),
-          ],
+          tabs: const [Tab(text: 'فعال فصلیں'), Tab(text: 'سابقہ فصلیں')],
         ),
         actions: [
           IconButton(
@@ -63,20 +64,35 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildCropList(context, cropProvider.activeCropSeasons, isActive: true),
-          _buildCropList(context, cropProvider.harvestedCropSeasons, isActive: false),
+          _buildCropList(
+            context,
+            cropProvider.activeCropSeasons,
+            isActive: true,
+          ),
+          _buildCropList(
+            context,
+            cropProvider.harvestedCropSeasons,
+            isActive: false,
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddCropSeasonDialog(context, farmProvider),
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('نئی فصل کاشت کریں', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'نئی فصل کاشت کریں',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.green.shade700,
       ),
     );
   }
 
-  Widget _buildCropList(BuildContext context, List<CropSeasonWithDetails> seasons, {required bool isActive}) {
+  Widget _buildCropList(
+    BuildContext context,
+    List<CropSeasonWithDetails> seasons, {
+    required bool isActive,
+  }) {
     final cropProvider = Provider.of<CropProvider>(context, listen: false);
     final farmProvider = Provider.of<FarmProvider>(context, listen: false);
     final activityProvider = Provider.of<ActivityProvider>(context);
@@ -86,373 +102,541 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
       onRefresh: () async {
         await cropProvider.fetchCropSeasons();
       },
-      child: seasons.isEmpty
-          ? SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - kToolbarHeight - kTextTabBarHeight - MediaQuery.of(context).padding.top,
-                child: EmptyStateWidget(
-                  message: isActive ? 'کوئی فعال فصل موجود نہیں ہے' : 'کوئی سابقہ فصل موجود نہیں ہے',
-                  subtitle: isActive ? 'کاشت شروع کرنے کے لیے نیچے بٹن دبائیں' : null,
-                  fallbackIcon: Icons.grass,
-                  imageAsset: 'assets/images/wheat.png',
-                ),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 88),
-              itemCount: seasons.length,
-              itemBuilder: (context, index) {
-                final details = seasons[index];
-                final season = details.cropSeason;
-                final cropNameUrdu = cropProvider.predefinedCrops[season.cropName] ?? season.cropName;
-                final cropActivities = activityProvider.activities
-                    .where((act) => act.activity.cropSeasonId == season.id)
-                    .toList();
-                final cropHarvests = harvestProvider.harvests
-                    .where((h) => h.harvest.cropSeasonId == season.id)
-                    .toList();
-                final timelineSteps = cropProvider.getDynamicTimelineForActivities(
-                  cropActivities.map((e) => e.activity).toList(),
-                );
-
-                final totalExpensePaisa = cropActivities.fold<int>(
-                  0,
-                  (sum, act) => sum + (act.expenseAmountPaisa ?? 0),
-                );
-                final totalIncomePaisa = cropHarvests
-                    .where((h) => h.sale != null)
-                    .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
-                final totalYield = cropHarvests.fold<double>(
-                  0.0,
-                  (sum, h) => sum + h.harvest.quantity,
-                );
-                final fieldCount = details.fields.isEmpty ? 1 : details.fields.length;
-                // Per-field averages stay in integer paisa.
-                final expensePerFieldPaisa = cropProvider
-                    .splitAmountAcrossFields(
-                        amountPaisa: totalExpensePaisa, fieldCount: fieldCount);
-                final incomePerFieldPaisa = cropProvider
-                    .splitAmountAcrossFields(
-                        amountPaisa: totalIncomePaisa, fieldCount: fieldCount);
-                final yieldPerField = totalYield / fieldCount;
-                final profitPerFieldPaisa = incomePerFieldPaisa - expensePerFieldPaisa;
-
-                // Status border coloring matching premium layout
-                final sideColor = isActive ? Colors.green.shade600 : Colors.brown.shade500;
-
-                return Card(
-                  elevation: 3,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+      child:
+          seasons.isEmpty
+              ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height:
+                      MediaQuery.of(context).size.height -
+                      kToolbarHeight -
+                      kTextTabBarHeight -
+                      MediaQuery.of(context).padding.top,
+                  child: EmptyStateWidget(
+                    message:
+                        isActive
+                            ? 'کوئی فعال فصل موجود نہیں ہے'
+                            : 'کوئی سابقہ فصل موجود نہیں ہے',
+                    subtitle:
+                        isActive
+                            ? 'کاشت شروع کرنے کے لیے نیچے بٹن دبائیں'
+                            : null,
+                    fallbackIcon: Icons.grass,
+                    imageAsset: 'assets/images/wheat.png',
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: BorderDirectional(
-                        start: BorderSide(color: sideColor, width: 6),
-                      ),
+                ),
+              )
+              : ListView.builder(
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 88,
+                ),
+                itemCount: seasons.length,
+                itemBuilder: (context, index) {
+                  final details = seasons[index];
+                  final season = details.cropSeason;
+                  final cropNameUrdu =
+                      cropProvider.predefinedCrops[season.cropName] ??
+                      season.cropName;
+                  final cropActivities =
+                      activityProvider.activities
+                          .where(
+                            (act) => act.activity.cropSeasonId == season.id,
+                          )
+                          .toList();
+                  final cropHarvests =
+                      harvestProvider.harvests
+                          .where((h) => h.harvest.cropSeasonId == season.id)
+                          .toList();
+                  final timelineSteps = cropProvider
+                      .getDynamicTimelineForActivities(
+                        cropActivities.map((e) => e.activity).toList(),
+                      );
+
+                  final totalExpensePaisa = cropActivities.fold<int>(
+                    0,
+                    (sum, act) => sum + (act.expenseAmountPaisa ?? 0),
+                  );
+                  final totalIncomePaisa = cropHarvests
+                      .where((h) => h.sale != null)
+                      .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
+                  final totalYield = cropHarvests.fold<double>(
+                    0.0,
+                    (sum, h) => sum + h.harvest.quantity,
+                  );
+                  final fieldCount =
+                      details.fields.isEmpty ? 1 : details.fields.length;
+                  // Per-field averages stay in integer paisa.
+                  final expensePerFieldPaisa = cropProvider
+                      .splitAmountAcrossFields(
+                        amountPaisa: totalExpensePaisa,
+                        fieldCount: fieldCount,
+                      );
+                  final incomePerFieldPaisa = cropProvider
+                      .splitAmountAcrossFields(
+                        amountPaisa: totalIncomePaisa,
+                        fieldCount: fieldCount,
+                      );
+                  final yieldPerField = totalYield / fieldCount;
+                  final profitPerFieldPaisa =
+                      incomePerFieldPaisa - expensePerFieldPaisa;
+
+                  // Status border coloring matching premium layout
+                  final sideColor =
+                      isActive ? Colors.green.shade600 : Colors.brown.shade500;
+
+                  return Card(
+                    elevation: 3,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: ExpansionTile(
-                      shape: const Border(), // remove defaults
-                      collapsedShape: const Border(),
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    clipBehavior: Clip.antiAlias,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: BorderDirectional(
+                          start: BorderSide(color: sideColor, width: 6),
+                        ),
+                      ),
+                      child: ExpansionTile(
+                        shape: const Border(), // remove defaults
+                        collapsedShape: const Border(),
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '$cropNameUrdu (${season.variety})',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    isActive
+                                        ? Colors.green.shade50
+                                        : Colors.brown.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                isActive ? 'کاشت شدہ' : 'کٹائی مکمل',
+                                style: TextStyle(
+                                  color:
+                                      isActive
+                                          ? Colors.green.shade800
+                                          : Colors.brown.shade800,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'زمین / کھیت: ${details.farmDisplayName} - ${details.fieldDisplayName}',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.straighten,
+                                    size: 15,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'کل زیر کاشت رقبہ: ${details.totalArea.toStringAsFixed(2)} ایکڑ',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 15,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'کاشت کی تاریخ: ${DateFormat('dd MMM yyyy').format(DateTime.parse(season.startDate))}',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: sideColor.withValues(alpha: 0.1),
+                          child: Icon(Icons.grass, color: sideColor),
+                        ),
                         children: [
-                          Expanded(
-                            child: Text(
-                              '$cropNameUrdu (${season.variety})',
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                          const Divider(height: 1),
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'مجموعی سیزن رپورٹ',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'کل خرچہ: ${Money(totalExpensePaisa).format()}',
+                                  ),
+                                  Text(
+                                    'کل پیداوار: ${totalYield.toStringAsFixed(1)}',
+                                  ),
+                                  Text(
+                                    'کل آمدن: ${Money(totalIncomePaisa).format()}',
+                                  ),
+                                  Text(
+                                    'کل منافع: ${Money(totalIncomePaisa - totalExpensePaisa).format()}',
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isActive ? Colors.green.shade50 : Colors.brown.shade50,
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
                             ),
-                            child: Text(
-                              isActive ? 'کاشت شدہ' : 'کٹائی مکمل',
-                              style: TextStyle(
-                                color: isActive ? Colors.green.shade800 : Colors.brown.shade800,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.green.shade100,
+                                ),
                               ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'کھیت وار رپورٹ (اوسط تقسیم)',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...details.fields.map((field) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: Text(
+                                        '${field.name}: خرچہ ${Money(expensePerFieldPaisa).format()}، پیداوار ${yieldPerField.toStringAsFixed(1)}، منافع ${Money(profitPerFieldPaisa).format()}',
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'فصل کی حقیقی ٹائم لائن:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                if (isActive)
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange.shade700,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                    ),
+                                    onPressed:
+                                        () => _confirmHarvestCrop(
+                                          context,
+                                          season.id!,
+                                        ),
+                                    icon: const Icon(
+                                      Icons.check_circle_outline,
+                                      size: 20,
+                                    ),
+                                    label: const Text(
+                                      'کٹائی مکمل کریں',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Optimized Timeline vertical steps (No Overlapping)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20.0,
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount:
+                                  timelineSteps.isEmpty
+                                      ? 1
+                                      : timelineSteps.length,
+                              itemBuilder: (context, tIndex) {
+                                if (timelineSteps.isEmpty) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Text(
+                                      'ابھی کوئی سرگرمی شامل نہیں ہوئی۔ جیسے ہی کام شامل ہوگا، ٹائم لائن خود بن جائے گی۔',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                final step = timelineSteps[tIndex];
+                                bool isCompleted = _isTimelineStepCompleted(
+                                  step,
+                                  cropActivities,
+                                  cropHarvests,
+                                  !isActive,
+                                );
+                                final completionDate =
+                                    _getTimelineStepCompletionDate(
+                                      step,
+                                      cropActivities,
+                                      cropHarvests,
+                                    );
+
+                                return IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Column(
+                                        children: [
+                                          Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  isCompleted
+                                                      ? Colors.green
+                                                      : Colors.grey.shade300,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color:
+                                                    isCompleted
+                                                        ? Colors.green.shade700
+                                                        : Colors.grey.shade400,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child:
+                                                isCompleted
+                                                    ? const Icon(
+                                                      Icons.check,
+                                                      size: 14,
+                                                      color: Colors.white,
+                                                    )
+                                                    : null,
+                                          ),
+                                          if (tIndex < timelineSteps.length - 1)
+                                            Expanded(
+                                              child: Container(
+                                                width: 2.5,
+                                                color:
+                                                    isCompleted
+                                                        ? Colors.green
+                                                        : Colors.grey.shade300,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 20.0,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                step,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color:
+                                                      isCompleted
+                                                          ? Colors.black87
+                                                          : Colors
+                                                              .grey
+                                                              .shade600,
+                                                  fontWeight:
+                                                      isCompleted
+                                                          ? FontWeight.bold
+                                                          : FontWeight.normal,
+                                                ),
+                                              ),
+                                              if (isCompleted) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  completionDate != null
+                                                      ? 'تاریخِ تکمیل: $completionDate'
+                                                      : Strings.done,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color:
+                                                        Colors.green.shade700,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          // Action row (Edit / Delete)
+                          Container(
+                            color: Colors.grey.shade50,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.blueGrey,
+                                  ),
+                                  onPressed:
+                                      () => _showEditCropSeasonDialog(
+                                        context,
+                                        details,
+                                        farmProvider,
+                                      ),
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: const Text(
+                                    'تبدیلی کریں',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.redAccent,
+                                  ),
+                                  onPressed:
+                                      () => _confirmDeleteCrop(
+                                        context,
+                                        season.id!,
+                                      ),
+                                  icon: const Icon(Icons.delete_outline),
+                                  label: const Text(
+                                    Strings.delete,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'زمین / کھیت: ${details.farmDisplayName} - ${details.fieldDisplayName}',
-                                  style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.straighten, size: 15, color: Colors.grey.shade600),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'کل زیر کاشت رقبہ: ${details.totalArea.toStringAsFixed(2)} ایکڑ',
-                                  style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.calendar_today, size: 15, color: Colors.grey.shade600),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'کاشت کی تاریخ: ${DateFormat('dd MMM yyyy').format(DateTime.parse(season.startDate))}',
-                                  style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      leading: CircleAvatar(
-                        backgroundColor: sideColor.withValues(alpha: 0.1),
-                        child: Icon(Icons.grass, color: sideColor),
-                      ),
-                      children: [
-                        const Divider(height: 1),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'مجموعی سیزن رپورٹ',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade800,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text('کل خرچہ: ${Money(totalExpensePaisa).format()}'),
-                                Text('کل پیداوار: ${totalYield.toStringAsFixed(1)}'),
-                                Text('کل آمدن: ${Money(totalIncomePaisa).format()}'),
-                                Text('کل منافع: ${Money(totalIncomePaisa - totalExpensePaisa).format()}'),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.green.shade100),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'کھیت وار رپورٹ (اوسط تقسیم)',
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                ...details.fields.map((field) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: Text(
-                                      '${field.name}: خرچہ ${Money(expensePerFieldPaisa).format()}، پیداوار ${yieldPerField.toStringAsFixed(1)}، منافع ${Money(profitPerFieldPaisa).format()}',
-                                      style: const TextStyle(fontSize: 13),
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'فصل کی حقیقی ٹائم لائن:',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
-                              ),
-                              if (isActive)
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange.shade700,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                  onPressed: () => _confirmHarvestCrop(context, season.id!),
-                                  icon: const Icon(Icons.check_circle_outline, size: 20),
-                                  label: const Text('کٹائی مکمل کریں', style: TextStyle(fontWeight: FontWeight.bold)),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Optimized Timeline vertical steps (No Overlapping)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: timelineSteps.isEmpty ? 1 : timelineSteps.length,
-                            itemBuilder: (context, tIndex) {
-                              if (timelineSteps.isEmpty) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: Text(
-                                    'ابھی کوئی سرگرمی شامل نہیں ہوئی۔ جیسے ہی کام شامل ہوگا، ٹائم لائن خود بن جائے گی۔',
-                                    style: TextStyle(color: Colors.grey.shade700),
-                                  ),
-                                );
-                              }
-                              final step = timelineSteps[tIndex];
-                              bool isCompleted = _isTimelineStepCompleted(
-                                step,
-                                cropActivities,
-                                cropHarvests,
-                                !isActive,
-                              );
-                              final completionDate = _getTimelineStepCompletionDate(
-                                step,
-                                cropActivities,
-                                cropHarvests,
-                              );
-                              
-                              return IntrinsicHeight(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    Column(
-                                      children: [
-                                        Container(
-                                          width: 22,
-                                          height: 22,
-                                          decoration: BoxDecoration(
-                                            color: isCompleted ? Colors.green : Colors.grey.shade300,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: isCompleted ? Colors.green.shade700 : Colors.grey.shade400,
-                                              width: 1.5,
-                                            ),
-                                          ),
-                                          child: isCompleted
-                                              ? const Icon(Icons.check, size: 14, color: Colors.white)
-                                              : null,
-                                        ),
-                                        if (tIndex < timelineSteps.length - 1)
-                                          Expanded(
-                                            child: Container(
-                                              width: 2.5,
-                                              color: isCompleted ? Colors.green : Colors.grey.shade300,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(bottom: 20.0),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              step,
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                color: isCompleted ? Colors.black87 : Colors.grey.shade600,
-                                                fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
-                                              ),
-                                            ),
-                                            if (isCompleted) ...[
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                completionDate != null
-                                                    ? 'تاریخِ تکمیل: $completionDate'
-                                                    : Strings.done,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.green.shade700,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        
-                        // Action row (Edit / Delete)
-                        Container(
-                          color: Colors.grey.shade50,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton.icon(
-                                style: TextButton.styleFrom(foregroundColor: Colors.blueGrey),
-                                onPressed: () => _showEditCropSeasonDialog(context, details, farmProvider),
-                                icon: const Icon(Icons.edit_outlined),
-                                label: const Text('تبدیلی کریں', style: TextStyle(fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(width: 12),
-                              TextButton.icon(
-                                style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-                                onPressed: () => _confirmDeleteCrop(context, season.id!),
-                                icon: const Icon(Icons.delete_outline),
-                                label: const Text(Strings.delete, style: TextStyle(fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
     );
   }
 
-  void _showAddCropSeasonDialog(BuildContext context, FarmProvider farmProvider) {
+  void _showAddCropSeasonDialog(
+    BuildContext context,
+    FarmProvider farmProvider,
+  ) {
     final cropProvider = Provider.of<CropProvider>(context, listen: false);
     final formKey = GlobalKey<FormState>();
-    
+
     // Flatten fields for selection
     List<Map<String, dynamic>> fieldsList = [];
     for (var farm in farmProvider.farms) {
@@ -468,16 +652,19 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
     if (fieldsList.isEmpty) {
       showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('کھیت موجود نہیں ہے'),
-          content: const Text('فصل کاشت کرنے کے لیے پہلے "میری زمینیں" والے سیکشن میں جا کر کھیت شامل کریں۔'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('اوکے'),
+        builder:
+            (ctx) => AlertDialog(
+              title: const Text('کھیت موجود نہیں ہے'),
+              content: const Text(
+                'فصل کاشت کرنے کے لیے پہلے "میری زمینیں" والے سیکشن میں جا کر کھیت شامل کریں۔',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('اوکے'),
+                ),
+              ],
             ),
-          ],
-        ),
       );
       return;
     }
@@ -493,14 +680,20 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
-            List<String> varieties = cropProvider.predefinedVarieties[selectedCropKey] ?? [];
+            List<String> varieties =
+                cropProvider.predefinedVarieties[selectedCropKey] ?? [];
             if (varieties.isNotEmpty && selectedVariety == null) {
               selectedVariety = varieties.first;
             }
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('نئی فصل کاشت کریں', style: TextStyle(fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                'نئی فصل کاشت کریں',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -525,25 +718,26 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: fieldsList.map((f) {
-                            final int id = f['id'] as int;
-                            return CheckboxListTile(
-                              value: selectedFieldIds.contains(id),
-                              title: Text(f['name']),
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    selectedFieldIds.add(id);
-                                  } else {
-                                    selectedFieldIds.remove(id);
-                                  }
-                                  if (selectedFieldIds.isEmpty) {
-                                    selectedFieldIds.add(id);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                          children:
+                              fieldsList.map((f) {
+                                final int id = f['id'] as int;
+                                return CheckboxListTile(
+                                  value: selectedFieldIds.contains(id),
+                                  title: Text(f['name']),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        selectedFieldIds.add(id);
+                                      } else {
+                                        selectedFieldIds.remove(id);
+                                      }
+                                      if (selectedFieldIds.isEmpty) {
+                                        selectedFieldIds.add(id);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -551,14 +745,17 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                         value: selectedCropKey,
                         decoration: const InputDecoration(
                           labelText: 'فصل کا نام',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
-                        items: cropProvider.predefinedCrops.entries.map((e) {
-                          return DropdownMenuItem<String>(
-                            value: e.key,
-                            child: Text(e.value),
-                          );
-                        }).toList(),
+                        items:
+                            cropProvider.predefinedCrops.entries.map((e) {
+                              return DropdownMenuItem<String>(
+                                value: e.key,
+                                child: Text(e.value),
+                              );
+                            }).toList(),
                         onChanged: (val) {
                           setState(() {
                             selectedCropKey = val!;
@@ -573,11 +770,23 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                           value: selectedVariety,
                           decoration: const InputDecoration(
                             labelText: 'قسم (Variety)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                            ),
                           ),
                           items: [
-                            ...varieties.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
-                            const DropdownMenuItem<String>(value: 'Custom', child: Text('دیگر (ٹائپ کریں)')),
+                            ...varieties.map(
+                              (v) => DropdownMenuItem<String>(
+                                value: v,
+                                child: Text(v),
+                              ),
+                            ),
+                            const DropdownMenuItem<String>(
+                              value: 'Custom',
+                              child: Text('دیگر (ٹائپ کریں)'),
+                            ),
                           ],
                           onChanged: (val) {
                             setState(() {
@@ -592,9 +801,17 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                           controller: varietyTextController,
                           decoration: const InputDecoration(
                             labelText: 'قسم کا نام لکھیں (Variety Name)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                            ),
                           ),
-                          validator: (value) => value!.isEmpty ? 'براہ کرم قسم کا نام درج کریں' : null,
+                          validator:
+                              (value) =>
+                                  value!.isEmpty
+                                      ? 'براہ کرم قسم کا نام درج کریں'
+                                      : null,
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -603,7 +820,9 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(color: Colors.grey.shade400),
                         ),
-                        title: Text('کاشت کی تاریخ: ${DateFormat('dd MMM yyyy').format(selectedDate)}'),
+                        title: Text(
+                          'کاشت کی تاریخ: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final date = await showDatePicker(
@@ -626,20 +845,26 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  child: const Text(
+                    Strings.cancel,
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade700,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
-                      String variety = selectedVariety == 'Custom' || varieties.isEmpty
-                          ? varietyTextController.text
-                          : selectedVariety!;
-                          
+                      String variety =
+                          selectedVariety == 'Custom' || varieties.isEmpty
+                              ? varietyTextController.text
+                              : selectedVariety!;
+
                       cropProvider.addCropSeason(
                         fieldIds: selectedFieldIds.toList(),
                         cropName: selectedCropKey,
@@ -649,7 +874,10 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       Navigator.pop(ctx);
                     }
                   },
-                  child: const Text(Strings.save, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    Strings.save,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             );
@@ -662,58 +890,96 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
   void _confirmHarvestCrop(BuildContext context, int id) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('کٹائی مکمل کریں؟', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('کیا اس فصل کی کٹائی مکمل ہو چکی ہے؟ کٹائی کے بعد یہ "سابقہ فصلیں" والے حصے میں چلی جائے گی۔'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade700,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            onPressed: () {
-              Provider.of<CropProvider>(context, listen: false).updateCropSeasonStatus(id, 'Harvested');
-              Navigator.pop(ctx);
-            },
-            child: const Text('ہاں، کٹائی مکمل', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            title: const Text(
+              'کٹائی مکمل کریں؟',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'کیا اس فصل کی کٹائی مکمل ہو چکی ہے؟ کٹائی کے بعد یہ "سابقہ فصلیں" والے حصے میں چلی جائے گی۔',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  Strings.cancel,
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Provider.of<CropProvider>(
+                    context,
+                    listen: false,
+                  ).updateCropSeasonStatus(id, 'Harvested');
+                  Navigator.pop(ctx);
+                },
+                child: const Text(
+                  'ہاں، کٹائی مکمل',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   void _confirmDeleteCrop(BuildContext context, int id) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف کریں؟', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('کیا آپ واقعی اس فصل کا پورا ریکارڈ حذف کرنا چاہتے ہیں؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            onPressed: () {
-              Provider.of<CropProvider>(context, listen: false).deleteCropSeason(id);
-              Navigator.pop(ctx);
-            },
-            child: const Text(Strings.delete, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            title: const Text(
+              'حذف کریں؟',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'کیا آپ واقعی اس فصل کا پورا ریکارڈ حذف کرنا چاہتے ہیں؟',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  Strings.cancel,
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Provider.of<CropProvider>(
+                    context,
+                    listen: false,
+                  ).deleteCropSeason(id);
+                  Navigator.pop(ctx);
+                },
+                child: const Text(
+                  Strings.delete,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -740,9 +1006,10 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
 
     final Set<int> selectedFieldIds = details.fields.map((f) => f.id!).toSet();
     String selectedCropKey = season.cropName;
-    
+
     // Check if current variety is in predefined ones
-    List<String> varieties = cropProvider.predefinedVarieties[selectedCropKey] ?? [];
+    List<String> varieties =
+        cropProvider.predefinedVarieties[selectedCropKey] ?? [];
     String? selectedVariety;
     final varietyTextController = TextEditingController();
 
@@ -762,14 +1029,20 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
-            List<String> currentVarieties = cropProvider.predefinedVarieties[selectedCropKey] ?? [];
+            List<String> currentVarieties =
+                cropProvider.predefinedVarieties[selectedCropKey] ?? [];
             if (currentVarieties.isNotEmpty && selectedVariety == null) {
               selectedVariety = currentVarieties.first;
             }
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('فصل کے ریکارڈ میں ترمیم', style: TextStyle(fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text(
+                'فصل کے ریکارڈ میں ترمیم',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -794,25 +1067,26 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: fieldsList.map((f) {
-                            final int id = f['id'] as int;
-                            return CheckboxListTile(
-                              value: selectedFieldIds.contains(id),
-                              title: Text(f['name']),
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    selectedFieldIds.add(id);
-                                  } else {
-                                    selectedFieldIds.remove(id);
-                                  }
-                                  if (selectedFieldIds.isEmpty) {
-                                    selectedFieldIds.add(id);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                          children:
+                              fieldsList.map((f) {
+                                final int id = f['id'] as int;
+                                return CheckboxListTile(
+                                  value: selectedFieldIds.contains(id),
+                                  title: Text(f['name']),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        selectedFieldIds.add(id);
+                                      } else {
+                                        selectedFieldIds.remove(id);
+                                      }
+                                      if (selectedFieldIds.isEmpty) {
+                                        selectedFieldIds.add(id);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -820,14 +1094,17 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                         value: selectedCropKey,
                         decoration: const InputDecoration(
                           labelText: 'فصل کا نام',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
-                        items: cropProvider.predefinedCrops.entries.map((e) {
-                          return DropdownMenuItem<String>(
-                            value: e.key,
-                            child: Text(e.value),
-                          );
-                        }).toList(),
+                        items:
+                            cropProvider.predefinedCrops.entries.map((e) {
+                              return DropdownMenuItem<String>(
+                                value: e.key,
+                                child: Text(e.value),
+                              );
+                            }).toList(),
                         onChanged: (val) {
                           setState(() {
                             selectedCropKey = val!;
@@ -842,11 +1119,23 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                           value: selectedVariety,
                           decoration: const InputDecoration(
                             labelText: 'قسم (Variety)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                            ),
                           ),
                           items: [
-                            ...currentVarieties.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))),
-                            const DropdownMenuItem<String>(value: 'Custom', child: Text('دیگر (ٹائپ کریں)')),
+                            ...currentVarieties.map(
+                              (v) => DropdownMenuItem<String>(
+                                value: v,
+                                child: Text(v),
+                              ),
+                            ),
+                            const DropdownMenuItem<String>(
+                              value: 'Custom',
+                              child: Text('دیگر (ٹائپ کریں)'),
+                            ),
                           ],
                           onChanged: (val) {
                             setState(() {
@@ -856,14 +1145,23 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                         ),
                         const SizedBox(height: 16),
                       ],
-                      if (currentVarieties.isEmpty || selectedVariety == 'Custom') ...[
+                      if (currentVarieties.isEmpty ||
+                          selectedVariety == 'Custom') ...[
                         TextFormField(
                           controller: varietyTextController,
                           decoration: const InputDecoration(
                             labelText: 'قسم کا نام لکھیں (Variety Name)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                            ),
                           ),
-                          validator: (value) => value!.isEmpty ? 'براہ کرم قسم کا نام درج کریں' : null,
+                          validator:
+                              (value) =>
+                                  value!.isEmpty
+                                      ? 'براہ کرم قسم کا نام درج کریں'
+                                      : null,
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -872,7 +1170,9 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(color: Colors.grey.shade400),
                         ),
-                        title: Text('کاشت کی تاریخ: ${DateFormat('dd MMM yyyy').format(selectedDate)}'),
+                        title: Text(
+                          'کاشت کی تاریخ: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final date = await showDatePicker(
@@ -895,20 +1195,27 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  child: const Text(
+                    Strings.cancel,
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade700,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
-                      String variety = selectedVariety == 'Custom' || currentVarieties.isEmpty
-                          ? varietyTextController.text
-                          : selectedVariety!;
-                          
+                      String variety =
+                          selectedVariety == 'Custom' ||
+                                  currentVarieties.isEmpty
+                              ? varietyTextController.text
+                              : selectedVariety!;
+
                       cropProvider.updateCropSeason(
                         id: season.id!,
                         fieldIds: selectedFieldIds.toList(),
@@ -919,11 +1226,18 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       );
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('فصل کی تفصیلات کامیابی سے تبدیل ہو گئیں!')),
+                        const SnackBar(
+                          content: Text(
+                            'فصل کی تفصیلات کامیابی سے تبدیل ہو گئیں!',
+                          ),
+                        ),
                       );
                     }
                   },
-                  child: const Text(Strings.save, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    Strings.save,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             );

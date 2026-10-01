@@ -23,7 +23,10 @@ class BataiStatusChip extends StatelessWidget {
       child: Text(
         bataiStatusUrdu(status),
         style: TextStyle(
-            fontSize: 12, fontWeight: FontWeight.bold, color: color),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
       ),
     );
   }

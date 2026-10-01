@@ -49,7 +49,8 @@ class BataiProvider extends ChangeNotifier {
     try {
       await _fetchAgreements();
     } catch (_) {
-      _errorMessage = 'بٹائی معاہدوں کا ریکارڈ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+      _errorMessage =
+          'بٹائی معاہدوں کا ریکارڈ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
       notifyListeners();
     }
   }
@@ -61,8 +62,9 @@ class BataiProvider extends ChangeNotifier {
 
   /// Agreements with resolved party/crop/farm/field names (LEFT JOINs),
   /// newest first. Pass [status] to filter.
-  Future<List<BataiAgreementSummary>> getAgreementSummaries(
-      {BataiStatus? status}) async {
+  Future<List<BataiAgreementSummary>> getAgreementSummaries({
+    BataiStatus? status,
+  }) async {
     final db = await _db();
     final where = status == null ? '' : 'WHERE b.status = ?';
     final args = status == null ? null : [bataiStatusToString(status)];
@@ -129,8 +131,7 @@ class BataiProvider extends ChangeNotifier {
       throw BataiException('حصے 0 سے 100 کے درمیان ہونے چاہئیں۔');
     }
     if (ownerSharePercent + cultivatorSharePercent != 100) {
-      throw BataiException(
-          'مالک اور مزارع کے حصوں کا مجموعہ 100 ہونا چاہیے۔');
+      throw BataiException('مالک اور مزارع کے حصوں کا مجموعہ 100 ہونا چاہیے۔');
     }
     if (DateTime.tryParse(startDate) == null) {
       throw BataiException('درست آغاز کی تاریخ درج کریں۔');
@@ -141,7 +142,9 @@ class BataiProvider extends ChangeNotifier {
         throw BataiException('درست اختتامی تاریخ درج کریں۔');
       }
       if (end.isBefore(DateTime.parse(startDate))) {
-        throw BataiException('اختتامی تاریخ آغاز کی تاریخ سے پہلے نہیں ہو سکتی۔');
+        throw BataiException(
+          'اختتامی تاریخ آغاز کی تاریخ سے پہلے نہیں ہو سکتی۔',
+        );
       }
     }
   }
@@ -278,10 +281,7 @@ class BataiProvider extends ChangeNotifier {
     final db = await _db();
     await db.update(
       'batai_agreements',
-      {
-        'expense_note': _nullIfEmpty(expenseNote),
-        'notes': _nullIfEmpty(notes),
-      },
+      {'expense_note': _nullIfEmpty(expenseNote), 'notes': _nullIfEmpty(notes)},
       where: 'id = ?',
       whereArgs: [existing.id],
     );
@@ -383,8 +383,11 @@ class BataiProvider extends ChangeNotifier {
       );
     }
     await _txn((txn) async {
-      await txn.delete('batai_agreements',
-          where: 'id = ?', whereArgs: [existing.id]);
+      await txn.delete(
+        'batai_agreements',
+        where: 'id = ?',
+        whereArgs: [existing.id],
+      );
       await AuditService.log(
         txn,
         table: 'batai_agreements',

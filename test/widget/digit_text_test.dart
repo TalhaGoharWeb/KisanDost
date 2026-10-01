@@ -3,14 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kisan_dost/widgets/digit_text.dart';
 
 void main() {
-  testWidgets('DigitText renders with the Noto Sans numeric font',
-      (tester) async {
+  testWidgets('DigitText renders with the Noto Sans numeric font', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: DigitText('1,250 روپے'),
-        ),
-      ),
+      const MaterialApp(home: Scaffold(body: DigitText('1,250 روپے'))),
     );
 
     expect(find.text('1,250 روپے'), findsOneWidget);

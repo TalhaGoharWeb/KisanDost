@@ -73,107 +73,114 @@ void main() {
   }
 
   group('DB v11 migration', () {
-    test('creates the ledger table, new columns, backfills opening balances',
-        () async {
-      final db = await openV10Db();
-      await createV10Schema(db);
+    test(
+      'creates the ledger table, new columns, backfills opening balances',
+      () async {
+        final db = await openV10Db();
+        await createV10Schema(db);
 
-      final itemId = await db.insert('inventory', {
-        'category': 'Fertilizer',
-        'name': 'یوریا',
-        'unit': 'بوری',
-        'quantity': 7.0,
-        'cost_per_unit': 2000.0,
-      });
-      await db.insert('inventory', {
-        'category': 'Seed',
-        'name': 'گندم بیج',
-        'unit': 'کلوگرام',
-        'quantity': 40.0,
-        'cost_per_unit': 100.0,
-      });
-      // Pre-v11 activity referencing the first item by name.
-      final linkedActivity = await db.insert('activities', {
-        'crop_season_id': 1,
-        'activity_type': 'کھاد ڈالی',
-        'date': '2026-01-05',
-        'inventory_category': 'Fertilizer',
-        'inventory_name': 'یوریا',
-        'inventory_unit': 'بوری',
-        'inventory_quantity': 2.0,
-      });
-      // Activity referencing an item that does not exist.
-      final orphanActivity = await db.insert('activities', {
-        'crop_season_id': 1,
-        'activity_type': 'کھاد ڈالی',
-        'date': '2026-01-06',
-        'inventory_category': 'Fertilizer',
-        'inventory_name': 'ڈی اے پی',
-        'inventory_unit': 'بوری',
-        'inventory_quantity': 1.0,
-      });
+        final itemId = await db.insert('inventory', {
+          'category': 'Fertilizer',
+          'name': 'یوریا',
+          'unit': 'بوری',
+          'quantity': 7.0,
+          'cost_per_unit': 2000.0,
+        });
+        await db.insert('inventory', {
+          'category': 'Seed',
+          'name': 'گندم بیج',
+          'unit': 'کلوگرام',
+          'quantity': 40.0,
+          'cost_per_unit': 100.0,
+        });
+        // Pre-v11 activity referencing the first item by name.
+        final linkedActivity = await db.insert('activities', {
+          'crop_season_id': 1,
+          'activity_type': 'کھاد ڈالی',
+          'date': '2026-01-05',
+          'inventory_category': 'Fertilizer',
+          'inventory_name': 'یوریا',
+          'inventory_unit': 'بوری',
+          'inventory_quantity': 2.0,
+        });
+        // Activity referencing an item that does not exist.
+        final orphanActivity = await db.insert('activities', {
+          'crop_season_id': 1,
+          'activity_type': 'کھاد ڈالی',
+          'date': '2026-01-06',
+          'inventory_category': 'Fertilizer',
+          'inventory_name': 'ڈی اے پی',
+          'inventory_unit': 'بوری',
+          'inventory_quantity': 1.0,
+        });
 
-      await DatabaseHelper.migrateV10ToV11(db);
+        await DatabaseHelper.migrateV10ToV11(db);
 
-      // Ledger table exists with the expected columns.
-      final tables = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'inventory_transactions'",
-      );
-      expect(tables, hasLength(1));
-      final txColumns = await db.rawQuery("PRAGMA table_info('inventory_transactions')");
-      final txNames = txColumns.map((c) => c['name'] as String).toSet();
-      expect(
-        txNames,
-        containsAll([
-          'inventory_id',
-          'type',
-          'quantity',
-          'unit',
-          'unit_price',
-          'total_amount',
-          'activity_id',
-          'date',
-          'notes',
-          'created_at',
-        ]),
-      );
+        // Ledger table exists with the expected columns.
+        final tables = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'inventory_transactions'",
+        );
+        expect(tables, hasLength(1));
+        final txColumns = await db.rawQuery(
+          "PRAGMA table_info('inventory_transactions')",
+        );
+        final txNames = txColumns.map((c) => c['name'] as String).toSet();
+        expect(
+          txNames,
+          containsAll([
+            'inventory_id',
+            'type',
+            'quantity',
+            'unit',
+            'unit_price',
+            'total_amount',
+            'activity_id',
+            'date',
+            'notes',
+            'created_at',
+          ]),
+        );
 
-      // New columns on the old tables.
-      final invColumns = await db.rawQuery("PRAGMA table_info('inventory')");
-      expect(
-        invColumns.map((c) => c['name']),
-        contains('weight_per_unit_kg'),
-      );
-      final actColumns = await db.rawQuery("PRAGMA table_info('activities')");
-      expect(
-        actColumns.map((c) => c['name']),
-        contains('inventory_item_id'),
-      );
+        // New columns on the old tables.
+        final invColumns = await db.rawQuery("PRAGMA table_info('inventory')");
+        expect(
+          invColumns.map((c) => c['name']),
+          contains('weight_per_unit_kg'),
+        );
+        final actColumns = await db.rawQuery("PRAGMA table_info('activities')");
+        expect(actColumns.map((c) => c['name']), contains('inventory_item_id'));
 
-      // One opening_balance row per pre-existing item.
-      final backfill = await db.query(
-        'inventory_transactions',
-        where: "type = 'opening_balance'",
-        orderBy: 'id ASC',
-      );
-      expect(backfill, hasLength(2));
-      expect(backfill[0]['quantity'], 7.0);
-      expect(backfill[0]['unit'], 'بوری');
-      expect(backfill[1]['quantity'], 40.0);
+        // One opening_balance row per pre-existing item.
+        final backfill = await db.query(
+          'inventory_transactions',
+          where: "type = 'opening_balance'",
+          orderBy: 'id ASC',
+        );
+        expect(backfill, hasLength(2));
+        expect(backfill[0]['quantity'], 7.0);
+        expect(backfill[0]['unit'], 'بوری');
+        expect(backfill[1]['quantity'], 40.0);
 
-      // The matching activity is linked to the exact item row; the
-      // non-matching one stays NULL instead of guessing.
-      final linked = (await db.query('activities',
-              where: 'id = ?', whereArgs: [linkedActivity]))
-          .single;
-      expect(linked['inventory_item_id'], itemId);
-      final orphan = (await db.query('activities',
-              where: 'id = ?', whereArgs: [orphanActivity]))
-          .single;
-      expect(orphan['inventory_item_id'], isNull);
+        // The matching activity is linked to the exact item row; the
+        // non-matching one stays NULL instead of guessing.
+        final linked =
+            (await db.query(
+              'activities',
+              where: 'id = ?',
+              whereArgs: [linkedActivity],
+            )).single;
+        expect(linked['inventory_item_id'], itemId);
+        final orphan =
+            (await db.query(
+              'activities',
+              where: 'id = ?',
+              whereArgs: [orphanActivity],
+            )).single;
+        expect(orphan['inventory_item_id'], isNull);
 
-      await db.close();
-    });
+        await db.close();
+      },
+    );
 
     test('migration is idempotent', () async {
       final db = await openV10Db();
@@ -219,14 +226,16 @@ void main() {
       // The old REAL column is gone: the rebuild leaves no deprecated
       // money columns behind, so future inserts can't hit a NOT NULL
       // constraint on a column Dart never writes.
-      final invCols = (await db.rawQuery("PRAGMA table_info('inventory')"))
-          .map((c) => c['name'] as String)
-          .toSet();
+      final invCols =
+          (await db.rawQuery(
+            "PRAGMA table_info('inventory')",
+          )).map((c) => c['name'] as String).toSet();
       expect(invCols, isNot(contains('cost_per_unit')));
 
       // The ledger carries the paisa columns too.
-      final txColumns =
-          await db.rawQuery("PRAGMA table_info('inventory_transactions')");
+      final txColumns = await db.rawQuery(
+        "PRAGMA table_info('inventory_transactions')",
+      );
       final txNames = txColumns.map((c) => c['name'] as String).toSet();
       expect(txNames, containsAll(['unit_price_paisa', 'total_amount_paisa']));
 
@@ -256,8 +265,7 @@ void main() {
       await db.close();
     });
 
-    test('recordPurchase creates the item and a purchase ledger row',
-        () async {
+    test('recordPurchase creates the item and a purchase ledger row', () async {
       final id = await provider.recordPurchase(
         category: 'Fertilizer',
         name: 'یوریا',
@@ -308,60 +316,60 @@ void main() {
       expect(await ledgerRows(db, id), hasLength(2));
     });
 
-    test('recordPurchase merges cleanly over a legacy zero-quantity row',
-        () async {
-      // Pre-ledger corruption: a row with 0 stock and no ledger history.
-      final id = await db.insert('inventory', {
-        'category': 'Seed',
-        'name': 'گندم بیج',
-        'unit': 'کلوگرام',
-        'quantity': 0.0,
-        'cost_per_unit_paisa': 10000,
-      });
+    test(
+      'recordPurchase merges cleanly over a legacy zero-quantity row',
+      () async {
+        // Pre-ledger corruption: a row with 0 stock and no ledger history.
+        final id = await db.insert('inventory', {
+          'category': 'Seed',
+          'name': 'گندم بیج',
+          'unit': 'کلوگرام',
+          'quantity': 0.0,
+          'cost_per_unit_paisa': 10000,
+        });
 
-      final mergedId = await provider.recordPurchase(
-        category: 'Seed',
-        name: 'گندم بیج',
-        unit: 'کلوگرام',
-        quantity: 40,
-        costPerUnitPaisa: 12000,
-        executor: db,
-      );
-      expect(mergedId, id);
+        final mergedId = await provider.recordPurchase(
+          category: 'Seed',
+          name: 'گندم بیج',
+          unit: 'کلوگرام',
+          quantity: 40,
+          costPerUnitPaisa: 12000,
+          executor: db,
+        );
+        expect(mergedId, id);
 
-      final item = await provider.getItemById(id, executor: db);
-      expect(item!.quantity, 40);
-      // No division by zero: (0*10000 + 40*12000) / 40.
-      expect(item.costPerUnitPaisa, 12000);
-    });
+        final item = await provider.getItemById(id, executor: db);
+        expect(item!.quantity, 40);
+        // No division by zero: (0*10000 + 40*12000) / 40.
+        expect(item.costPerUnitPaisa, 12000);
+      },
+    );
 
-    test('recordUsage deducts stock and writes a negative ledger row',
-        () async {
-      final id = await provider.recordPurchase(
-        category: 'Fertilizer',
-        name: 'یوریا',
-        unit: 'بوری',
-        quantity: 10,
-        costPerUnitPaisa: 200000,
-        executor: db,
-      );
-      await provider.recordUsage(
-        itemId: id,
-        quantity: 3,
-        executor: db,
-      );
+    test(
+      'recordUsage deducts stock and writes a negative ledger row',
+      () async {
+        final id = await provider.recordPurchase(
+          category: 'Fertilizer',
+          name: 'یوریا',
+          unit: 'بوری',
+          quantity: 10,
+          costPerUnitPaisa: 200000,
+          executor: db,
+        );
+        await provider.recordUsage(itemId: id, quantity: 3, executor: db);
 
-      final item = await provider.getItemById(id, executor: db);
-      expect(item!.quantity, 7);
+        final item = await provider.getItemById(id, executor: db);
+        expect(item!.quantity, 7);
 
-      final rows = await ledgerRows(db, id);
-      expect(rows, hasLength(2));
-      final usage = rows.last;
-      expect(usage['type'], 'usage');
-      expect(usage['quantity'], -3);
-      expect(usage['unit'], 'بوری');
-      expect(usage['activity_id'], isNull);
-    });
+        final rows = await ledgerRows(db, id);
+        expect(rows, hasLength(2));
+        final usage = rows.last;
+        expect(usage['type'], 'usage');
+        expect(usage['quantity'], -3);
+        expect(usage['unit'], 'بوری');
+        expect(usage['activity_id'], isNull);
+      },
+    );
 
     test('recordUsage links the ledger row to its activity', () async {
       final id = await provider.recordPurchase(
@@ -395,8 +403,7 @@ void main() {
       expect(kept['activity_id'], isNull);
     });
 
-    test('recordUsage rejects overuse loudly; stock stays untouched',
-        () async {
+    test('recordUsage rejects overuse loudly; stock stays untouched', () async {
       final id = await provider.recordPurchase(
         category: 'Fertilizer',
         name: 'یوریا',
@@ -453,36 +460,37 @@ void main() {
       expect(usage['notes'], contains('درج:'));
     });
 
-    test('recordUsage without a declared package weight throws, stock kept',
-        () async {
-      final id = await provider.recordPurchase(
-        category: 'Fertilizer',
-        name: 'یوریا',
-        unit: 'بوری',
-        quantity: 10,
-        costPerUnitPaisa: 200000,
-        // No weightPerUnitKg on purpose.
-        executor: db,
-      );
-
-      // The old code silently assumed 1 bag = 50 kg; now it must throw.
-      await expectLater(
-        provider.recordUsage(
-          itemId: id,
-          quantity: 100,
-          fromUnit: 'کلوگرام',
+    test(
+      'recordUsage without a declared package weight throws, stock kept',
+      () async {
+        final id = await provider.recordPurchase(
+          category: 'Fertilizer',
+          name: 'یوریا',
+          unit: 'بوری',
+          quantity: 10,
+          costPerUnitPaisa: 200000,
+          // No weightPerUnitKg on purpose.
           executor: db,
-        ),
-        throwsA(isA<UnitConversionException>()),
-      );
+        );
 
-      final item = await provider.getItemById(id, executor: db);
-      expect(item!.quantity, 10);
-      expect(await ledgerRows(db, id), hasLength(1));
-    });
+        // The old code silently assumed 1 bag = 50 kg; now it must throw.
+        await expectLater(
+          provider.recordUsage(
+            itemId: id,
+            quantity: 100,
+            fromUnit: 'کلوگرام',
+            executor: db,
+          ),
+          throwsA(isA<UnitConversionException>()),
+        );
 
-    test('recordAdjustment writes a signed ledger row with a reason',
-        () async {
+        final item = await provider.getItemById(id, executor: db);
+        expect(item!.quantity, 10);
+        expect(await ledgerRows(db, id), hasLength(1));
+      },
+    );
+
+    test('recordAdjustment writes a signed ledger row with a reason', () async {
       final id = await provider.recordPurchase(
         category: 'Seed',
         name: 'گندم بیج',
@@ -508,89 +516,105 @@ void main() {
       expect(rows.last['notes'], 'گنتی میں فرق');
     });
 
-    test('recordAdjustment rejects empty reason, zero delta, negative stock',
-        () async {
-      final id = await provider.recordPurchase(
-        category: 'Seed',
-        name: 'گندم بیج',
-        unit: 'کلوگرام',
-        quantity: 40,
-        costPerUnitPaisa: 10000,
-        executor: db,
-      );
+    test(
+      'recordAdjustment rejects empty reason, zero delta, negative stock',
+      () async {
+        final id = await provider.recordPurchase(
+          category: 'Seed',
+          name: 'گندم بیج',
+          unit: 'کلوگرام',
+          quantity: 40,
+          costPerUnitPaisa: 10000,
+          executor: db,
+        );
 
-      await expectLater(
-        provider.recordAdjustment(
-            itemId: id, quantityDelta: -1, reason: '   ', executor: db),
-        throwsA(isA<InventoryException>()),
-      );
-      await expectLater(
-        provider.recordAdjustment(
-            itemId: id, quantityDelta: 0, reason: 'وجہ', executor: db),
-        throwsA(isA<InventoryException>()),
-      );
-      await expectLater(
-        provider.recordAdjustment(
-            itemId: id, quantityDelta: -50, reason: 'وجہ', executor: db),
-        throwsA(isA<InventoryException>()),
-      );
+        await expectLater(
+          provider.recordAdjustment(
+            itemId: id,
+            quantityDelta: -1,
+            reason: '   ',
+            executor: db,
+          ),
+          throwsA(isA<InventoryException>()),
+        );
+        await expectLater(
+          provider.recordAdjustment(
+            itemId: id,
+            quantityDelta: 0,
+            reason: 'وجہ',
+            executor: db,
+          ),
+          throwsA(isA<InventoryException>()),
+        );
+        await expectLater(
+          provider.recordAdjustment(
+            itemId: id,
+            quantityDelta: -50,
+            reason: 'وجہ',
+            executor: db,
+          ),
+          throwsA(isA<InventoryException>()),
+        );
 
-      final item = await provider.getItemById(id, executor: db);
-      expect(item!.quantity, 40);
-      expect(await ledgerRows(db, id), hasLength(1));
-    });
+        final item = await provider.getItemById(id, executor: db);
+        expect(item!.quantity, 40);
+        expect(await ledgerRows(db, id), hasLength(1));
+      },
+    );
 
-    test('updateItemDetails edits metadata without touching the ledger',
-        () async {
-      final id = await provider.recordPurchase(
-        category: 'Fertilizer',
-        name: 'یوریا',
-        unit: 'بوری',
-        quantity: 10,
-        costPerUnitPaisa: 200000,
-        executor: db,
-      );
-      await provider.recordPurchase(
-        category: 'Fertilizer',
-        name: 'ڈی اے پی',
-        unit: 'بوری',
-        quantity: 5,
-        costPerUnitPaisa: 300000,
-        executor: db,
-      );
-
-      // A rename onto another item's (category, name, unit) key is
-      // rejected loudly — no silent merge.
-      await expectLater(
-        provider.updateItemDetails(
-          id: id,
+    test(
+      'updateItemDetails edits metadata without touching the ledger',
+      () async {
+        final id = await provider.recordPurchase(
+          category: 'Fertilizer',
+          name: 'یوریا',
+          unit: 'بوری',
+          quantity: 10,
+          costPerUnitPaisa: 200000,
+          executor: db,
+        );
+        await provider.recordPurchase(
           category: 'Fertilizer',
           name: 'ڈی اے پی',
           unit: 'بوری',
-          costPerUnitPaisa: 200000,
+          quantity: 5,
+          costPerUnitPaisa: 300000,
           executor: db,
-        ),
-        throwsA(isA<InventoryException>()),
-      );
+        );
 
-      // A clean metadata edit leaves quantity and ledger alone.
-      await provider.updateItemDetails(
-        id: id,
-        category: 'Fertilizer',
-        name: 'یوریا دانے دار',
-        unit: 'بوری',
-        costPerUnitPaisa: 210000,
-        weightPerUnitKg: 50,
-        executor: db,
-      );
-      final item = await provider.getItemById(id, executor: db);
-      expect(item!.name, 'یوریا دانے دار');
-      expect(item.costPerUnitPaisa, 210000);
-      expect(item.weightPerUnitKg, 50);
-      expect(item.quantity, 10);
-      // Only the original purchase row — metadata edits write no ledger.
-      expect(await ledgerRows(db, id), hasLength(1));
-    });
+        // A rename onto another item's (category, name, unit) key is
+        // rejected loudly — no silent merge.
+        await expectLater(
+          provider.updateItemDetails(
+            id: id,
+            category: 'Fertilizer',
+            name: 'ڈی اے پی',
+            unit: 'بوری',
+            costPerUnitPaisa: 200000,
+            executor: db,
+          ),
+          throwsA(isA<InventoryException>()),
+        );
+
+        // A clean metadata edit leaves quantity and ledger alone.
+        await provider.updateItemDetails(
+          id: id,
+          category: 'Fertilizer',
+          name: 'یوریا دانے دار',
+          unit: 'بوری',
+          costPerUnitPaisa: 210000,
+          weightPerUnitKg: 50,
+          executor: db,
+        );
+        final item = await provider.getItemById(id, executor: db);
+        expect(item!.name, 'یوریا دانے دار');
+        expect(item.costPerUnitPaisa, 210000);
+        expect(item.weightPerUnitKg, 50);
+        expect(item.quantity, 10);
+        // Only the original purchase row — metadata edits write no ledger.
+        expect(await ledgerRows(db, id), hasLength(1));
+      },
+    );
 
     test('getTransactions returns history newest first', () async {
       final id = await provider.recordPurchase(

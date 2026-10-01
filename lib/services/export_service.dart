@@ -19,7 +19,10 @@ const String csvBom = '\uFEFF';
 /// Escapes one CSV field per RFC 4180.
 String csvEscape(String? value) {
   final v = value ?? '';
-  if (v.contains(',') || v.contains('"') || v.contains('\n') || v.contains('\r')) {
+  if (v.contains(',') ||
+      v.contains('"') ||
+      v.contains('\n') ||
+      v.contains('\r')) {
     return '"${v.replaceAll('"', '""')}"';
   }
   return v;
@@ -65,7 +68,16 @@ String expensesCsv(
 /// Sales CSV — one row per sold harvest.
 String salesCsv(List<HarvestWithDetails> harvests) {
   return _csv(
-    const [Strings.date, 'فصل', 'زمین', 'مقدار', 'اکائی', 'فی اکائی قیمت', 'کل رقم', 'خریدار'],
+    const [
+      Strings.date,
+      'فصل',
+      'زمین',
+      'مقدار',
+      'اکائی',
+      'فی اکائی قیمت',
+      'کل رقم',
+      'خریدار',
+    ],
     [
       for (final h in harvests)
         if (h.sale != null)
@@ -110,15 +122,12 @@ String partyLedgerCsv(
         balances[id]! > 0
             ? 'پارٹی سے لینا ہے'
             : balances[id]! < 0
-                ? 'پارٹی کو دینا ہے'
-                : 'حساب برابر',
+            ? 'پارٹی کو دینا ہے'
+            : 'حساب برابر',
         '',
       ],
   ];
-  return _csv(
-    const [Strings.date, 'پارٹی', 'قسم', 'رقم', 'سمت', 'نوٹ'],
-    rows,
-  );
+  return _csv(const [Strings.date, 'پارٹی', 'قسم', 'رقم', 'سمت', 'نوٹ'], rows);
 }
 
 /// Inventory transactions CSV.
@@ -127,7 +136,16 @@ String inventoryTransactionsCsv(
   Map<int, String> itemNames,
 ) {
   return _csv(
-    const [Strings.date, 'آئٹم', 'قسم', 'مقدار', 'اکائی', 'فی اکائی قیمت', 'کل رقم', 'نوٹ'],
+    const [
+      Strings.date,
+      'آئٹم',
+      'قسم',
+      'مقدار',
+      'اکائی',
+      'فی اکائی قیمت',
+      'کل رقم',
+      'نوٹ',
+    ],
     [
       for (final t in txns)
         [
@@ -151,7 +169,14 @@ String bataiSettlementsCsv(
   Map<int, String> agreementLabels,
 ) {
   return _csv(
-    const [Strings.date, 'معاہدہ', 'کل رقم', 'مالک کا حصہ', 'کاشتکار کا حصہ', 'نوٹ'],
+    const [
+      Strings.date,
+      'معاہدہ',
+      'کل رقم',
+      'مالک کا حصہ',
+      'کاشتکار کا حصہ',
+      'نوٹ',
+    ],
     [
       for (final s in settlements)
         [

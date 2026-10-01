@@ -12,12 +12,14 @@ import '../screens/alarm_screen.dart';
 import '../l10n/strings.dart';
 
 @pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse notificationResponse) async {
+void notificationTapBackground(
+  NotificationResponse notificationResponse,
+) async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   final payload = notificationResponse.payload;
   final actionId = notificationResponse.actionId;
-  
+
   if (payload == null) return;
   final taskId = int.tryParse(payload);
   if (taskId == null) return;
@@ -26,15 +28,12 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
     final db = await DatabaseHelper.instance.database;
     await db.update(
       'tasks',
-      {
-        'is_completed': 1,
-        'snoozed_until': null,
-      },
+      {'is_completed': 1, 'snoozed_until': null},
       // A soft-deleted task ignores notification actions.
       where: 'id = ? AND deleted_at IS NULL',
       whereArgs: [taskId],
     );
-    
+
     // Cancel all notifications for this task (including reminders/snooze)
     final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     for (int i = 0; i < 10; i++) {
@@ -42,7 +41,7 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
     }
   } else if (actionId == 'action_snooze') {
     final db = await DatabaseHelper.instance.database;
-    
+
     // Get snooze duration from preferences
     final prefs = await SharedPreferences.getInstance();
     final snoozeDuration = prefs.getInt('snooze_duration') ?? 10;
@@ -50,12 +49,10 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
     final enableVibration = prefs.getBool('vibration_enabled') ?? true;
 
     final snoozeTime = DateTime.now().add(Duration(minutes: snoozeDuration));
-    
+
     await db.update(
       'tasks',
-      {
-        'snoozed_until': snoozeTime.toIso8601String(),
-      },
+      {'snoozed_until': snoozeTime.toIso8601String()},
       where: 'id = ?',
       whereArgs: [taskId],
     );
@@ -66,7 +63,7 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
       where: 'id = ? AND deleted_at IS NULL',
       whereArgs: [taskId],
     );
-    
+
     if (maps.isNotEmpty) {
       final taskTitle = maps.first['title'] as String;
 
@@ -78,10 +75,12 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
       }
 
       final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-      
+
       // Cancel the current notification first
-      await flutterLocalNotificationsPlugin.cancel(notificationResponse.id ?? (taskId * 10));
-      
+      await flutterLocalNotificationsPlugin.cancel(
+        notificationResponse.id ?? (taskId * 10),
+      );
+
       // Schedule a new alarm notification using slot 9 for snooze
       await flutterLocalNotificationsPlugin.zonedSchedule(
         taskId * 10 + 9,
@@ -95,11 +94,16 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
             channelDescription: 'Loud farming task reminders',
             importance: Importance.max,
             priority: Priority.high,
-            sound: playSound ? const RawResourceAndroidNotificationSound('farming_alarm') : null,
+            sound:
+                playSound
+                    ? const RawResourceAndroidNotificationSound('farming_alarm')
+                    : null,
             playSound: playSound,
             enableVibration: enableVibration,
             audioAttributesUsage: AudioAttributesUsage.alarm,
-            additionalFlags: Int32List.fromList(<int>[4]), // FLAG_INSISTENT for continuous loop
+            additionalFlags: Int32List.fromList(<int>[
+              4,
+            ]), // FLAG_INSISTENT for continuous loop
             ongoing: true,
             autoCancel: false,
             fullScreenIntent: true,
@@ -133,13 +137,16 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  static const MethodChannel _nativeChannel = MethodChannel('com.example.kisan_dost/share');
+  static const MethodChannel _nativeChannel = MethodChannel(
+    'com.example.kisan_dost/share',
+  );
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
   static String? launchPayload;
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   Future<void> init() async {
     tz.initializeTimeZones();
@@ -164,9 +171,7 @@ class NotificationService {
           if (taskId != null) {
             if (navigatorKey.currentState != null) {
               navigatorKey.currentState!.push(
-                MaterialPageRoute(
-                  builder: (_) => AlarmScreen(taskId: taskId),
-                ),
+                MaterialPageRoute(builder: (_) => AlarmScreen(taskId: taskId)),
               );
             } else {
               launchPayload = response.payload;
@@ -180,16 +185,19 @@ class NotificationService {
     // Request permissions for Android 13+
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
-    
+
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestExactAlarmsPermission();
 
     // Check if the app was launched by a notification click
-    final launchDetails = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+    final launchDetails =
+        await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
     if (launchDetails != null && launchDetails.didNotificationLaunchApp) {
       final payload = launchDetails.notificationResponse?.payload;
       if (payload != null) {
@@ -233,7 +241,12 @@ class NotificationService {
     final defaultSnooze = prefs.getInt('snooze_duration') ?? 10;
 
     // 2. Parse the reminder offsets (minutes before event)
-    final offsets = task.reminders.split(',').map((e) => int.tryParse(e.trim())).whereType<int>().toList();
+    final offsets =
+        task.reminders
+            .split(',')
+            .map((e) => int.tryParse(e.trim()))
+            .whereType<int>()
+            .toList();
     if (offsets.isEmpty) {
       offsets.add(0); // Default to at the event time
     }
@@ -241,7 +254,9 @@ class NotificationService {
     // 3. For each offset, schedule a notification
     for (int index = 0; index < offsets.length; index++) {
       final offsetMinutes = offsets[index];
-      final triggerTime = task.dateTime.subtract(Duration(minutes: offsetMinutes));
+      final triggerTime = task.dateTime.subtract(
+        Duration(minutes: offsetMinutes),
+      );
 
       // Calculate the stable sub-id for this reminder (slots 0 to 8, slot 9 is snooze)
       final notificationId = task.id * 10 + (index % 9);
@@ -280,11 +295,18 @@ class NotificationService {
               channelDescription: 'Loud farming task reminders',
               importance: Importance.max,
               priority: Priority.high,
-              sound: playSound ? const RawResourceAndroidNotificationSound('farming_alarm') : null,
+              sound:
+                  playSound
+                      ? const RawResourceAndroidNotificationSound(
+                        'farming_alarm',
+                      )
+                      : null,
               playSound: playSound,
               enableVibration: enableVibration,
               audioAttributesUsage: AudioAttributesUsage.alarm,
-              additionalFlags: Int32List.fromList(<int>[4]), // FLAG_INSISTENT for continuous loop
+              additionalFlags: Int32List.fromList(<int>[
+                4,
+              ]), // FLAG_INSISTENT for continuous loop
               ongoing: true,
               autoCancel: false,
               fullScreenIntent: true,
@@ -311,7 +333,9 @@ class NotificationService {
           payload: task.id.toString(),
         );
       } catch (e) {
-        debugPrint('PlatformException scheduling exact alarm: $e. Falling back to inexact scheduling.');
+        debugPrint(
+          'PlatformException scheduling exact alarm: $e. Falling back to inexact scheduling.',
+        );
         try {
           await flutterLocalNotificationsPlugin.zonedSchedule(
             notificationId,
@@ -325,7 +349,12 @@ class NotificationService {
                 channelDescription: 'Loud farming task reminders',
                 importance: Importance.max,
                 priority: Priority.high,
-                sound: playSound ? const RawResourceAndroidNotificationSound('farming_alarm') : null,
+                sound:
+                    playSound
+                        ? const RawResourceAndroidNotificationSound(
+                          'farming_alarm',
+                        )
+                        : null,
                 playSound: playSound,
                 enableVibration: enableVibration,
                 audioAttributesUsage: AudioAttributesUsage.alarm,
@@ -390,7 +419,8 @@ class NotificationService {
   Future<bool> canScheduleExactAlarms() async {
     if (Platform.isAndroid) {
       try {
-        return await _nativeChannel.invokeMethod('canScheduleExactAlarms') ?? false;
+        return await _nativeChannel.invokeMethod('canScheduleExactAlarms') ??
+            false;
       } catch (e) {
         debugPrint('Error checking exact alarm permission: $e');
       }
@@ -426,7 +456,8 @@ class NotificationService {
         where: 'is_completed = ? AND deleted_at IS NULL',
         whereArgs: [0],
       );
-      final List<TaskItem> pendingTasks = maps.map((e) => TaskItem.fromMap(e)).toList();
+      final List<TaskItem> pendingTasks =
+          maps.map((e) => TaskItem.fromMap(e)).toList();
       for (var task in pendingTasks) {
         await scheduleTaskNotifications(task);
       }

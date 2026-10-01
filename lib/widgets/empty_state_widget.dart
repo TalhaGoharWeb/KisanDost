@@ -18,7 +18,8 @@ class EmptyStateWidget extends StatefulWidget {
   State<EmptyStateWidget> createState() => _EmptyStateWidgetState();
 }
 
-class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerProviderStateMixin {
+class _EmptyStateWidgetState extends State<EmptyStateWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -67,7 +68,9 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
                 errorBuilder: (context, error, stackTrace) {
                   return CircleAvatar(
                     radius: 70,
-                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     child: Icon(
                       widget.fallbackIcon,
                       size: 70,
@@ -78,7 +81,7 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Message (Title) in Urdu Jameel font
             Text(
               widget.message,
@@ -89,7 +92,7 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget> with SingleTickerPr
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             // Subtitle if any
             if (widget.subtitle != null) ...[
               const SizedBox(height: 12),

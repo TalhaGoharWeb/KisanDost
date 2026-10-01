@@ -82,7 +82,10 @@ class CropProvider extends ChangeNotifier {
     return timeline;
   }
 
-  int splitAmountAcrossFields({required int amountPaisa, required int fieldCount}) {
+  int splitAmountAcrossFields({
+    required int amountPaisa,
+    required int fieldCount,
+  }) {
     if (fieldCount <= 0) {
       return 0;
     }
@@ -145,7 +148,8 @@ class CropProvider extends ChangeNotifier {
 
       // Backward compatibility fallback for old rows that may not have mapping.
       if (linkedFields.isEmpty && row['field_id'] != null) {
-        final fallbackRows = await db.rawQuery('''
+        final fallbackRows = await db.rawQuery(
+          '''
           SELECT
             f.id as field_id,
             f.farm_id,
@@ -158,40 +162,40 @@ class CropProvider extends ChangeNotifier {
           FROM fields f
           JOIN farms farm ON f.farm_id = farm.id
           WHERE f.id = ?
-        ''', [row['field_id']]);
+        ''',
+          [row['field_id']],
+        );
 
         if (fallbackRows.isNotEmpty) {
           linkedFields = fallbackRows;
-          await db.insert(
-            'crop_season_fields',
-            {
-              'crop_season_id': seasonId,
-              'field_id': row['field_id'],
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore,
-          );
+          await db.insert('crop_season_fields', {
+            'crop_season_id': seasonId,
+            'field_id': row['field_id'],
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
 
-      final List<Field> fields = linkedFields
-          .map(
-            (f) => Field(
-              id: f['field_id'],
-              farmId: f['farm_id'],
-              name: f['field_name'],
-              sizeAcres: (f['size_acres'] as num).toDouble(),
-              canalWaterAvailable: f['canal_water_available'] ?? 0,
-              tubeWellAvailable: f['tube_well_available'] ?? 0,
-              location: f['location'],
-            ),
-          )
-          .toList();
+      final List<Field> fields =
+          linkedFields
+              .map(
+                (f) => Field(
+                  id: f['field_id'],
+                  farmId: f['farm_id'],
+                  name: f['field_name'],
+                  sizeAcres: (f['size_acres'] as num).toDouble(),
+                  canalWaterAvailable: f['canal_water_available'] ?? 0,
+                  tubeWellAvailable: f['tube_well_available'] ?? 0,
+                  location: f['location'],
+                ),
+              )
+              .toList();
 
       final cropSeason = CropSeason(
         id: seasonId,
-        fieldId: linkedFields.isNotEmpty
-            ? linkedFields.first['field_id'] as int
-            : row['field_id'] as int,
+        fieldId:
+            linkedFields.isNotEmpty
+                ? linkedFields.first['field_id'] as int
+                : row['field_id'] as int,
         cropName: row['crop_name'],
         variety: row['variety'],
         status: row['status'],
@@ -202,10 +206,8 @@ class CropProvider extends ChangeNotifier {
         cropSeason: cropSeason,
         fields: fields,
         fieldNames: linkedFields.map((f) => f['field_name'] as String).toList(),
-        farmNames: linkedFields
-            .map((f) => f['farm_name'] as String)
-            .toSet()
-            .toList(),
+        farmNames:
+            linkedFields.map((f) => f['farm_name'] as String).toSet().toList(),
         totalArea: fields.fold(0.0, (sum, f) => sum + f.sizeAcres),
       );
 
@@ -240,14 +242,10 @@ class CropProvider extends ChangeNotifier {
       final int seasonId = await txn.insert('crop_seasons', newSeason.toMap());
 
       for (final fieldId in fieldIds) {
-        await txn.insert(
-          'crop_season_fields',
-          {
-            'crop_season_id': seasonId,
-            'field_id': fieldId,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await txn.insert('crop_season_fields', {
+          'crop_season_id': seasonId,
+          'field_id': fieldId,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
     });
 
@@ -299,14 +297,10 @@ class CropProvider extends ChangeNotifier {
       );
 
       for (final fieldId in fieldIds) {
-        await txn.insert(
-          'crop_season_fields',
-          {
-            'crop_season_id': id,
-            'field_id': fieldId,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await txn.insert('crop_season_fields', {
+          'crop_season_id': id,
+          'field_id': fieldId,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
     });
 
@@ -315,11 +309,7 @@ class CropProvider extends ChangeNotifier {
 
   Future<void> deleteCropSeason(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete(
-      'crop_seasons',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('crop_seasons', where: 'id = ?', whereArgs: [id]);
     await fetchCropSeasons();
   }
 }

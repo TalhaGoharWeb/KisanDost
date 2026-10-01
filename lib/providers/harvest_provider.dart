@@ -204,8 +204,8 @@ class HarvestProvider extends ChangeNotifier {
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
-
-    final int totalExpensePaisa = transportationExpensePaisa +
+    final int totalExpensePaisa =
+        transportationExpensePaisa +
         labourExpensePaisa +
         harvestingExpensePaisa +
         commissionExpensePaisa +
@@ -226,8 +226,7 @@ class HarvestProvider extends ChangeNotifier {
           table: 'expenses',
           rowId: expenseId,
           action: AuditService.create,
-          details:
-              'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
+          details: 'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
         );
       }
 
@@ -293,8 +292,8 @@ class HarvestProvider extends ChangeNotifier {
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
-
-    final int totalExpensePaisa = transportationExpensePaisa +
+    final int totalExpensePaisa =
+        transportationExpensePaisa +
         labourExpensePaisa +
         harvestingExpensePaisa +
         commissionExpensePaisa +
@@ -324,16 +323,12 @@ class HarvestProvider extends ChangeNotifier {
             table: 'expenses',
             rowId: expenseId,
             action: AuditService.create,
-            details:
-                'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
+            details: 'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
           );
         } else {
           await txn.update(
             'expenses',
-            {
-              'amount_paisa': totalExpensePaisa,
-              'date': date,
-            },
+            {'amount_paisa': totalExpensePaisa, 'date': date},
             where: 'id = ?',
             whereArgs: [expenseId],
           );
@@ -342,8 +337,7 @@ class HarvestProvider extends ChangeNotifier {
             table: 'expenses',
             rowId: expenseId,
             action: AuditService.update,
-            details:
-                'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
+            details: 'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
           );
         }
       } else {
@@ -455,8 +449,11 @@ class HarvestProvider extends ChangeNotifier {
     String? buyerName,
   }) async {
     await _txn((txn) async {
-      final List<Map<String, dynamic>> hMaps = await txn
-          .query('harvests', where: 'id = ?', whereArgs: [harvestId]);
+      final List<Map<String, dynamic>> hMaps = await txn.query(
+        'harvests',
+        where: 'id = ?',
+        whereArgs: [harvestId],
+      );
       if (hMaps.isEmpty) return;
 
       // The sale total is ALWAYS recomputed from quantity x price (rounded to
@@ -475,8 +472,11 @@ class HarvestProvider extends ChangeNotifier {
         whereArgs: [harvestId],
       );
 
-      final List<Map<String, dynamic>> sMaps = await txn
-          .query('sales', where: 'harvest_id = ? AND deleted_at IS NULL', whereArgs: [harvestId]);
+      final List<Map<String, dynamic>> sMaps = await txn.query(
+        'sales',
+        where: 'harvest_id = ? AND deleted_at IS NULL',
+        whereArgs: [harvestId],
+      );
       if (sMaps.isEmpty) {
         final saleId = await txn.insert('sales', {
           'harvest_id': harvestId,
@@ -648,10 +648,7 @@ class HarvestProvider extends ChangeNotifier {
       // the two can never disagree.
       await txn.update(
         'harvests',
-        {
-          'rate_per_unit_paisa': pricePerUnitPaisa,
-          'buyer_name': buyerName,
-        },
+        {'rate_per_unit_paisa': pricePerUnitPaisa, 'buyer_name': buyerName},
         where: 'id = ?',
         whereArgs: [harvestId],
       );
@@ -694,9 +691,8 @@ class HarvestProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [id],
       );
-      final int? expenseId = existing.isEmpty
-          ? null
-          : existing.first['expense_id'] as int?;
+      final int? expenseId =
+          existing.isEmpty ? null : existing.first['expense_id'] as int?;
       if (expenseId != null) {
         await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
       }

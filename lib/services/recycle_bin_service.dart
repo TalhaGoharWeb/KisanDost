@@ -56,14 +56,17 @@ class RecycleBinService {
     )) {
       final category = m['category'] as String;
       final desc = m['description'] as String?;
-      items.add(DeletedItem(
-        table: 'expenses',
-        id: m['id'] as int,
-        title: (desc == null || desc.isEmpty) ? category : '$category — $desc',
-        subtitle:
-            '${Money((m['amount_paisa'] as num).toInt()).format()} — ${m['date']}',
-        deletedAt: m['deleted_at'] as String,
-      ));
+      items.add(
+        DeletedItem(
+          table: 'expenses',
+          id: m['id'] as int,
+          title:
+              (desc == null || desc.isEmpty) ? category : '$category — $desc',
+          subtitle:
+              '${Money((m['amount_paisa'] as num).toInt()).format()} — ${m['date']}',
+          deletedAt: m['deleted_at'] as String,
+        ),
+      );
     }
 
     // --- Harvests (with crop name from the season) ---
@@ -76,16 +79,20 @@ class RecycleBinService {
     )) {
       final crop = m['crop_name'] as String?;
       final variety = m['variety'] as String?;
-      final name = [crop, variety]
-          .where((s) => s != null && s.isNotEmpty)
-          .join(' — ');
-      items.add(DeletedItem(
-        table: 'harvests',
-        id: m['id'] as int,
-        title: name.isEmpty ? 'پیداوار' : 'پیداوار — $name',
-        subtitle: '${UnitDisplay.format((m['quantity'] as num).toDouble(), m['unit'] as String)} — ${m['date']}',
-        deletedAt: m['deleted_at'] as String,
-      ));
+      final name = [
+        crop,
+        variety,
+      ].where((s) => s != null && s.isNotEmpty).join(' — ');
+      items.add(
+        DeletedItem(
+          table: 'harvests',
+          id: m['id'] as int,
+          title: name.isEmpty ? 'پیداوار' : 'پیداوار — $name',
+          subtitle:
+              '${UnitDisplay.format((m['quantity'] as num).toDouble(), m['unit'] as String)} — ${m['date']}',
+          deletedAt: m['deleted_at'] as String,
+        ),
+      );
     }
 
     // --- Sales (with crop name through the parent harvest) ---
@@ -99,17 +106,20 @@ class RecycleBinService {
     )) {
       final crop = m['crop_name'] as String?;
       final buyer = m['buyer_name'] as String?;
-      final label = [crop, buyer]
-          .where((s) => s != null && s.isNotEmpty)
-          .join(' — ');
-      items.add(DeletedItem(
-        table: 'sales',
-        id: m['id'] as int,
-        title: label.isEmpty ? 'فروخت' : 'فروخت — $label',
-        subtitle:
-            '${Money((m['total_amount_paisa'] as num).toInt()).format()} — ${m['date']}',
-        deletedAt: m['deleted_at'] as String,
-      ));
+      final label = [
+        crop,
+        buyer,
+      ].where((s) => s != null && s.isNotEmpty).join(' — ');
+      items.add(
+        DeletedItem(
+          table: 'sales',
+          id: m['id'] as int,
+          title: label.isEmpty ? 'فروخت' : 'فروخت — $label',
+          subtitle:
+              '${Money((m['total_amount_paisa'] as num).toInt()).format()} — ${m['date']}',
+          deletedAt: m['deleted_at'] as String,
+        ),
+      );
     }
 
     // --- Tasks ---
@@ -118,13 +128,15 @@ class RecycleBinService {
       where: 'deleted_at IS NOT NULL',
       orderBy: 'deleted_at DESC',
     )) {
-      items.add(DeletedItem(
-        table: 'tasks',
-        id: m['id'] as int,
-        title: m['title'] as String,
-        subtitle: 'کام',
-        deletedAt: m['deleted_at'] as String,
-      ));
+      items.add(
+        DeletedItem(
+          table: 'tasks',
+          id: m['id'] as int,
+          title: m['title'] as String,
+          subtitle: 'کام',
+          deletedAt: m['deleted_at'] as String,
+        ),
+      );
     }
 
     // --- Parties ---
@@ -134,14 +146,16 @@ class RecycleBinService {
       orderBy: 'deleted_at DESC',
     )) {
       final phone = m['phone'] as String?;
-      items.add(DeletedItem(
-        table: 'parties',
-        id: m['id'] as int,
-        title: m['name'] as String,
-        subtitle:
-            (phone == null || phone.isEmpty) ? 'پارٹی' : 'پارٹی — $phone',
-        deletedAt: m['deleted_at'] as String,
-      ));
+      items.add(
+        DeletedItem(
+          table: 'parties',
+          id: m['id'] as int,
+          title: m['name'] as String,
+          subtitle:
+              (phone == null || phone.isEmpty) ? 'پارٹی' : 'پارٹی — $phone',
+          deletedAt: m['deleted_at'] as String,
+        ),
+      );
     }
 
     return items;
