@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/batai.dart';
+import '../services/audit_service.dart';
+import '../services/money.dart';
 
 /// Thrown for batai rule violations; [message] is user-facing Urdu.
 class BataiException implements Exception {
@@ -178,24 +180,34 @@ class BataiProvider extends ChangeNotifier {
       endDate: endDate,
     );
     await _requirePartyExists(otherPartyId);
-    final db = await _db();
-    final id = await db.insert(
-      'batai_agreements',
-      BataiAgreement(
-        farmerRole: farmerRole,
-        otherPartyId: otherPartyId,
-        farmId: farmId,
-        fieldId: fieldId,
-        cropSeasonId: cropSeasonId,
-        ownerSharePercent: ownerSharePercent,
-        cultivatorSharePercent: cultivatorSharePercent,
-        expenseNote: _nullIfEmpty(expenseNote),
-        startDate: startDate,
-        endDate: _nullIfEmpty(endDate),
-        notes: _nullIfEmpty(notes),
-        createdAt: DateTime.now().toIso8601String(),
-      ).toMap(),
-    );
+    final id = await _txn((txn) async {
+      final newId = await txn.insert(
+        'batai_agreements',
+        BataiAgreement(
+          farmerRole: farmerRole,
+          otherPartyId: otherPartyId,
+          farmId: farmId,
+          fieldId: fieldId,
+          cropSeasonId: cropSeasonId,
+          ownerSharePercent: ownerSharePercent,
+          cultivatorSharePercent: cultivatorSharePercent,
+          expenseNote: _nullIfEmpty(expenseNote),
+          startDate: startDate,
+          endDate: _nullIfEmpty(endDate),
+          notes: _nullIfEmpty(notes),
+          createdAt: DateTime.now().toIso8601String(),
+        ).toMap(),
+      );
+      await AuditService.log(
+        txn,
+        table: 'batai_agreements',
+        rowId: newId,
+        action: AuditService.create,
+        details:
+            'بٹائی معاہدہ — مالک $ownerSharePercent٪ / مزارع $cultivatorSharePercent٪',
+      );
+      return newId;
+    });
     await fetchAgreements();
     return id;
   }
@@ -230,23 +242,32 @@ class BataiProvider extends ChangeNotifier {
       endDate: endDate,
     );
     await _requirePartyExists(otherPartyId);
-    final db = await _db();
-    await db.update(
-      'batai_agreements',
-      {
-        'farmer_role': farmerRoleToString(farmerRole),
-        'other_party_id': otherPartyId,
-        'farm_id': farmId,
-        'field_id': fieldId,
-        'crop_season_id': cropSeasonId,
-        'owner_share_percent': ownerSharePercent,
-        'cultivator_share_percent': cultivatorSharePercent,
-        'start_date': startDate,
-        'end_date': _nullIfEmpty(endDate),
-      },
-      where: 'id = ?',
-      whereArgs: [existing.id],
-    );
+    await _txn((txn) async {
+      await txn.update(
+        'batai_agreements',
+        {
+          'farmer_role': farmerRoleToString(farmerRole),
+          'other_party_id': otherPartyId,
+          'farm_id': farmId,
+          'field_id': fieldId,
+          'crop_season_id': cropSeasonId,
+          'owner_share_percent': ownerSharePercent,
+          'cultivator_share_percent': cultivatorSharePercent,
+          'start_date': startDate,
+          'end_date': _nullIfEmpty(endDate),
+        },
+        where: 'id = ?',
+        whereArgs: [existing.id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'batai_agreements',
+        rowId: existing.id!,
+        action: AuditService.update,
+        details:
+            'شرائط تبدیل — مالک $ownerSharePercent٪ / مزارع $cultivatorSharePercent٪',
+      );
+    });
     await fetchAgreements();
   }
 
@@ -272,13 +293,21 @@ class BataiProvider extends ChangeNotifier {
   /// one season is usually settled over several harvests.
   Future<void> setStatus(int id, BataiStatus status) async {
     final existing = await _requireAgreement(id);
-    final db = await _db();
-    await db.update(
-      'batai_agreements',
-      {'status': bataiStatusToString(status)},
-      where: 'id = ?',
-      whereArgs: [existing.id],
-    );
+    await _txn((txn) async {
+      await txn.update(
+        'batai_agreements',
+        {'status': bataiStatusToString(status)},
+        where: 'id = ?',
+        whereArgs: [existing.id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'batai_agreements',
+        rowId: existing.id!,
+        action: AuditService.update,
+        details: 'حیثیت: ${bataiStatusUrdu(status)}',
+      );
+    });
     await fetchAgreements();
   }
 
@@ -316,7 +345,7 @@ class BataiProvider extends ChangeNotifier {
     }
     final split = splitBatai(totalPaisa, agreement.ownerSharePercent);
     final id = await _txn((txn) async {
-      return await txn.insert(
+      final newId = await txn.insert(
         'batai_settlements',
         BataiSettlement(
           agreementId: agreementId,
@@ -330,6 +359,14 @@ class BataiProvider extends ChangeNotifier {
           createdAt: DateTime.now().toIso8601String(),
         ).toMap(),
       );
+      await AuditService.log(
+        txn,
+        table: 'batai_settlements',
+        rowId: newId,
+        action: AuditService.create,
+        details: 'چکتائی — ${Money(totalPaisa).format()}',
+      );
+      return newId;
     });
     await fetchAgreements();
     return id;
@@ -345,9 +382,17 @@ class BataiProvider extends ChangeNotifier {
         'اس معاہدے کی چکتائیاں موجود ہیں، اس لیے اسے حذف نہیں کیا جا سکتا۔',
       );
     }
-    final db = await _db();
-    await db.delete('batai_agreements',
-        where: 'id = ?', whereArgs: [existing.id]);
+    await _txn((txn) async {
+      await txn.delete('batai_agreements',
+          where: 'id = ?', whereArgs: [existing.id]);
+      await AuditService.log(
+        txn,
+        table: 'batai_agreements',
+        rowId: existing.id!,
+        action: AuditService.delete,
+        details: 'بٹائی معاہدہ حذف (بغیر چکتائی)',
+      );
+    });
     await fetchAgreements();
   }
 

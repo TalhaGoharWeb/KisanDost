@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
+import '../services/audit_service.dart';
 import '../services/notification_service.dart';
 
 class TaskItem {
@@ -12,6 +13,9 @@ class TaskItem {
   final String recurrence;
   final String reminders; // comma separated minutes before, e.g. "0,60,1440"
 
+  /// ISO timestamp of soft deletion; NULL = live row. Never in [toMap].
+  final String? deletedAt;
+
   TaskItem({
     required this.id,
     required this.title,
@@ -21,6 +25,7 @@ class TaskItem {
     this.isCompleted = false,
     this.recurrence = 'none',
     this.reminders = '0',
+    this.deletedAt,
   });
 
   factory TaskItem.fromMap(Map<String, dynamic> map) {
@@ -33,6 +38,7 @@ class TaskItem {
       isCompleted: map['is_completed'] == 1,
       recurrence: map['recurrence'] ?? 'none',
       reminders: map['reminders'] ?? '0',
+      deletedAt: map['deleted_at'] as String?,
     );
   }
 
@@ -75,7 +81,11 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
 
     final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> maps = await db.query('tasks', orderBy: 'date_time ASC');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tasks',
+      where: 'deleted_at IS NULL',
+      orderBy: 'date_time ASC',
+    );
 
     _tasks = maps.map((e) => TaskItem.fromMap(e)).toList();
     _isLoading = false;
@@ -123,6 +133,13 @@ class TaskProvider with ChangeNotifier {
     await fetchTasks();
 
     if (id != 0) {
+      await AuditService.log(
+        db,
+        table: 'tasks',
+        rowId: id,
+        action: AuditService.create,
+        details: 'کام: $title',
+      );
       TaskItem? newTask;
       for (var t in _tasks) {
         if (t.id == id) {
@@ -149,6 +166,13 @@ class TaskProvider with ChangeNotifier {
       where: 'id = ?',
       whereArgs: [id],
     );
+    await AuditService.log(
+      db,
+      table: 'tasks',
+      rowId: id,
+      action: AuditService.update,
+      details: newStatus ? 'کام مکمل' : 'کام دوبارہ کھولا گیا',
+    );
 
     // Refresh list and notify
     await fetchTasks();
@@ -173,18 +197,19 @@ class TaskProvider with ChangeNotifier {
 
   Future<void> updateTask(int id, String title, String? description, DateTime dateTime, {String recurrence = 'none', String reminders = '0'}) async {
     final db = await DatabaseHelper.instance.database;
-    
+
+    final values = {
+      'title': title,
+      'description': description,
+      'snoozed_until': null, // Clear snooze on edits
+      'date_time': dateTime.toIso8601String(),
+      'recurrence': recurrence,
+      'reminders': reminders,
+    };
     try {
       await db.update(
         'tasks',
-        {
-          'title': title,
-          'description': description,
-          'snoozed_until': null, // Clear snooze on edits
-          'date_time': dateTime.toIso8601String(),
-          'recurrence': recurrence,
-          'reminders': reminders,
-        },
+        values,
         where: 'id = ?',
         whereArgs: [id],
       );
@@ -199,14 +224,7 @@ class TaskProvider with ChangeNotifier {
       try {
         await db.update(
           'tasks',
-          {
-            'title': title,
-            'description': description,
-            'snoozed_until': null,
-            'date_time': dateTime.toIso8601String(),
-            'recurrence': recurrence,
-            'reminders': reminders,
-          },
+          values,
           where: 'id = ?',
           whereArgs: [id],
         );
@@ -214,6 +232,13 @@ class TaskProvider with ChangeNotifier {
         debugPrint('Self-healing database fix failed on update: $retryError');
       }
     }
+    await AuditService.log(
+      db,
+      table: 'tasks',
+      rowId: id,
+      action: AuditService.update,
+      details: 'کام: $title',
+    );
 
     // Refresh local list and notify UI
     await fetchTasks();
@@ -230,15 +255,72 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
+  /// Soft delete: the task is hidden everywhere but kept for history and
+  /// the recycle bin. Callers keep calling [deleteTask] — the name is
+  /// unchanged on purpose.
   Future<void> deleteTask(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+    final existing = await db.query(
+      'tasks',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await db.update(
+      'tasks',
+      {'deleted_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await AuditService.log(
+      db,
+      table: 'tasks',
+      rowId: id,
+      action: AuditService.softDelete,
+      details: existing.isEmpty
+          ? 'کام حذف'
+          : 'کام: ${existing.first['title']}',
+    );
 
     _tasks.removeWhere((t) => t.id == id);
-    
+
     // Cancel notification
     await NotificationService().cancelTaskNotifications(id);
-    
+
     notifyListeners();
+  }
+
+  /// Restores a soft-deleted task (recycle bin only).
+  Future<void> restoreTask(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.update(
+      'tasks',
+      {'deleted_at': null},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await AuditService.log(
+      db,
+      table: 'tasks',
+      rowId: id,
+      action: AuditService.restore,
+      details: 'کام بحال کیا گیا',
+    );
+    await fetchTasks();
+  }
+
+  /// Permanent delete — offered ONLY from the recycle bin, with the caller's
+  /// destructive confirmation. The audit log keeps the record.
+  Future<void> permanentDeleteTask(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+    await AuditService.log(
+      db,
+      table: 'tasks',
+      rowId: id,
+      action: AuditService.permanentDelete,
+      details: 'کام مستقل حذف کیا گیا',
+    );
+    await NotificationService().cancelTaskNotifications(id);
+    await fetchTasks();
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
 import '../services/money.dart';
 
 class ThekaProvider extends ChangeNotifier {
@@ -76,10 +77,20 @@ class ThekaProvider extends ChangeNotifier {
         );
         await txn.insert('theka_installments', newInst.toMap());
       }
+      await AuditService.log(
+        txn,
+        table: 'thekas',
+        rowId: thekaId,
+        action: AuditService.create,
+        details:
+            'ٹھیکہ — ${Money(theka.totalAmountPaisa).format()} (${theka.paymentMethod})',
+      );
     });
     await fetchThekas();
   }
 
+  /// DELIBERATE Phase 11: deleteTheka keeps its hard-delete semantics (the
+  /// delete-theka problem is deferred by design). It is logged as a delete.
   Future<void> deleteTheka(int thekaId) async {
     final db = await DatabaseHelper.instance.database;
     await db.transaction((txn) async {
@@ -97,6 +108,13 @@ class ThekaProvider extends ChangeNotifier {
       }
       // 2. Delete theka (cascading deletes installments due to db ON DELETE CASCADE)
       await txn.delete('thekas', where: 'id = ?', whereArgs: [thekaId]);
+      await AuditService.log(
+        txn,
+        table: 'thekas',
+        rowId: thekaId,
+        action: AuditService.delete,
+        details: 'ٹھیکہ حذف',
+      );
     });
     await fetchThekas();
   }
@@ -183,6 +201,13 @@ class ThekaProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [installmentId],
       );
+      await AuditService.log(
+        txn,
+        table: 'theka_installments',
+        rowId: installmentId,
+        action: AuditService.update,
+        details: 'قسط ادائیگی — ${Money(paidAmountPaisa).format()} ($farmName)',
+      );
     });
     await fetchThekas();
   }
@@ -214,6 +239,13 @@ class ThekaProvider extends ChangeNotifier {
         },
         where: 'id = ?',
         whereArgs: [installmentId],
+      );
+      await AuditService.log(
+        txn,
+        table: 'theka_installments',
+        rowId: installmentId,
+        action: AuditService.update,
+        details: 'قسط دوبارہ زیر التواء',
       );
     });
     await fetchThekas();
@@ -248,6 +280,13 @@ class ThekaProvider extends ChangeNotifier {
         );
         await txn.insert('theka_installments', newInst.toMap());
       }
+      await AuditService.log(
+        txn,
+        table: 'thekas',
+        rowId: thekaId,
+        action: AuditService.update,
+        details: 'شیڈول تبدیل',
+      );
     });
     await fetchThekas();
   }

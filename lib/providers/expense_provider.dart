@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
+import '../services/money.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   List<Expense> _expenses = [];
@@ -47,10 +49,17 @@ class ExpenseProvider extends ChangeNotifier {
 
   Future<void> _fetchExpenses() async {
     final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> maps = await db.query('expenses', orderBy: 'id DESC');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'expenses',
+      where: 'deleted_at IS NULL',
+      orderBy: 'id DESC',
+    );
     _expenses = List.generate(maps.length, (i) => Expense.fromMap(maps[i]));
     notifyListeners();
   }
+
+  String _detail(String category, int amountPaisa) =>
+      'خرچ: ${expenseCategories[category] ?? category} — ${Money(amountPaisa).format()}';
 
   Future<int> addExpense({
     required String category,
@@ -71,7 +80,17 @@ class ExpenseProvider extends ChangeNotifier {
       fieldId: fieldId,
       cropSeasonId: cropSeasonId,
     );
-    final id = await db.insert('expenses', newExpense.toMap());
+    final id = await db.transaction((txn) async {
+      final newId = await txn.insert('expenses', newExpense.toMap());
+      await AuditService.log(
+        txn,
+        table: 'expenses',
+        rowId: newId,
+        action: AuditService.create,
+        details: _detail(category, amountPaisa),
+      );
+      return newId;
+    });
     await fetchExpenses();
     return id;
   }
@@ -87,31 +106,105 @@ class ExpenseProvider extends ChangeNotifier {
     int? cropSeasonId,
   }) async {
     final db = await DatabaseHelper.instance.database;
-    await db.update(
-      'expenses',
-      Expense(
-        id: id,
-        category: category,
-        amountPaisa: amountPaisa,
-        date: date,
-        description: description,
-        farmId: farmId,
-        fieldId: fieldId,
-        cropSeasonId: cropSeasonId,
-      ).toMap(),
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.transaction((txn) async {
+      await txn.update(
+        'expenses',
+        Expense(
+          id: id,
+          category: category,
+          amountPaisa: amountPaisa,
+          date: date,
+          description: description,
+          farmId: farmId,
+          fieldId: fieldId,
+          cropSeasonId: cropSeasonId,
+        ).toMap(),
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'expenses',
+        rowId: id,
+        action: AuditService.update,
+        details: _detail(category, amountPaisa),
+      );
+    });
     await fetchExpenses();
   }
 
+  /// Soft delete: the row is hidden everywhere but kept for history and the
+  /// recycle bin. Callers keep calling [deleteExpense] — the name is
+  /// unchanged on purpose.
   Future<void> deleteExpense(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete(
-      'expenses',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.transaction((txn) async {
+      final existing = await txn.query(
+        'expenses',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (existing.isEmpty) return;
+      final row = existing.first;
+      await txn.update(
+        'expenses',
+        {'deleted_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'expenses',
+        rowId: id,
+        action: AuditService.softDelete,
+        details: _detail(
+          (row['category'] ?? '') as String,
+          (row['amount_paisa'] as num).toInt(),
+        ),
+      );
+    });
+    await fetchExpenses();
+  }
+
+  /// Restores a soft-deleted expense (recycle bin only).
+  Future<void> restoreExpense(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'expenses',
+        {'deleted_at': null},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'expenses',
+        rowId: id,
+        action: AuditService.restore,
+        details: 'خرچ بحال کیا گیا',
+      );
+    });
+    await fetchExpenses();
+  }
+
+  /// Permanent delete — offered ONLY from the recycle bin, with the caller's
+  /// destructive confirmation. The audit log keeps the record.
+  Future<void> permanentDeleteExpense(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'expenses',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'expenses',
+        rowId: id,
+        action: AuditService.permanentDelete,
+        details: 'خرچ مستقل حذف کیا گیا',
+      );
+    });
     await fetchExpenses();
   }
 }

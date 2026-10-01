@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/party.dart';
+import '../services/audit_service.dart';
+import '../services/money.dart';
 
 /// Thrown for party-ledger rule violations; [message] is user-facing Urdu.
 class PartyException implements Exception {
@@ -21,6 +23,18 @@ class PartyProvider extends ChangeNotifier {
 
   Future<DatabaseExecutor> _db() async =>
       testExecutor ?? await DatabaseHelper.instance.database;
+
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly. (Same
+  /// pattern as BataiProvider.)
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
 
   List<Party> _parties = [];
   final Map<int, int> _balances = {}; // partyId -> SUM(amount_paisa)
@@ -67,11 +81,21 @@ class PartyProvider extends ChangeNotifier {
 
   Future<void> _fetchParties() async {
     final db = await _db();
-    final maps = await db.query('parties', orderBy: 'name ASC');
+    final maps = await db.query(
+      'parties',
+      where: 'deleted_at IS NULL',
+      orderBy: 'name ASC',
+    );
     _parties = maps.map(Party.fromMap).toList();
+    // Balances come only from live parties; a soft-deleted party cannot
+    // have entries (deletion is blocked while entries exist), but the join
+    // keeps the invariant explicit.
     final balMaps = await db.rawQuery(
-      'SELECT party_id, SUM(amount_paisa) AS bal '
-      'FROM party_ledger_entries GROUP BY party_id',
+      'SELECT e.party_id AS party_id, SUM(e.amount_paisa) AS bal '
+      'FROM party_ledger_entries e '
+      'JOIN parties p ON p.id = e.party_id '
+      'WHERE p.deleted_at IS NULL '
+      'GROUP BY e.party_id',
     );
     _balances
       ..clear()
@@ -87,16 +111,25 @@ class PartyProvider extends ChangeNotifier {
     if (name.isEmpty) {
       throw PartyException('پارٹی کا نام درج کریں۔');
     }
-    final db = await _db();
-    final id = await db.insert(
-      'parties',
-      Party(
-        name: name,
-        phone: _nullIfEmpty(party.phone),
-        notes: _nullIfEmpty(party.notes),
-        createdAt: party.createdAt,
-      ).toMap(),
-    );
+    final id = await _txn((txn) async {
+      final newId = await txn.insert(
+        'parties',
+        Party(
+          name: name,
+          phone: _nullIfEmpty(party.phone),
+          notes: _nullIfEmpty(party.notes),
+          createdAt: party.createdAt,
+        ).toMap(),
+      );
+      await AuditService.log(
+        txn,
+        table: 'parties',
+        rowId: newId,
+        action: AuditService.create,
+        details: 'پارٹی: $name',
+      );
+      return newId;
+    });
     await fetchParties();
     return id;
   }
@@ -106,22 +139,32 @@ class PartyProvider extends ChangeNotifier {
     if (name.isEmpty) {
       throw PartyException('پارٹی کا نام درج کریں۔');
     }
-    final db = await _db();
-    await db.update(
-      'parties',
-      {
-        'name': name,
-        'phone': _nullIfEmpty(party.phone),
-        'notes': _nullIfEmpty(party.notes),
-      },
-      where: 'id = ?',
-      whereArgs: [party.id],
-    );
+    await _txn((txn) async {
+      await txn.update(
+        'parties',
+        {
+          'name': name,
+          'phone': _nullIfEmpty(party.phone),
+          'notes': _nullIfEmpty(party.notes),
+        },
+        where: 'id = ?',
+        whereArgs: [party.id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'parties',
+        rowId: party.id!,
+        action: AuditService.update,
+        details: 'پارٹی: $name',
+      );
+    });
     await fetchParties();
   }
 
-  /// Deletes a party only when it has NO ledger entries. A party with
-  /// entries keeps its financial history — deleteParty throws an Urdu error.
+  /// Soft-deletes a party. Blocked (Urdu error) when the party has ledger
+  /// entries OR is referenced by a batai agreement — financial/share history
+  /// must survive. A zero-entry, unreferenced party is hidden but kept for
+  /// the recycle bin.
   Future<void> deleteParty(int partyId) async {
     final db = await _db();
     final count = await db.rawQuery(
@@ -134,7 +177,74 @@ class PartyProvider extends ChangeNotifier {
         'اس پارٹی کے کھاتے میں اندراجات موجود ہیں، اس لیے اسے حذف نہیں کیا جا سکتا۔ پہلے حساب برابر کریں۔',
       );
     }
-    await db.delete('parties', where: 'id = ?', whereArgs: [partyId]);
+    final bataiCount = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM batai_agreements WHERE other_party_id = ?',
+      [partyId],
+    );
+    final bataiRefs = ((bataiCount.first['c'] as num?) ?? 0).toInt();
+    if (bataiRefs > 0) {
+      throw PartyException(
+        'اس پارٹی کا بٹائی معاہدہ موجود ہے، اس لیے اسے حذف نہیں کیا جا سکتا۔',
+      );
+    }
+    await _txn((txn) async {
+      final existing = await txn.query(
+        'parties',
+        where: 'id = ?',
+        whereArgs: [partyId],
+      );
+      await txn.update(
+        'parties',
+        {'deleted_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [partyId],
+      );
+      await AuditService.log(
+        txn,
+        table: 'parties',
+        rowId: partyId,
+        action: AuditService.softDelete,
+        details: existing.isEmpty
+            ? 'پارٹی حذف'
+            : 'پارٹی: ${existing.first['name']}',
+      );
+    });
+    await fetchParties();
+  }
+
+  /// Restores a soft-deleted party (recycle bin only).
+  Future<void> restoreParty(int partyId) async {
+    await _txn((txn) async {
+      await txn.update(
+        'parties',
+        {'deleted_at': null},
+        where: 'id = ?',
+        whereArgs: [partyId],
+      );
+      await AuditService.log(
+        txn,
+        table: 'parties',
+        rowId: partyId,
+        action: AuditService.restore,
+        details: 'پارٹی بحال',
+      );
+    });
+    await fetchParties();
+  }
+
+  /// Permanent delete — recycle bin only. A party with ledger entries can
+  /// never reach here ([deleteParty] blocks it).
+  Future<void> permanentDeleteParty(int partyId) async {
+    await _txn((txn) async {
+      await txn.delete('parties', where: 'id = ?', whereArgs: [partyId]);
+      await AuditService.log(
+        txn,
+        table: 'parties',
+        rowId: partyId,
+        action: AuditService.permanentDelete,
+        details: 'پارٹی مستقل حذف',
+      );
+    });
     await fetchParties();
   }
 
@@ -154,14 +264,33 @@ class PartyProvider extends ChangeNotifier {
     if (DateTime.tryParse(date) == null) {
       throw PartyException('درست تاریخ درج کریں۔');
     }
-    final db = await _db();
-    final id = await db.insert('party_ledger_entries', {
-      'party_id': partyId,
-      'entry_type': partyEntryTypeToString(type),
-      'amount_paisa': partyEntryTypeSign(type) * amountPaisa,
-      'date': date,
-      'note': _nullIfEmpty(note),
-      'created_at': DateTime.now().toIso8601String(),
+    final id = await _txn((txn) async {
+      // Never post to a missing or soft-deleted party.
+      final party = await txn.query(
+        'parties',
+        where: 'id = ? AND deleted_at IS NULL',
+        whereArgs: [partyId],
+      );
+      if (party.isEmpty) {
+        throw PartyException('یہ پارٹی موجود نہیں ہے۔');
+      }
+      final newId = await txn.insert('party_ledger_entries', {
+        'party_id': partyId,
+        'entry_type': partyEntryTypeToString(type),
+        'amount_paisa': partyEntryTypeSign(type) * amountPaisa,
+        'date': date,
+        'note': _nullIfEmpty(note),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await AuditService.log(
+        txn,
+        table: 'party_ledger_entries',
+        rowId: newId,
+        action: AuditService.create,
+        details:
+            '${partyEntryTypeUrdu(type)} — ${Money(amountPaisa).format()}',
+      );
+      return newId;
     });
     await fetchParties();
     return id;

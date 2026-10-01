@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
 import '../services/unit_converter.dart';
 
 /// Inventory with an immutable transaction ledger.
@@ -170,7 +171,7 @@ class InventoryProvider extends ChangeNotifier {
       });
     }
 
-    await ex.insert('inventory_transactions', {
+    final txnId = await ex.insert('inventory_transactions', {
       'inventory_id': itemId,
       'type': 'purchase',
       'quantity': quantity,
@@ -181,6 +182,13 @@ class InventoryProvider extends ChangeNotifier {
       'notes': notes,
       'created_at': now,
     });
+    await AuditService.log(
+      ex,
+      table: 'inventory_transactions',
+      rowId: txnId,
+      action: AuditService.create,
+      details: 'خریداری — $name — $quantity $unit',
+    );
     return itemId;
   }
 
@@ -268,7 +276,7 @@ class InventoryProvider extends ChangeNotifier {
       where: 'id = ?',
       whereArgs: [itemId],
     );
-    await ex.insert('inventory_transactions', {
+    final txnId = await ex.insert('inventory_transactions', {
       'inventory_id': itemId,
       'type': 'usage',
       'quantity': -qtyInItemUnit,
@@ -278,6 +286,13 @@ class InventoryProvider extends ChangeNotifier {
       'notes': enteredNote,
       'created_at': now,
     });
+    await AuditService.log(
+      ex,
+      table: 'inventory_transactions',
+      rowId: txnId,
+      action: AuditService.create,
+      details: 'استعمال — ${item.name} — $qtyInItemUnit ${item.unit}',
+    );
   }
 
   /// Records a manual stock correction. [quantityDelta] is signed
@@ -311,7 +326,7 @@ class InventoryProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [itemId],
       );
-      await ex.insert('inventory_transactions', {
+      final txnId = await ex.insert('inventory_transactions', {
         'inventory_id': itemId,
         'type': 'adjustment',
         'quantity': quantityDelta,
@@ -320,6 +335,13 @@ class InventoryProvider extends ChangeNotifier {
         'notes': reason,
         'created_at': now,
       });
+      await AuditService.log(
+        ex,
+        table: 'inventory_transactions',
+        rowId: txnId,
+        action: AuditService.create,
+        details: 'تصحیح — ${item.name} — $quantityDelta ${item.unit}',
+      );
     }
 
     // Copy to a local so flow analysis can promote the null check.
@@ -378,17 +400,50 @@ class InventoryProvider extends ChangeNotifier {
       where: 'id = ?',
       whereArgs: [id],
     );
+    await AuditService.log(
+      db,
+      table: 'inventory',
+      rowId: id,
+      action: AuditService.update,
+      details: 'آئٹم: $name',
+    );
     if (transactionExecutor == null) await fetchInventory();
   }
 
-  /// Deletes the item row. Ledger rows cascade with it (documented
-  /// trade-off: history of a deleted item goes with it).
+  /// Deletes the item ONLY when it has no ledger transactions. An item with
+  /// history keeps it — deleteInventoryItem throws an Urdu error (mirrors
+  /// PartyProvider.deleteParty). This resolves the deferred "item deletion
+  /// cascades its ledger" decision: the ledger always survives now.
   Future<void> deleteInventoryItem(int id, {DatabaseExecutor? executor}) async {
     final db = await _executor(executor);
+    final count = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM inventory_transactions WHERE inventory_id = ?',
+      [id],
+    );
+    final txns = ((count.first['c'] as num?) ?? 0).toInt();
+    if (txns > 0) {
+      throw const InventoryException(
+        'اس آئٹم کا اسٹاک ریکارڈ موجود ہے، اس لیے اسے حذف نہیں کیا جا سکتا',
+      );
+    }
+    final existing = await db.query(
+      'inventory',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     await db.delete(
       'inventory',
       where: 'id = ?',
       whereArgs: [id],
+    );
+    await AuditService.log(
+      db,
+      table: 'inventory',
+      rowId: id,
+      action: AuditService.delete,
+      details: existing.isEmpty
+          ? 'آئٹم حذف'
+          : 'آئٹم: ${existing.first['name']}',
     );
     if (executor == null) await fetchInventory();
   }

@@ -545,12 +545,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Provider.of<InventoryProvider>(context, listen: false).deleteInventoryItem(item.id!);
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('اسٹاک کامیابی سے حذف ہو گیا!')),
-              );
+              try {
+                await Provider.of<InventoryProvider>(context, listen: false)
+                    .deleteInventoryItem(item.id!);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('اسٹاک کامیابی سے حذف ہو گیا!')),
+                );
+              } on InventoryException catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.message)),
+                );
+              }
             },
             child: const Text(Strings.delete, style: TextStyle(color: Colors.white)),
           ),

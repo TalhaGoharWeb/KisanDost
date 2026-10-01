@@ -70,12 +70,16 @@ class Party {
   final String? notes;
   final String createdAt;
 
+  /// ISO timestamp of soft deletion; NULL = live row. Never in [toMap].
+  final String? deletedAt;
+
   Party({
     this.id,
     required this.name,
     this.phone,
     this.notes,
     required this.createdAt,
+    this.deletedAt,
   });
 
   Map<String, dynamic> toMap() => {
@@ -92,6 +96,7 @@ class Party {
         phone: map['phone'] as String?,
         notes: map['notes'] as String?,
         createdAt: map['created_at'] as String,
+        deletedAt: map['deleted_at'] as String?,
       );
 }
 

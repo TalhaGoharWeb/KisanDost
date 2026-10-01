@@ -124,6 +124,11 @@ class Expense {
   final int? fieldId;
   final int? cropSeasonId;
 
+  /// ISO timestamp of soft deletion; NULL = live row.
+  /// Read from the DB but never written via [toMap] — updates must not
+  /// accidentally resurrect a soft-deleted row.
+  final String? deletedAt;
+
   Expense({
     this.id,
     required this.category,
@@ -133,6 +138,7 @@ class Expense {
     this.farmId,
     this.fieldId,
     this.cropSeasonId,
+    this.deletedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -158,6 +164,7 @@ class Expense {
       farmId: map['farm_id'],
       fieldId: map['field_id'],
       cropSeasonId: map['crop_season_id'],
+      deletedAt: map['deleted_at'] as String?,
     );
   }
 }
@@ -386,6 +393,9 @@ class Harvest {
   final String? notes;
   final int? expenseId;
 
+  /// ISO timestamp of soft deletion; NULL = live row. Never in [toMap].
+  final String? deletedAt;
+
   Harvest({
     this.id,
     required this.cropSeasonId,
@@ -402,6 +412,7 @@ class Harvest {
     this.paymentStatus = 'Pending',
     this.notes,
     this.expenseId,
+    this.deletedAt,
   });
 
   /// Computed — NEVER stored (storing them caused drift bugs when sales
@@ -455,6 +466,7 @@ class Harvest {
       paymentStatus: map['payment_status'] ?? 'Pending',
       notes: map['notes'],
       expenseId: map['expense_id'],
+      deletedAt: map['deleted_at'] as String?,
     );
   }
 }
@@ -470,6 +482,9 @@ class Sale {
   final int totalAmountPaisa;
   final String date;
 
+  /// ISO timestamp of soft deletion; NULL = live row. Never in [toMap].
+  final String? deletedAt;
+
   Sale({
     this.id,
     required this.harvestId,
@@ -478,6 +493,7 @@ class Sale {
     required this.pricePerUnitPaisa,
     required this.totalAmountPaisa,
     required this.date,
+    this.deletedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -501,6 +517,7 @@ class Sale {
       pricePerUnitPaisa: map['price_per_unit_paisa'] as int,
       totalAmountPaisa: map['total_amount_paisa'] as int,
       date: map['date'],
+      deletedAt: map['deleted_at'] as String?,
     );
   }
 }

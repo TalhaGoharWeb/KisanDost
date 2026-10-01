@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
+import '../services/money.dart';
 
 class HarvestWithDetails {
   final Harvest harvest;
@@ -31,6 +34,51 @@ class HarvestProvider extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  /// Marks one row soft-deleted and writes the audit entry. Callers pass a
+  /// short Urdu [details] summary.
+  Future<void> _softDeleteRow(
+    DatabaseExecutor txn,
+    String table,
+    int id,
+    String details,
+  ) async {
+    await txn.update(
+      table,
+      {'deleted_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await AuditService.log(
+      txn,
+      table: table,
+      rowId: id,
+      action: AuditService.softDelete,
+      details: details,
+    );
+  }
+
+  /// Restores one soft-deleted row and writes the audit entry.
+  Future<void> _restoreRow(
+    DatabaseExecutor txn,
+    String table,
+    int id,
+    String details,
+  ) async {
+    await txn.update(
+      table,
+      {'deleted_at': null},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await AuditService.log(
+      txn,
+      table: table,
+      rowId: id,
+      action: AuditService.restore,
+      details: details,
+    );
+  }
+
   Future<void> fetchHarvests() async {
     _errorMessage = null;
     try {
@@ -57,7 +105,8 @@ class HarvestProvider extends ChangeNotifier {
       JOIN crop_seasons cs ON h.crop_season_id = cs.id
       JOIN fields f ON cs.field_id = f.id
       JOIN farms farm ON f.farm_id = farm.id
-      LEFT JOIN sales s ON h.id = s.harvest_id
+      LEFT JOIN sales s ON h.id = s.harvest_id AND s.deleted_at IS NULL
+      WHERE h.deleted_at IS NULL
       ORDER BY h.id DESC
     ''';
 
@@ -144,6 +193,14 @@ class HarvestProvider extends ChangeNotifier {
           'date': date,
           'description': 'کٹائی کے اخراجات برائے فصل',
         });
+        await AuditService.log(
+          txn,
+          table: 'expenses',
+          rowId: expenseId,
+          action: AuditService.create,
+          details:
+              'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
+        );
       }
 
       final harvestId = await txn.insert('harvests', {
@@ -162,9 +219,16 @@ class HarvestProvider extends ChangeNotifier {
         'notes': notes,
         'expense_id': expenseId,
       });
+      await AuditService.log(
+        txn,
+        table: 'harvests',
+        rowId: harvestId,
+        action: AuditService.create,
+        details: 'پیداوار — $quantity $unit',
+      );
 
       if (grossPaisa > 0) {
-        await txn.insert('sales', {
+        final saleId = await txn.insert('sales', {
           'harvest_id': harvestId,
           'buyer_name': buyerName,
           'quantity': quantity,
@@ -172,6 +236,13 @@ class HarvestProvider extends ChangeNotifier {
           'total_amount_paisa': grossPaisa,
           'date': date,
         });
+        await AuditService.log(
+          txn,
+          table: 'sales',
+          rowId: saleId,
+          action: AuditService.create,
+          details: 'فروخت — ${Money(grossPaisa).format()}',
+        );
       }
     });
 
@@ -221,6 +292,14 @@ class HarvestProvider extends ChangeNotifier {
             'date': date,
             'description': 'کٹائی کے اخراجات برائے فصل',
           });
+          await AuditService.log(
+            txn,
+            table: 'expenses',
+            rowId: expenseId,
+            action: AuditService.create,
+            details:
+                'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
+          );
         } else {
           await txn.update(
             'expenses',
@@ -231,10 +310,23 @@ class HarvestProvider extends ChangeNotifier {
             where: 'id = ?',
             whereArgs: [expenseId],
           );
+          await AuditService.log(
+            txn,
+            table: 'expenses',
+            rowId: expenseId,
+            action: AuditService.update,
+            details:
+                'کٹائی کے اخراجات — ${Money(totalExpensePaisa).format()}',
+          );
         }
       } else {
         if (expenseId != null) {
-          await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
+          await _softDeleteRow(
+            txn,
+            'expenses',
+            expenseId,
+            'کٹائی کے اخراجات ختم — ${Money(0).format()}',
+          );
           expenseId = null;
         }
       }
@@ -263,13 +355,13 @@ class HarvestProvider extends ChangeNotifier {
 
       final List<Map<String, dynamic>> sales = await txn.query(
         'sales',
-        where: 'harvest_id = ?',
+        where: 'harvest_id = ? AND deleted_at IS NULL',
         whereArgs: [id],
       );
 
       if (grossPaisa > 0) {
         if (sales.isEmpty) {
-          await txn.insert('sales', {
+          final saleId = await txn.insert('sales', {
             'harvest_id': id,
             'buyer_name': buyerName,
             'quantity': quantity,
@@ -277,6 +369,13 @@ class HarvestProvider extends ChangeNotifier {
             'total_amount_paisa': grossPaisa,
             'date': date,
           });
+          await AuditService.log(
+            txn,
+            table: 'sales',
+            rowId: saleId,
+            action: AuditService.create,
+            details: 'فروخت — ${Money(grossPaisa).format()}',
+          );
         } else {
           await txn.update(
             'sales',
@@ -290,12 +389,32 @@ class HarvestProvider extends ChangeNotifier {
             where: 'harvest_id = ?',
             whereArgs: [id],
           );
+          await AuditService.log(
+            txn,
+            table: 'sales',
+            rowId: (sales.first['id'] as num).toInt(),
+            action: AuditService.update,
+            details: 'فروخت — ${Money(grossPaisa).format()}',
+          );
         }
       } else {
-        if (sales.isNotEmpty) {
-          await txn.delete('sales', where: 'harvest_id = ?', whereArgs: [id]);
+        for (final s in sales) {
+          await _softDeleteRow(
+            txn,
+            'sales',
+            (s['id'] as num).toInt(),
+            'فروخت ختم — ${Money((s['total_amount_paisa'] as num).toInt()).format()}',
+          );
         }
       }
+
+      await AuditService.log(
+        txn,
+        table: 'harvests',
+        rowId: id,
+        action: AuditService.update,
+        details: 'پیداوار — $quantity $unit',
+      );
     });
 
     await fetchHarvests();
@@ -331,9 +450,9 @@ class HarvestProvider extends ChangeNotifier {
       );
 
       final List<Map<String, dynamic>> sMaps = await txn
-          .query('sales', where: 'harvest_id = ?', whereArgs: [harvestId]);
+          .query('sales', where: 'harvest_id = ? AND deleted_at IS NULL', whereArgs: [harvestId]);
       if (sMaps.isEmpty) {
-        await txn.insert('sales', {
+        final saleId = await txn.insert('sales', {
           'harvest_id': harvestId,
           'buyer_name': buyerName,
           'quantity': quantity,
@@ -341,6 +460,13 @@ class HarvestProvider extends ChangeNotifier {
           'total_amount_paisa': grossPaisa,
           'date': date,
         });
+        await AuditService.log(
+          txn,
+          table: 'sales',
+          rowId: saleId,
+          action: AuditService.create,
+          details: 'فروخت — ${Money(grossPaisa).format()}',
+        );
       } else {
         await txn.update(
           'sales',
@@ -354,11 +480,27 @@ class HarvestProvider extends ChangeNotifier {
           where: 'harvest_id = ?',
           whereArgs: [harvestId],
         );
+        await AuditService.log(
+          txn,
+          table: 'sales',
+          rowId: (sMaps.first['id'] as num).toInt(),
+          action: AuditService.update,
+          details: 'فروخت — ${Money(grossPaisa).format()}',
+        );
       }
+      await AuditService.log(
+        txn,
+        table: 'harvests',
+        rowId: harvestId,
+        action: AuditService.update,
+        details: 'فروخت درج — ${Money(grossPaisa).format()}',
+      );
     });
     await fetchHarvests();
   }
 
+  /// Soft delete: the harvest, its sales and its linked harvest-expense are
+  /// hidden everywhere but kept for history and the recycle bin.
   Future<void> deleteHarvest(int id) async {
     final db = await DatabaseHelper.instance.database;
     await db.transaction((txn) async {
@@ -367,19 +509,43 @@ class HarvestProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [id],
       );
-      if (existing.isNotEmpty) {
-        final int? expenseId = existing.first['expense_id'] as int?;
-        if (expenseId != null) {
-          await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
-        }
+      if (existing.isEmpty) return;
+      final row = existing.first;
+      final int? expenseId = row['expense_id'] as int?;
+      if (expenseId != null) {
+        await _softDeleteRow(
+          txn,
+          'expenses',
+          expenseId,
+          'کٹائی کے اخراجات (پیداوار حذف)',
+        );
       }
 
-      await txn.delete('sales', where: 'harvest_id = ?', whereArgs: [id]);
-      await txn.delete('harvests', where: 'id = ?', whereArgs: [id]);
+      final sales = await txn.query(
+        'sales',
+        where: 'harvest_id = ? AND deleted_at IS NULL',
+        whereArgs: [id],
+      );
+      for (final s in sales) {
+        await _softDeleteRow(
+          txn,
+          'sales',
+          (s['id'] as num).toInt(),
+          'فروخت (پیداوار حذف)',
+        );
+      }
+      await _softDeleteRow(
+        txn,
+        'harvests',
+        id,
+        'پیداوار — ${row['quantity']} ${row['unit']}',
+      );
     });
     await fetchHarvests();
   }
 
+  /// Soft delete of one sale; the parent harvest is reset so the sale can
+  /// be re-recorded.
   Future<void> deleteSale(int id) async {
     final db = await DatabaseHelper.instance.database;
     await db.transaction((txn) async {
@@ -391,10 +557,13 @@ class HarvestProvider extends ChangeNotifier {
       final int? harvestId =
           sMaps.isEmpty ? null : sMaps.first['harvest_id'] as int?;
 
-      await txn.delete(
+      await _softDeleteRow(
+        txn,
         'sales',
-        where: 'id = ?',
-        whereArgs: [id],
+        id,
+        sMaps.isEmpty
+            ? 'فروخت حذف'
+            : 'فروخت — ${Money((sMaps.first['total_amount_paisa'] as num).toInt()).format()}',
       );
 
       // Reset the parent harvest so the sale can be re-recorded instead of
@@ -410,6 +579,13 @@ class HarvestProvider extends ChangeNotifier {
           },
           where: 'id = ?',
           whereArgs: [harvestId],
+        );
+        await AuditService.log(
+          txn,
+          table: 'harvests',
+          rowId: harvestId,
+          action: AuditService.update,
+          details: 'فروخت حذف پر ری سیٹ',
         );
       }
     });
@@ -455,6 +631,79 @@ class HarvestProvider extends ChangeNotifier {
         },
         where: 'id = ?',
         whereArgs: [harvestId],
+      );
+      await AuditService.log(
+        txn,
+        table: 'sales',
+        rowId: id,
+        action: AuditService.update,
+        details: 'فروخت — ${Money(totalPaisa).format()}',
+      );
+    });
+    await fetchHarvests();
+  }
+
+  /// Restores a soft-deleted harvest (recycle bin only). Its sales and
+  /// linked expense stay deleted — they are restored individually, so a
+  /// farmer never accidentally resurrects a whole subtree.
+  Future<void> restoreHarvest(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.transaction((txn) async {
+      await _restoreRow(txn, 'harvests', id, 'پیداوار بحال');
+    });
+    await fetchHarvests();
+  }
+
+  /// Restores a soft-deleted sale (recycle bin only).
+  Future<void> restoreSale(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.transaction((txn) async {
+      await _restoreRow(txn, 'sales', id, 'فروخت بحال');
+    });
+    await fetchHarvests();
+  }
+
+  /// Permanent delete of a harvest and its subtree — recycle bin only,
+  /// with the caller's destructive confirmation. The audit log keeps the
+  /// record.
+  Future<void> permanentDeleteHarvest(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.transaction((txn) async {
+      final existing = await txn.query(
+        'harvests',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      final int? expenseId = existing.isEmpty
+          ? null
+          : existing.first['expense_id'] as int?;
+      if (expenseId != null) {
+        await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
+      }
+      await txn.delete('sales', where: 'harvest_id = ?', whereArgs: [id]);
+      await txn.delete('harvests', where: 'id = ?', whereArgs: [id]);
+      await AuditService.log(
+        txn,
+        table: 'harvests',
+        rowId: id,
+        action: AuditService.permanentDelete,
+        details: 'پیداوار مستقل حذف',
+      );
+    });
+    await fetchHarvests();
+  }
+
+  /// Permanent delete of a sale — recycle bin only.
+  Future<void> permanentDeleteSale(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.transaction((txn) async {
+      await txn.delete('sales', where: 'id = ?', whereArgs: [id]);
+      await AuditService.log(
+        txn,
+        table: 'sales',
+        rowId: id,
+        action: AuditService.permanentDelete,
+        details: 'فروخت مستقل حذف',
       );
     });
     await fetchHarvests();
