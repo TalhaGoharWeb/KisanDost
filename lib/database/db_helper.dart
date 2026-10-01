@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 13;
+  static const _databaseVersion = 14;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -304,6 +304,47 @@ class DatabaseHelper {
       CREATE INDEX IF NOT EXISTS idx_party_ledger_entries_party
         ON party_ledger_entries (party_id)
     ''');
+
+    await db.execute('''
+      CREATE TABLE batai_agreements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        farmer_role TEXT NOT NULL CHECK(farmer_role IN ('landowner','cultivator')),
+        other_party_id INTEGER NOT NULL REFERENCES parties (id) ON DELETE RESTRICT,
+        farm_id INTEGER REFERENCES farms (id) ON DELETE SET NULL,
+        field_id INTEGER REFERENCES fields (id) ON DELETE SET NULL,
+        crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL,
+        owner_share_percent INTEGER NOT NULL CHECK(owner_share_percent >= 0 AND owner_share_percent <= 100),
+        cultivator_share_percent INTEGER NOT NULL CHECK(cultivator_share_percent >= 0 AND cultivator_share_percent <= 100),
+        CHECK(owner_share_percent + cultivator_share_percent = 100),
+        expense_note TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','settled','cancelled')),
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE batai_settlements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        agreement_id INTEGER NOT NULL REFERENCES batai_agreements (id) ON DELETE RESTRICT,
+        harvest_id INTEGER REFERENCES harvests (id) ON DELETE SET NULL,
+        sale_id INTEGER REFERENCES sales (id) ON DELETE SET NULL,
+        total_paisa INTEGER NOT NULL CHECK(total_paisa > 0),
+        owner_paisa INTEGER NOT NULL,
+        cultivator_paisa INTEGER NOT NULL,
+        CHECK(owner_paisa + cultivator_paisa = total_paisa),
+        settle_date TEXT NOT NULL,
+        note TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_batai_settlements_agreement
+        ON batai_settlements (agreement_id)
+    ''');
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -475,6 +516,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 13) {
       await migrateV12ToV13(db);
+    }
+    if (oldVersion < 14) {
+      await migrateV13ToV14(db);
     }
   }
 
@@ -827,6 +871,57 @@ class DatabaseHelper {
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_party_ledger_entries_party
         ON party_ledger_entries (party_id)
+    ''');
+  }
+
+  /// v13 -> v14 migration, exposed for tests: batai (بٹائی) sharecropping.
+  ///
+  /// Creates `batai_agreements` (the share terms: who is owner/cultivator,
+  /// the two percentages that must sum to exactly 100, optional farm/field/
+  /// crop links) and `batai_settlements` (append-only financial records —
+  /// one per settled harvest/sale — with the DB-level guarantee
+  /// `owner_paisa + cultivator_paisa = total_paisa`). Idempotent
+  /// (`IF NOT EXISTS`) — a repeated run is a no-op. No data moves;
+  /// nothing is dropped.
+  @visibleForTesting
+  static Future<void> migrateV13ToV14(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS batai_agreements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        farmer_role TEXT NOT NULL CHECK(farmer_role IN ('landowner','cultivator')),
+        other_party_id INTEGER NOT NULL REFERENCES parties (id) ON DELETE RESTRICT,
+        farm_id INTEGER REFERENCES farms (id) ON DELETE SET NULL,
+        field_id INTEGER REFERENCES fields (id) ON DELETE SET NULL,
+        crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL,
+        owner_share_percent INTEGER NOT NULL CHECK(owner_share_percent >= 0 AND owner_share_percent <= 100),
+        cultivator_share_percent INTEGER NOT NULL CHECK(cultivator_share_percent >= 0 AND cultivator_share_percent <= 100),
+        CHECK(owner_share_percent + cultivator_share_percent = 100),
+        expense_note TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','settled','cancelled')),
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS batai_settlements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        agreement_id INTEGER NOT NULL REFERENCES batai_agreements (id) ON DELETE RESTRICT,
+        harvest_id INTEGER REFERENCES harvests (id) ON DELETE SET NULL,
+        sale_id INTEGER REFERENCES sales (id) ON DELETE SET NULL,
+        total_paisa INTEGER NOT NULL CHECK(total_paisa > 0),
+        owner_paisa INTEGER NOT NULL,
+        cultivator_paisa INTEGER NOT NULL,
+        CHECK(owner_paisa + cultivator_paisa = total_paisa),
+        settle_date TEXT NOT NULL,
+        note TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_batai_settlements_agreement
+        ON batai_settlements (agreement_id)
     ''');
   }
 
