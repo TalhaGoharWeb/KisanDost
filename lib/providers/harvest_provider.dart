@@ -366,11 +366,45 @@ class HarvestProvider extends ChangeNotifier {
 
   Future<void> deleteSale(int id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete(
-      'sales',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.transaction((txn) async {
+      final List<Map<String, dynamic>> sMaps = await txn.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      final int? harvestId =
+          sMaps.isEmpty ? null : sMaps.first['harvest_id'] as int?;
+
+      await txn.delete(
+        'sales',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Reset the parent harvest so the sale can be re-recorded instead of
+      // leaving stale non-zero totals, buyer and payment status behind.
+      if (harvestId != null) {
+        final List<Map<String, dynamic>> hMaps = await txn.query(
+          'harvests',
+          where: 'id = ?',
+          whereArgs: [harvestId],
+        );
+        if (hMaps.isNotEmpty) {
+          final current = Harvest.fromMap(hMaps.first);
+          await txn.update(
+            'harvests',
+            {
+              'gross_amount': 0.0,
+              'net_income': 0.0 - current.totalExpense,
+              'buyer_name': null,
+              'payment_status': 'Pending',
+            },
+            where: 'id = ?',
+            whereArgs: [harvestId],
+          );
+        }
+      }
+    });
     await fetchHarvests();
   }
 
@@ -384,19 +418,43 @@ class HarvestProvider extends ChangeNotifier {
     String? buyerName,
   }) async {
     final db = await DatabaseHelper.instance.database;
-    await db.update(
-      'sales',
-      {
-        'harvest_id': harvestId,
-        'quantity': quantity,
-        'price_per_unit': pricePerUnit,
-        'total_amount': totalAmount,
-        'date': date,
-        'buyer_name': buyerName,
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.transaction((txn) async {
+      await txn.update(
+        'sales',
+        {
+          'harvest_id': harvestId,
+          'quantity': quantity,
+          'price_per_unit': pricePerUnit,
+          'total_amount': totalAmount,
+          'date': date,
+          'buyer_name': buyerName,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Keep the parent harvest in sync with the edited sale: the harvest's
+      // money fields mirror the sale's total so the two can never disagree.
+      final List<Map<String, dynamic>> hMaps = await txn.query(
+        'harvests',
+        where: 'id = ?',
+        whereArgs: [harvestId],
+      );
+      if (hMaps.isNotEmpty) {
+        final current = Harvest.fromMap(hMaps.first);
+        await txn.update(
+          'harvests',
+          {
+            'rate_per_unit': pricePerUnit,
+            'gross_amount': totalAmount,
+            'net_income': totalAmount - current.totalExpense,
+            'buyer_name': buyerName,
+          },
+          where: 'id = ?',
+          whereArgs: [harvestId],
+        );
+      }
+    });
     await fetchHarvests();
   }
 }
