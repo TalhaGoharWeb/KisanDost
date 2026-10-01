@@ -19,6 +19,10 @@ class AppTheme {
         error: errorColor,
       ),
       fontFamily: 'Jameel Noori Nastaleeq', // Enforcing Nastaleeq
+      // Safety net: any glyph Nastaleeq lacks falls back to Noto Sans
+      // (not the reverse — Nastaleeq HAS decorative digit glyphs, which is
+      // why money/quantities use the DigitText widget instead).
+      fontFamilyFallback: const ['Noto Sans'],
       textTheme: const TextTheme(
         displayLarge: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
         displayMedium: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
