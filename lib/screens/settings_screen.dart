@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import '../services/notification_service.dart';
 import '../database/db_helper.dart';
+import 'backup_screen.dart';
 import '../providers/task_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/crop_provider.dart';
@@ -482,10 +483,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: const ListTile(
-                leading: Icon(Icons.cloud_upload_outlined, color: Colors.grey),
-                title: Text('ڈیٹا بیک اپ (آف لائن)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
-                subtitle: Text('جلد آ رہا ہے (Coming Soon)', style: TextStyle(color: Colors.grey)),
+              child: ListTile(
+                leading: const Icon(Icons.backup, color: Colors.deepPurple),
+                title: const Text('ڈیٹا بیک اپ اور بحالی',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                subtitle: const Text('بیک اپ بنائیں، بحال کریں یا شیئر کریں'),
+                trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BackupScreen()),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 24),
