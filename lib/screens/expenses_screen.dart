@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -91,7 +92,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       ? SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.5,
+                          height: math.max(
+                            MediaQuery.of(context).size.height * 0.5,
+                            400.0,
+                          ),
                           child: const EmptyStateWidget(
                             message: 'کوئی خرچہ ریکارڈ نہیں ہے',
                             subtitle:

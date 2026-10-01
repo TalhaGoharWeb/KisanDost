@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/digit_text.dart';
@@ -148,7 +149,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ? SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.5,
+                          height: math.max(
+                            MediaQuery.of(context).size.height * 0.5,
+                            400.0,
+                          ),
                           child: const EmptyStateWidget(
                             message: 'کوئی اسٹاک موجود نہیں ہے',
                             subtitle:

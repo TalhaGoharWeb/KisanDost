@@ -12,6 +12,7 @@ import 'package:kisan_dost/providers/farm_provider.dart';
 import 'package:kisan_dost/providers/party_provider.dart';
 import 'package:kisan_dost/screens/dashboard_screen.dart';
 import 'package:kisan_dost/screens/task_form_screen.dart';
+import 'package:kisan_dost/services/demo_data_service.dart';
 import 'package:kisan_dost/services/money.dart';
 import 'package:kisan_dost/services/today_summary.dart';
 
@@ -154,6 +155,9 @@ Widget makeHome({
           payable: partyPayable,
         ),
       ),
+      // DemoDataService is always in the real app's provider tree; the
+      // dashboard's demo banner consumes it. Defaults to inactive here.
+      ChangeNotifierProvider<DemoDataService>(create: (_) => DemoDataService()),
     ],
     child: const MaterialApp(home: DashboardScreen()),
   );
@@ -280,9 +284,7 @@ void main() {
     testWidgets('tapping a task opens the task form', (tester) async {
       final now = DateTime.now();
       await tester.pumpWidget(
-        makeHome(
-          tasks: [task(1, 'پانی لگائیں', laterToday(now))],
-        ),
+        makeHome(tasks: [task(1, 'پانی لگائیں', laterToday(now))]),
       );
       await tester.pumpAndSettle();
 
