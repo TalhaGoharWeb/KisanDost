@@ -372,7 +372,13 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             labelText: 'قیمت خرید (روپے)',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (value) => value!.isEmpty ? 'قیمت درج کریں' : null,
+                          validator: (value) {
+                            if (value!.isEmpty) return 'قیمت درج کریں';
+                            if (double.tryParse(value) == null) {
+                              return 'صرف نمبر درج کریں';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -391,6 +397,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 if (value!.isEmpty) return 'مقدار درج کریں';
                                 final double? qty = double.tryParse(value);
                                 if (qty == null) return 'صرف نمبر درج کریں';
+                                if (qty <= 0) return 'مقدار صفر سے زیادہ ہونی چاہیے';
                                 if (!_directPurchase && _selectedInventoryItem != null) {
                                   final double convertedQty = convertUnit(qty, _selectedUnit, _selectedInventoryItem!.unit);
                                   if (convertedQty > _selectedInventoryItem!.quantity) {
@@ -540,14 +547,28 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                               inventoryQty = enteredQty;
                               inventoryUnit = _selectedUnit;
                               finalExpenseAmount = double.tryParse(_priceController.text);
-                              
+
+                              // Guard: never divide by a null price or a
+                              // zero/negative quantity. Validators should catch
+                              // this first, but a division must never trust the
+                              // form alone — show an error instead of crashing.
+                              if (finalExpenseAmount == null || inventoryQty <= 0) {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('مقدار اور قیمت درست درج کریں (صفر سے زیادہ)'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
                               // Create in inventory first so we can deduct it
                               await inventoryProvider.addInventoryItem(
                                 category: _inventoryCategory!,
                                 name: inventoryName,
                                 unit: _selectedUnit,
                                 quantity: inventoryQty,
-                                costPerUnit: finalExpenseAmount! / inventoryQty,
+                                costPerUnit: finalExpenseAmount / inventoryQty,
                               );
                             } else {
                               inventoryName = _selectedInventoryItem!.name;
