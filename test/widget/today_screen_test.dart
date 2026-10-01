@@ -9,6 +9,7 @@ import 'package:kisan_dost/providers/harvest_provider.dart';
 import 'package:kisan_dost/providers/theka_provider.dart';
 import 'package:kisan_dost/providers/crop_provider.dart';
 import 'package:kisan_dost/providers/farm_provider.dart';
+import 'package:kisan_dost/providers/party_provider.dart';
 import 'package:kisan_dost/screens/dashboard_screen.dart';
 import 'package:kisan_dost/screens/task_form_screen.dart';
 import 'package:kisan_dost/services/money.dart';
@@ -98,6 +99,21 @@ class FakeFarmProvider extends FarmProvider {
   Future<void> fetchFarms() async {}
 }
 
+class FakePartyProvider extends PartyProvider {
+  FakePartyProvider({this.receivable = 0, this.payable = 0});
+  final int receivable;
+  final int payable;
+
+  @override
+  int get totalReceivablePaisa => receivable;
+
+  @override
+  int get totalPayablePaisa => payable;
+
+  @override
+  Future<void> fetchParties() async {}
+}
+
 // ---------- Harness ----------
 
 Widget makeHome({
@@ -109,6 +125,8 @@ Widget makeHome({
   List<ThekaInstallment> installments = const [],
   List<CropSeasonWithDetails> crops = const [],
   List<Farm> farms = const [],
+  int partyReceivable = 0,
+  int partyPayable = 0,
 }) {
   return MultiProvider(
     providers: [
@@ -124,6 +142,9 @@ Widget makeHome({
           value: FakeCropProvider(List.of(crops))),
       ChangeNotifierProvider<FarmProvider>.value(
           value: FakeFarmProvider(List.of(farms))),
+      ChangeNotifierProvider<PartyProvider>.value(
+          value: FakePartyProvider(
+              receivable: partyReceivable, payable: partyPayable)),
     ],
     child: const MaterialApp(home: DashboardScreen()),
   );
@@ -310,6 +331,26 @@ void main() {
       expect(find.text(Money(500000).format()), findsNothing);
       expect(find.text(Money(200000).format()), findsNothing);
     });
+
+    testWidgets('party receivable/payable lines show when non-zero',
+        (tester) async {
+      await tester.pumpWidget(
+          makeHome(partyReceivable: 250000, partyPayable: 100000));
+      await tester.pumpAndSettle();
+
+      expect(find.text('لوگوں سے لینا ہے'), findsOneWidget);
+      expect(find.text('لوگوں کو دینا ہے'), findsOneWidget);
+      expect(find.text(Money(250000).format()), findsOneWidget);
+      expect(find.text(Money(100000).format()), findsOneWidget);
+    });
+
+    testWidgets('party lines hidden when both are zero', (tester) async {
+      await tester.pumpWidget(makeHome());
+      await tester.pumpAndSettle();
+
+      expect(find.text('لوگوں سے لینا ہے'), findsNothing);
+      expect(find.text('لوگوں کو دینا ہے'), findsNothing);
+    });
   });
 
   group('TODAY home — crops', () {
@@ -412,6 +453,13 @@ void main() {
       ], now);
       expect(list.map((i) => i.amountPaisa).toList(), [50000, 100000]);
       expect(remainingPaisa(list.first), 50000);
+    });
+
+    test('party totals split receivable and payable', () {
+      expect(totalReceivablePaisa({1: 50000, 2: -30000, 3: 0}), 50000);
+      expect(totalPayablePaisa({1: 50000, 2: -30000, 3: 0}), 30000);
+      expect(totalReceivablePaisa({}), 0);
+      expect(totalPayablePaisa({}), 0);
     });
   });
 }

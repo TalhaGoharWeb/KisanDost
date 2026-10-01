@@ -124,7 +124,8 @@ void main() {
         expect(info.hasSidecar, isTrue);
         expect(info.sizeBytes, greaterThan(0));
         expect(info.name, startsWith('kisandost_backup_'));
-        expect(info.name, endsWith('_v12.db'));
+        expect(info.name,
+            endsWith('_v${DatabaseHelper.schemaVersion}.db'));
 
         // Throws on any problem.
         await backups.verifyBackup(info.path);
@@ -227,7 +228,7 @@ void main() {
       expect(list.any((b) => b.label == 'pre-restore'), isTrue);
     });
 
-    test('migrates a v11-era backup forward to v12 on restore', () async {
+    test('migrates a v11-era backup forward to v13 on restore', () async {
       await populateSampleData();
 
       // Hand-craft a v11-shaped backup: REAL money columns, user_version 11.
@@ -344,8 +345,15 @@ void main() {
       final db = await DatabaseHelper.instance.database;
       expect(
         Sqflite.firstIntValue(await db.rawQuery('PRAGMA user_version')),
-        12,
+        DatabaseHelper.schemaVersion,
       );
+      // The v13 party tables were created by the forward migration too.
+      final allTables = (await db.rawQuery(
+              "SELECT name FROM sqlite_master WHERE type = 'table'"))
+          .map((r) => r['name'] as String)
+          .toSet();
+      expect(allTables,
+          containsAll(['parties', 'party_ledger_entries']));
       final cols =
           (await db.rawQuery(
             'PRAGMA table_info(expenses)',
@@ -462,6 +470,8 @@ void main() {
           'ushr_records',
           'thekas',
           'theka_installments',
+          'parties',
+          'party_ledger_entries',
           'tasks',
           'inventory_transactions',
         ]),
