@@ -22,6 +22,18 @@ class BataiProvider extends ChangeNotifier {
   Future<DatabaseExecutor> _db() async =>
       testExecutor ?? await DatabaseHelper.instance.database;
 
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly. This keeps
+  /// the testExecutor hook working while production always gets ACID.
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<BataiAgreementSummary> _agreements = [];
 
   List<BataiAgreementSummary> get agreements => _agreements;
@@ -303,8 +315,7 @@ class BataiProvider extends ChangeNotifier {
       throw BataiException('درست تاریخ درج کریں۔');
     }
     final split = splitBatai(totalPaisa, agreement.ownerSharePercent);
-    final db = await _db();
-    final id = await db.transaction((txn) async {
+    final id = await _txn((txn) async {
       return await txn.insert(
         'batai_settlements',
         BataiSettlement(
