@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../database/db_helper.dart';
+
 /// Append-only audit trail: every create/update/delete on the app's tables
 /// writes one row here describing what changed. There is deliberately NO
 /// delete or update API for audit rows, and the UI never offers per-row
@@ -63,6 +65,26 @@ class AuditService {
         where: 'table_name = ? AND row_id = ?',
         whereArgs: [table, rowId],
         orderBy: 'id DESC',
+      );
+    } on DatabaseException catch (e) {
+      if (!e.toString().contains('no such table')) rethrow;
+      return [];
+    }
+  }
+
+  /// Every audit row, newest first. Powers the audit-log viewer screen.
+  /// Pass an [executor] in tests; production callers omit it and read the
+  /// app database. Returns an empty list when the table is absent.
+  static Future<List<Map<String, dynamic>>> listAll({
+    DatabaseExecutor? executor,
+    int limit = 500,
+  }) async {
+    try {
+      final db = executor ?? await DatabaseHelper.instance.database;
+      return await db.query(
+        'audit_log',
+        orderBy: 'id DESC',
+        limit: limit,
       );
     } on DatabaseException catch (e) {
       if (!e.toString().contains('no such table')) rethrow;

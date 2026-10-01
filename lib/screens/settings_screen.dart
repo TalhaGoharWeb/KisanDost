@@ -6,6 +6,7 @@ import '../services/notification_service.dart';
 import '../database/db_helper.dart';
 import 'backup_screen.dart';
 import 'recycle_bin_screen.dart';
+import 'audit_log_screen.dart';
 import '../providers/task_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/crop_provider.dart';
@@ -511,6 +512,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.history, color: Colors.deepPurple),
+                    title: const Text('تبدیلیوں کا ریکارڈ',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    subtitle: const Text('ہر بنائی، تبدیلی اور حذف کا ریکارڈ'),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AuditLogScreen()),
                       );
                     },
                   ),
