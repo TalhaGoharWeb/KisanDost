@@ -50,20 +50,44 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
     final List<CropPL> cropPLList = allSeasons.map((details) {
       final seasonId = details.cropSeason.id;
-      
-      // Expenses for this season (linked via activities)
+
+      // Expenses for this season:
+      //  (a) expenses linked via activities (legacy path — incl. the auto-created
+      //      activity the Expenses screen adds for a crop-linked expense), and
+      //  (b) expenses linked directly via expenses.crop_season_id (new path).
+      // Dedupe by expense id so an expense linked both ways is counted once.
       final cropActivities = activityProvider.activities
           .where((act) => act.activity.cropSeasonId == seasonId)
           .toList();
-      final cropExpenses = cropActivities.fold(
-          0.0, (sum, act) => sum + (act.expenseAmount ?? 0.0));
+      final linkedExpenseIds = <int>{};
+      double activityLinkedExpenses = 0.0;
+      for (final act in cropActivities) {
+        final expId = act.activity.expenseId;
+        if (expId != null && linkedExpenseIds.add(expId)) {
+          activityLinkedExpenses += act.expenseAmount ?? 0.0;
+        }
+      }
+      double directExpenses = 0.0;
+      for (final exp in expenseProvider.expenses) {
+        final expId = exp.id;
+        if (exp.cropSeasonId == seasonId &&
+            expId != null &&
+            !linkedExpenseIds.contains(expId)) {
+          directExpenses += exp.amount;
+        }
+      }
+      final cropExpenses = activityLinkedExpenses + directExpenses;
 
-      // Income for this season (sales linked to harvests of this season)
+      // Income for this season: cash received from sales of this season's
+      // harvests. Uses sale.totalAmount — the SAME definition as the overall
+      // header above — so the two can never disagree. Unsold harvests
+      // contribute 0 (no phantom income from unsold stock).
       final cropHarvests = harvestProvider.harvests
           .where((h) => h.harvest.cropSeasonId == seasonId)
           .toList();
       final cropIncome = cropHarvests
-          .fold(0.0, (sum, h) => sum + h.harvest.grossAmount);
+          .where((h) => h.sale != null)
+          .fold(0.0, (sum, h) => sum + h.sale!.totalAmount);
 
       final cropHarvestExpenses = cropHarvests.fold(
           0.0, (sum, h) => sum + h.harvest.totalExpense);
@@ -133,9 +157,22 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     final sortedCategories = categorySums.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // Indirect Expenses
-    final linkedExpenseSum = activityProvider.activities
-        .fold(0.0, (sum, act) => sum + (act.expenseAmount ?? 0.0));
+    // Indirect Expenses: expenses not linked to any crop — neither via
+    // activities nor via the direct expenses.crop_season_id link.
+    final linkedExpenseIds = <int>{};
+    for (final act in activityProvider.activities) {
+      final expId = act.activity.expenseId;
+      if (expId != null) linkedExpenseIds.add(expId);
+    }
+    for (final exp in expenseProvider.expenses) {
+      final expId = exp.id;
+      if (exp.cropSeasonId != null && expId != null) {
+        linkedExpenseIds.add(expId);
+      }
+    }
+    final linkedExpenseSum = expenseProvider.expenses
+        .where((e) => e.id != null && linkedExpenseIds.contains(e.id))
+        .fold(0.0, (sum, e) => sum + e.amount);
     final indirectExpenses = totalExpenses - linkedExpenseSum;
 
     return DefaultTabController(
