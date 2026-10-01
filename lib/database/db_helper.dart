@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 12;
+  static const _databaseVersion = 13;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -276,6 +276,34 @@ class DatabaseHelper {
         FOREIGN KEY (expense_id) REFERENCES expenses (id) ON DELETE SET NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE parties (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE party_ledger_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        party_id INTEGER NOT NULL,
+        entry_type TEXT NOT NULL,
+        amount_paisa INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (party_id) REFERENCES parties (id) ON DELETE RESTRICT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_party_ledger_entries_party
+        ON party_ledger_entries (party_id)
+    ''');
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -444,6 +472,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 12) {
       await migrateV11ToV12(db);
+    }
+    if (oldVersion < 13) {
+      await migrateV12ToV13(db);
     }
   }
 
@@ -762,6 +793,41 @@ class DatabaseHelper {
       ['id', 'theka_id', 'amount_paisa', 'due_date', 'status', 'paid_amount_paisa', 'paid_date', 'expense_id'],
       ['id', 'theka_id', paisa('amount'), 'due_date', 'status', paisa('paid_amount'), 'paid_date', 'expense_id'],
     );
+  }
+
+  /// v12 -> v13 migration, exposed for tests: party ledger (udhaar).
+  ///
+  /// Creates `parties` and `party_ledger_entries` plus an index on
+  /// `party_ledger_entries.party_id`. Idempotent (`IF NOT EXISTS`) — a
+  /// repeated run is a no-op. No data moves; nothing is dropped.
+  /// Balances are always computed with SUM(), never stored.
+  @visibleForTesting
+  static Future<void> migrateV12ToV13(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS parties (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS party_ledger_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        party_id INTEGER NOT NULL,
+        entry_type TEXT NOT NULL,
+        amount_paisa INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (party_id) REFERENCES parties (id) ON DELETE RESTRICT
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_party_ledger_entries_party
+        ON party_ledger_entries (party_id)
+    ''');
   }
 
   /// v9 -> v10 migration, exposed for tests.
