@@ -427,7 +427,7 @@ class _UshrScreenState extends State<UshrScreen> {
 
             final double ushrQty = (qty * percentage) / 100.0;
             final int ushrAmountPaisa =
-                (marketValuePaisa * percentage / 100.0).round();
+                UshrProvider.computeUshrAmountPaisa(marketValuePaisa, percentage);
 
             // Unit Conversions
             final double ushrQtyKg = ushrQty * 40.0; // 1 Maund = 40 KG

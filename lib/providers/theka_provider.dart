@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../services/audit_service.dart';
 import '../services/money.dart';
 
 class ThekaProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  ThekaProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly.
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<Theka> _thekas = [];
   final Map<int, List<ThekaInstallment>> _thekaInstallments = {}; // thekaId -> installments
 
@@ -40,7 +61,7 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchThekas() async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final List<Map<String, dynamic>> maps = await db.query('thekas', orderBy: 'id DESC');
     _thekas = List.generate(maps.length, (i) => Theka.fromMap(maps[i]));
 
@@ -62,8 +83,8 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   Future<void> addTheka(Theka theka, List<ThekaInstallment> installments) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    final db = await _db();
+    await _txn((txn) async {
       final thekaId = await txn.insert('thekas', theka.toMap());
       for (var inst in installments) {
         final newInst = ThekaInstallment(
@@ -92,8 +113,8 @@ class ThekaProvider extends ChangeNotifier {
   /// DELIBERATE Phase 11: deleteTheka keeps its hard-delete semantics (the
   /// delete-theka problem is deferred by design). It is logged as a delete.
   Future<void> deleteTheka(int thekaId) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    final db = await _db();
+    await _txn((txn) async {
       // 1. Delete associated expenses
       final List<Map<String, dynamic>> instMaps = await txn.query(
         'theka_installments',
@@ -135,8 +156,8 @@ class ThekaProvider extends ChangeNotifier {
     required String farmName,
     required int installmentIndex,
   }) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    final db = await _db();
+    await _txn((txn) async {
       // 1. Fetch current installment
       final List<Map<String, dynamic>> maps = await txn.query(
         'theka_installments',
@@ -213,8 +234,8 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   Future<void> markInstallmentPending(int installmentId) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    final db = await _db();
+    await _txn((txn) async {
       final List<Map<String, dynamic>> maps = await txn.query(
         'theka_installments',
         where: 'id = ?',
@@ -252,8 +273,8 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   Future<void> updateInstallmentSchedule(int thekaId, List<ThekaInstallment> newSchedule) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    final db = await _db();
+    await _txn((txn) async {
       // Verify no payments are recorded yet
       final List<Map<String, dynamic>> maps = await txn.query(
         'theka_installments',

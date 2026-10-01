@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
 
@@ -19,12 +20,39 @@ class UshrWithDetails {
 }
 
 class UshrProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  UshrProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly.
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<UshrWithDetails> _ushrRecords = [];
 
   List<UshrWithDetails> get ushrRecords => _ushrRecords;
 
+  /// Pure ushr-amount computation, extracted verbatim from ushr_screen.dart
+  /// so it is unit-testable: (marketValuePaisa * percentage / 100.0).round().
+  ///
+  /// No behavior change — the screen calls this now.
+  static int computeUshrAmountPaisa(int marketValuePaisa, double percentage) =>
+      (marketValuePaisa * percentage / 100.0).round();
+
   Future<void> fetchUshrRecords() async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     // remaining_balance is COMPUTED in the UshrRecord model now — never read
     // from (or written to) the database.
     final String query = '''
@@ -92,12 +120,12 @@ class UshrProvider extends ChangeNotifier {
     required int cashPaidPaisa,
     required int ratePerUnitPaisa,
   }) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
 
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       int? expenseId;
       if (totalPaidPaisa > 0) {
         String payTypeUrdu = 'نقد (Cash)';
@@ -154,12 +182,12 @@ class UshrProvider extends ChangeNotifier {
     required int cashPaidPaisa,
     required int ratePerUnitPaisa,
   }) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
 
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(
         'ushr_records',
         where: 'id = ?',
@@ -231,9 +259,9 @@ class UshrProvider extends ChangeNotifier {
   }
 
   Future<void> deleteUshrRecord(int id) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
 
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(
         'ushr_records',
         where: 'id = ?',
