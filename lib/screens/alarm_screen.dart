@@ -6,6 +6,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:intl/intl.dart';
 import '../database/db_helper.dart';
 import '../providers/task_provider.dart';
+import '../l10n/strings.dart';
 
 class AlarmScreen extends StatefulWidget {
   final int taskId;
@@ -172,7 +173,7 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
               'action_complete',
-              'مکمل ہو گیا',
+              Strings.done,
               showsUserInterface: false,
             ),
             AndroidNotificationAction(

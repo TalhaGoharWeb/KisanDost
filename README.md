@@ -37,9 +37,12 @@ Designed specifically with native **Urdu typography (Jameel Noori Nastaleeq)** a
 | 📊 **Profit & Loss Analysis (منافع و نقصان)** | Automatic calculation of net income per crop season and per farm plot with clear financial summaries. |
 | 📜 **Theka Management (ٹھیکہ کا انتظام)** | Full management of leased agricultural land: contract dates, lease costs, installment payment schedules, and balances. |
 | 🤲 **Ushr Calculator (عشر کیلکولیٹر)** | Built-in Islamic agricultural tithe calculator supporting 10% (barani/rain-fed) and 5% (canal/tubewell) rules with allowable cost deductions. |
-| 📦 **Warehouse & Inventory (اسٹاک اور گودام)** | Keep track of remaining fertilizers, seeds, and pesticide inventory with consumption alerts. |
+| 📦 **Warehouse & Inventory (اسٹاک اور گودام)** | Keep track of remaining fertilizers, seeds, and pesticide inventory with an append-only transaction ledger and consumption validation. |
 | ⏰ **Agricultural Alarms & Tasks (یاد دہانیاں اور الارم)** | Schedule field tasks and set custom full-screen alarm reminders for critical irrigation and spray intervals. |
-| 📄 **PDF Reports & Invoicing (پی ڈی ایف رپورٹس)** | Generate and print downloadable PDF statements for farm accounts, sales, and expenses. |
+| 📄 **PDF Reports & Receipts (پی ڈی ایف رپورٹس)** | Generate downloadable PDF farm P&L reports and party payment receipts (Urdu rendered via the app's own text engine), plus UTF-8 CSV exports of expenses, sales, ledger, inventory and settlements. |
+| 🤝 **Party Ledger / Udhaar (پارٹی کھاتہ)** | Track who owes whom: append-only ledger with ادھار دیا / ادھار لیا / وصولی / ادائیگی entries and live balances. |
+| 🌾 **Batai / Sharecropping (بٹائی)** | Record sharecropping agreements (owner/cultivator shares, expense terms) and per-harvest settlements with exact-paisa splits. |
+| 💾 **Backup & Restore (بیک اپ)** | Versioned, hash-verified local backups with automatic daily backup, replace or merge restore. |
 | 🌐 **100% Offline-First (بغیر انٹرنیٹ کے)** | All data is stored securely on device via SQLite. Zero internet or account signup required. |
 
 ---
@@ -51,9 +54,8 @@ Designed specifically with native **Urdu typography (Jameel Noori Nastaleeq)** a
 - **Database:** Local [SQLite](https://pub.dev/packages/sqflite) (`sqflite`, `path_provider`)
 - **State Management:** [Provider](https://pub.dev/packages/provider) Pattern
 - **Notifications & Scheduling:** `flutter_local_notifications` & `timezone`
-- **Document Generation:** `pdf` & `printing`
-- **Animations & Assets:** [Lottie Flutter](https://pub.dev/packages/lottie)
-- **Typography:** Custom embedded *Jameel Noori Nastaleeq* font
+- **Document Generation:** `pdf` & `printing` (PDF reports rendered from the app's own widgets so Urdu shapes correctly)
+- **Typography:** Custom embedded *Jameel Noori Nastaleeq* font for Urdu, *Noto Sans* (OFL) for tabular money/quantity digits
 
 ---
 
@@ -66,13 +68,14 @@ kisan_dost/
 │   ├── images/              # App branding, icons, and illustrations
 │   └── lottie/              # Micro-animations
 ├── lib/
-│   ├── database/            # SQLite database helper & table schemas
-│   ├── models/              # Data models (Farm, Crop, Expense, Harvest, Theka, Task, etc.)
+│   ├── database/            # SQLite database helper & table schemas (v14)
+│   ├── l10n/                # AppLocale (locale-driven RTL) + centralized Strings
+│   ├── models/              # Data models (Farm, Crop, Expense, Harvest, Theka, Task, Party, Batai…)
 │   ├── providers/           # ChangeNotifier state providers (business logic)
-│   ├── screens/             # UI screens (Dashboard, Expenses, Harvest, Theka, Ushr, etc.)
-│   ├── services/            # Local notification & alarm services
-│   ├── theme/               # Colors, typography, and themes
-│   ├── widgets/             # Reusable UI components
+│   ├── screens/             # UI screens (TODAY home, Expenses, Harvest, Theka, Ushr, Party, Batai, Reports…)
+│   ├── services/            # Money (integer paisa), Quantity, UnitConverter/UnitDisplay, backup, export, PDF…
+│   ├── theme/               # Colors, typography (Nastaleeq + Noto Sans digits), and themes
+│   ├── widgets/             # Reusable UI components (incl. DigitText for money/quantities)
 │   └── main.dart            # Application entry point & provider tree
 └── pubspec.yaml             # Dependencies and configuration
 ```

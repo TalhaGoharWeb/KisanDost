@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/digit_text.dart';
 import '../models/batai.dart';
 import '../providers/batai_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../services/money.dart';
 import '../widgets/batai_status_chip.dart';
 import 'batai_screen.dart';
+import '../l10n/strings.dart';
 
 /// One batai agreement: its terms, its settlements, and the actions
 /// (settle a harvest, change status, edit, delete).
@@ -189,7 +191,7 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
                 children: [
                   const Text('اب تک کل چکتائی',
                       style: TextStyle(fontSize: 14)),
-                  Text(Money(total).format(),
+                  DigitText(Money(total).format(),
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
@@ -201,7 +203,7 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
                 children: [
                   const Text('آپ کا موصول شدہ حصہ',
                       style: TextStyle(fontSize: 14)),
-                  Text(Money(mine).format(),
+                  DigitText(Money(mine).format(),
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -252,7 +254,7 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
         ),
         TextButton(
           onPressed: () => _delete(a.id!),
-          child: const Text('حذف کریں',
+          child: const Text(Strings.delete,
               style: TextStyle(color: Colors.red)),
         ),
       ],
@@ -372,7 +374,7 @@ class _BataiDetailScreenState extends State<BataiDetailScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child:
-                const Text('حذف کریں', style: TextStyle(color: Colors.red)),
+                const Text(Strings.delete, style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -588,7 +590,7 @@ class _SettleDialogState extends State<_SettleDialog> {
                 controller: _noteCtrl,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  labelText: 'نوٹ (اختیاری)',
+                  labelText: Strings.noteOptional,
                   border: OutlineInputBorder(),
                 ),
               ),

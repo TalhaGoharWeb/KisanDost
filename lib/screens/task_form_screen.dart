@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/task_provider.dart';
+import '../l10n/strings.dart';
 
 class TaskFormScreen extends StatefulWidget {
   final TaskItem? task;
@@ -264,7 +265,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                   foregroundColor: Colors.white,
                 ),
                 child: Text(
-                  isEditing ? 'ترمیم محفوظ کریں' : 'محفوظ کریں',
+                  isEditing ? 'ترمیم محفوظ کریں' : Strings.save,
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),

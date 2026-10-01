@@ -11,6 +11,7 @@ import '../models/party.dart';
 import '../providers/harvest_provider.dart';
 import 'money.dart';
 import 'pnl_summary.dart';
+import '../l10n/strings.dart';
 
 /// UTF-8 BOM — required for Excel to detect UTF-8 and render Urdu.
 const String csvBom = '\uFEFF';
@@ -45,7 +46,7 @@ String expensesCsv(
   required Map<String, String> categoryLabels,
 }) {
   return _csv(
-    const ['تاریخ', 'زمرہ', 'رقم', 'زمین', 'کھیت', 'فصل', 'تفصیل'],
+    const [Strings.date, 'زمرہ', 'رقم', 'زمین', 'کھیت', 'فصل', 'تفصیل'],
     [
       for (final e in expenses)
         [
@@ -64,7 +65,7 @@ String expensesCsv(
 /// Sales CSV — one row per sold harvest.
 String salesCsv(List<HarvestWithDetails> harvests) {
   return _csv(
-    const ['تاریخ', 'فصل', 'زمین', 'مقدار', 'اکائی', 'فی اکائی قیمت', 'کل رقم', 'خریدار'],
+    const [Strings.date, 'فصل', 'زمین', 'مقدار', 'اکائی', 'فی اکائی قیمت', 'کل رقم', 'خریدار'],
     [
       for (final h in harvests)
         if (h.sale != null)
@@ -115,7 +116,7 @@ String partyLedgerCsv(
       ],
   ];
   return _csv(
-    const ['تاریخ', 'پارٹی', 'قسم', 'رقم', 'سمت', 'نوٹ'],
+    const [Strings.date, 'پارٹی', 'قسم', 'رقم', 'سمت', 'نوٹ'],
     rows,
   );
 }
@@ -126,7 +127,7 @@ String inventoryTransactionsCsv(
   Map<int, String> itemNames,
 ) {
   return _csv(
-    const ['تاریخ', 'آئٹم', 'قسم', 'مقدار', 'اکائی', 'فی اکائی قیمت', 'کل رقم', 'نوٹ'],
+    const [Strings.date, 'آئٹم', 'قسم', 'مقدار', 'اکائی', 'فی اکائی قیمت', 'کل رقم', 'نوٹ'],
     [
       for (final t in txns)
         [
@@ -150,7 +151,7 @@ String bataiSettlementsCsv(
   Map<int, String> agreementLabels,
 ) {
   return _csv(
-    const ['تاریخ', 'معاہدہ', 'کل رقم', 'مالک کا حصہ', 'کاشتکار کا حصہ', 'نوٹ'],
+    const [Strings.date, 'معاہدہ', 'کل رقم', 'مالک کا حصہ', 'کاشتکار کا حصہ', 'نوٹ'],
     [
       for (final s in settlements)
         [

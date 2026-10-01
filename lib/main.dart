@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'theme/app_theme.dart';
+import 'l10n/app_locale.dart';
 import 'screens/splash_screen.dart';
 
 import 'providers/farm_provider.dart';
@@ -46,20 +48,21 @@ class KisanDostApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UshrProvider()..fetchUshrRecords()),
         ChangeNotifierProvider(create: (_) => PartyProvider()..fetchParties()),
         ChangeNotifierProvider(create: (_) => BataiProvider()..fetchAgreements()),
+        // App locale: text direction (RTL) comes from the locale via
+        // flutter_localizations — never from a forced Directionality widget.
+        ChangeNotifierProvider(create: (_) => AppLocale()..load()),
       ],
-      child: MaterialApp(
-        title: 'کسان دوست',
-        navigatorKey: NotificationService.navigatorKey,
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        // Force RTL for Urdu
-        builder: (context, child) {
-          return Directionality(
-            textDirection: TextDirection.rtl,
-            child: child!,
-          );
-        },
-        home: const SplashScreen(),
+      child: Consumer<AppLocale>(
+        builder: (context, appLocale, _) => MaterialApp(
+          title: 'کسان دوست',
+          navigatorKey: NotificationService.navigatorKey,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          locale: appLocale.locale,
+          supportedLocales: const [Locale('ur'), Locale('en')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const SplashScreen(),
+        ),
       ),
     );
   }

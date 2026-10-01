@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/digit_text.dart';
 import '../models/party.dart';
 import '../providers/party_provider.dart';
 import '../services/money.dart';
 import '../services/today_summary.dart';
 import '../widgets/empty_state_widget.dart';
+import '../l10n/strings.dart';
 
 class PartyDetailScreen extends StatefulWidget {
   final int partyId;
@@ -104,8 +106,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                       child: Text(party!.phone!,
                           style: const TextStyle(fontSize: 15)),
                     ),
-                  Text(
-                    Money(balance.abs()).format(),
+                  DigitText(Money(balance.abs()).format(),
                     style: TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.bold,
@@ -232,7 +233,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                 controller: notesCtrl,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  labelText: 'نوٹ (اختیاری)',
+                  labelText: Strings.noteOptional,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -255,7 +256,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
               }
             },
             child:
-                const Text('حذف کریں', style: TextStyle(color: Colors.red)),
+                const Text(Strings.delete, style: TextStyle(color: Colors.red)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -280,7 +281,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                 }
               }
             },
-            child: const Text('محفوظ کریں'),
+            child: const Text(Strings.save),
           ),
         ],
       ),
@@ -353,7 +354,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                   },
                   child: InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'تاریخ',
+                      labelText: Strings.date,
                       border: OutlineInputBorder(),
                     ),
                     child: Text(urduDateLine(date)),
@@ -364,7 +365,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                   controller: noteCtrl,
                   maxLines: 2,
                   decoration: const InputDecoration(
-                    labelText: 'نوٹ (اختیاری)',
+                    labelText: Strings.noteOptional,
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -406,7 +407,7 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                   }
                 }
               },
-              child: const Text('محفوظ کریں'),
+              child: const Text(Strings.save),
             ),
           ],
         ),

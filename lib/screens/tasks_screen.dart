@@ -5,6 +5,7 @@ import 'dart:async';
 import '../providers/task_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import 'task_form_screen.dart';
+import '../l10n/strings.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -471,7 +472,7 @@ class _TasksScreenState extends State<TasksScreen> {
     final now = DateTime.now();
     if (task.isCompleted) {
       return _getStatusBadge(
-        label: 'مکمل ہو گیا',
+        label: Strings.done,
         bgColor: Colors.green.shade100,
         textColor: Colors.green.shade800,
       );
@@ -532,7 +533,7 @@ class _TasksScreenState extends State<TasksScreen> {
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('حذف کریں', style: TextStyle(color: Colors.white, fontSize: 16)),
+            child: const Text(Strings.delete, style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
         ],
       ),

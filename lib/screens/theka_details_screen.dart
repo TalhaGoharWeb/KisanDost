@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../widgets/digit_text.dart';
 import '../providers/theka_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/expense_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
 import 'theka_form_screen.dart';
+import '../l10n/strings.dart';
 
 class ThekaDetailsScreen extends StatefulWidget {
   final int thekaId;
@@ -109,7 +111,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل'),
+                  child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -168,7 +170,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                       }
                     }
                   },
-                  child: const Text('محفوظ کریں'),
+                  child: const Text(Strings.save),
                 ),
               ],
             );
@@ -192,7 +194,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('کینسل'),
+              child: const Text(Strings.cancel),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -214,7 +216,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                   );
                 }
               },
-              child: const Text('حذف کریں'),
+              child: const Text(Strings.delete),
             ),
           ],
         );
@@ -298,7 +300,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'حذف کریں',
+            tooltip: Strings.delete,
             onPressed: () => _confirmDeleteAgreement(context, theka, farm.name, hasPayments),
           ),
         ],
@@ -533,8 +535,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
       children: [
         Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
         const SizedBox(height: 4),
-        Text(
-          Money(amount).format(),
+        DigitText(Money(amount).format(),
           style: TextStyle(color: textCol, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ],

@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../providers/task_provider.dart';
 import '../database/db_helper.dart';
 import '../screens/alarm_screen.dart';
+import '../l10n/strings.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) async {
@@ -105,7 +106,7 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
             actions: <AndroidNotificationAction>[
               const AndroidNotificationAction(
                 'action_complete',
-                'مکمل ہو گیا',
+                Strings.done,
                 showsUserInterface: false,
               ),
               AndroidNotificationAction(
@@ -290,7 +291,7 @@ class NotificationService {
               actions: <AndroidNotificationAction>[
                 const AndroidNotificationAction(
                   'action_complete',
-                  'مکمل ہو گیا',
+                  Strings.done,
                   showsUserInterface: false,
                 ),
                 AndroidNotificationAction(
@@ -335,7 +336,7 @@ class NotificationService {
                 actions: <AndroidNotificationAction>[
                   const AndroidNotificationAction(
                     'action_complete',
-                    'مکمل ہو گیا',
+                    Strings.done,
                     showsUserInterface: false,
                   ),
                   AndroidNotificationAction(

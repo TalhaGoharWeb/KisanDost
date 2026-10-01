@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../widgets/digit_text.dart';
 import 'activity_form_screen.dart';
 import '../providers/activity_provider.dart';
 import '../providers/crop_provider.dart';
@@ -10,6 +11,7 @@ import '../providers/harvest_provider.dart';
 import '../providers/task_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import '../services/money.dart';
+import '../l10n/strings.dart';
 
 class TodaysWorkScreen extends StatelessWidget {
   const TodaysWorkScreen({super.key});
@@ -142,8 +144,7 @@ class TodaysWorkScreen extends StatelessWidget {
                                Text('${item.fieldDisplayName} ($cropNameUrdu)'),
                               if (item.expenseAmountPaisa != null &&
                                   item.expenseAmountPaisa! > 0)
-                                Text(
-                                  Money(item.expenseAmountPaisa!).format(),
+                                DigitText(Money(item.expenseAmountPaisa!).format(),
                                   style: const TextStyle(
                                     color: Colors.red,
                                     fontWeight: FontWeight.bold,
@@ -202,7 +203,7 @@ class TodaysWorkScreen extends StatelessWidget {
                                 value: 'toggle_complete',
                                 child: Text(act.isCompleted ? 'نامکمل نشان کریں' : 'مکمل نشان کریں'),
                               ),
-                              const PopupMenuItem(value: 'delete', child: Text('حذف کریں')),
+                              const PopupMenuItem(value: 'delete', child: Text(Strings.delete)),
                             ],
                           ),
                         ),
@@ -273,7 +274,7 @@ class TodaysWorkScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -290,7 +291,7 @@ class TodaysWorkScreen extends StatelessWidget {
               Provider.of<TaskProvider>(context, listen: false).fetchTasks();
               Navigator.pop(ctx);
             },
-            child: const Text('حذف کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text(Strings.delete, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

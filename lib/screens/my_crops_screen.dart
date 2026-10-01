@@ -7,6 +7,7 @@ import '../providers/activity_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
+import '../l10n/strings.dart';
 
 class MyCropsScreen extends StatefulWidget {
   const MyCropsScreen({super.key});
@@ -397,7 +398,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                                               Text(
                                                 completionDate != null
                                                     ? 'تاریخِ تکمیل: $completionDate'
-                                                    : 'مکمل ہو گیا',
+                                                    : Strings.done,
                                                 style: TextStyle(
                                                   fontSize: 13,
                                                   color: Colors.green.shade700,
@@ -434,7 +435,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                                 style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
                                 onPressed: () => _confirmDeleteCrop(context, season.id!),
                                 icon: const Icon(Icons.delete_outline),
-                                label: const Text('حذف کریں', style: TextStyle(fontWeight: FontWeight.bold)),
+                                label: const Text(Strings.delete, style: TextStyle(fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ),
@@ -625,7 +626,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -648,7 +649,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       Navigator.pop(ctx);
                     }
                   },
-                  child: const Text('محفوظ کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: const Text(Strings.save, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -668,7 +669,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -697,7 +698,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('کینسل', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -709,7 +710,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
               Provider.of<CropProvider>(context, listen: false).deleteCropSeason(id);
               Navigator.pop(ctx);
             },
-            child: const Text('حذف کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text(Strings.delete, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -894,7 +895,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('کینسل', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  child: const Text(Strings.cancel, style: TextStyle(color: Colors.grey, fontSize: 16)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -922,7 +923,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                       );
                     }
                   },
-                  child: const Text('محفوظ کریں', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: const Text(Strings.save, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ],
             );

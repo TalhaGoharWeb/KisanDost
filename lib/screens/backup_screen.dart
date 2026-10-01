@@ -15,6 +15,7 @@ import '../providers/expense_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/theka_provider.dart';
 import '../providers/ushr_provider.dart';
+import '../l10n/strings.dart';
 
 /// ڈیٹا بیک اپ اور بحالی کی اسکرین: بیک اپ بنانا، فہرست، شیئر، حذف اور بحال (تبدیل/ضم)۔
 class BackupScreen extends StatefulWidget {
@@ -509,7 +510,7 @@ class _BackupScreenState extends State<BackupScreen> {
                                     TextButton.icon(
                                       onPressed: () => _confirmDelete(info),
                                       icon: const Icon(Icons.delete, size: 18),
-                                      label: const Text('حذف کریں'),
+                                      label: const Text(Strings.delete),
                                       style: TextButton.styleFrom(foregroundColor: Colors.red),
                                     ),
                                   ],

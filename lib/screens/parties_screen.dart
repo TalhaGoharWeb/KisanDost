@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/digit_text.dart';
 import '../models/party.dart';
 import '../providers/party_provider.dart';
 import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 import 'party_detail_screen.dart';
+import '../l10n/strings.dart';
 
 class PartiesScreen extends StatefulWidget {
   const PartiesScreen({super.key});
@@ -77,8 +79,7 @@ class _PartiesScreenState extends State<PartiesScreen> {
                 const Text('لوگوں سے لینا ہے',
                     style: TextStyle(fontSize: 14, color: Colors.black54)),
                 const SizedBox(height: 4),
-                Text(
-                  Money(receivable).format(),
+                DigitText(Money(receivable).format(),
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -93,8 +94,7 @@ class _PartiesScreenState extends State<PartiesScreen> {
                 const Text('لوگوں کو دینا ہے',
                     style: TextStyle(fontSize: 14, color: Colors.black54)),
                 const SizedBox(height: 4),
-                Text(
-                  Money(payable).format(),
+                DigitText(Money(payable).format(),
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -182,8 +182,7 @@ class _PartiesScreenState extends State<PartiesScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              Money(balance.abs()).format(),
+            DigitText(Money(balance.abs()).format(),
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -238,7 +237,7 @@ class _PartiesScreenState extends State<PartiesScreen> {
                 controller: notesCtrl,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  labelText: 'نوٹ (اختیاری)',
+                  labelText: Strings.noteOptional,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -260,7 +259,7 @@ class _PartiesScreenState extends State<PartiesScreen> {
                   }
                 }
               },
-              child: const Text('حذف کریں',
+              child: const Text(Strings.delete,
                   style: TextStyle(color: Colors.red)),
             ),
           TextButton(
@@ -295,7 +294,7 @@ class _PartiesScreenState extends State<PartiesScreen> {
                 }
               }
             },
-            child: const Text('محفوظ کریں'),
+            child: const Text(Strings.save),
           ),
         ],
       ),
