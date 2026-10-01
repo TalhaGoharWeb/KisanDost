@@ -41,6 +41,20 @@ void main() {
     final db = await openV13Db();
     await DatabaseHelper.migrateV12ToV13(db);
     await DatabaseHelper.migrateV13ToV14(db);
+    // Minimal stand-ins for the tables batai_agreements/_settlements
+    // reference. SQLite with PRAGMA foreign_keys = ON needs every
+    // REFERENCES target to EXIST (even for a plain DELETE on the child),
+    // so the harness creates them; production always has the real ones.
+    await db.execute(
+        'CREATE TABLE IF NOT EXISTS farms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, total_area REAL NOT NULL, created_at TEXT NOT NULL)');
+    await db.execute(
+        'CREATE TABLE IF NOT EXISTS fields (id INTEGER PRIMARY KEY AUTOINCREMENT, farm_id INTEGER NOT NULL, name TEXT NOT NULL, size_acres REAL NOT NULL, canal_water_available INTEGER NOT NULL DEFAULT 0, tube_well_available INTEGER NOT NULL DEFAULT 0, location TEXT)');
+    await db.execute(
+        'CREATE TABLE IF NOT EXISTS crop_seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, field_id INTEGER NOT NULL, crop_name TEXT NOT NULL, variety TEXT NOT NULL, status TEXT NOT NULL, start_date TEXT NOT NULL)');
+    await db.execute(
+        'CREATE TABLE IF NOT EXISTS harvests (id INTEGER PRIMARY KEY AUTOINCREMENT, crop_season_id INTEGER NOT NULL, quantity REAL NOT NULL, unit TEXT NOT NULL, date TEXT NOT NULL)');
+    await db.execute(
+        'CREATE TABLE IF NOT EXISTS sales (id INTEGER PRIMARY KEY AUTOINCREMENT, harvest_id INTEGER NOT NULL, quantity REAL NOT NULL, price_per_unit_paisa INTEGER NOT NULL, total_amount_paisa INTEGER NOT NULL, date TEXT NOT NULL)');
     // FFI in-memory databases are shared across openDatabase() calls in one
     // test run: start every test from empty tables (children first — FKs
     // are enforced).
@@ -275,12 +289,6 @@ void main() {
     test('summaries resolve crop/farm/field names via LEFT JOINs', () async {
       final p = await openProvider();
       final db = p.testExecutor as Database;
-      await db.execute(
-          'CREATE TABLE IF NOT EXISTS farms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, total_area REAL NOT NULL, created_at TEXT NOT NULL)');
-      await db.execute(
-          'CREATE TABLE IF NOT EXISTS fields (id INTEGER PRIMARY KEY AUTOINCREMENT, farm_id INTEGER NOT NULL, name TEXT NOT NULL, size_acres REAL NOT NULL, canal_water_available INTEGER NOT NULL DEFAULT 0, tube_well_available INTEGER NOT NULL DEFAULT 0, location TEXT)');
-      await db.execute(
-          'CREATE TABLE IF NOT EXISTS crop_seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, field_id INTEGER NOT NULL, crop_name TEXT NOT NULL, variety TEXT NOT NULL, status TEXT NOT NULL, start_date TEXT NOT NULL)');
       final farmId = await db.insert('farms',
           {'name': 'چک نمبر 5', 'total_area': 10.0, 'created_at': 'x'});
       final fieldId = await db.insert('fields', {

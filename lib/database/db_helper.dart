@@ -315,13 +315,13 @@ class DatabaseHelper {
         crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL,
         owner_share_percent INTEGER NOT NULL CHECK(owner_share_percent >= 0 AND owner_share_percent <= 100),
         cultivator_share_percent INTEGER NOT NULL CHECK(cultivator_share_percent >= 0 AND cultivator_share_percent <= 100),
-        CHECK(owner_share_percent + cultivator_share_percent = 100),
         expense_note TEXT,
         start_date TEXT NOT NULL,
         end_date TEXT,
         status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','settled','cancelled')),
         notes TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        CHECK(owner_share_percent + cultivator_share_percent = 100)
       )
     ''');
 
@@ -334,10 +334,10 @@ class DatabaseHelper {
         total_paisa INTEGER NOT NULL CHECK(total_paisa > 0),
         owner_paisa INTEGER NOT NULL,
         cultivator_paisa INTEGER NOT NULL,
-        CHECK(owner_paisa + cultivator_paisa = total_paisa),
         settle_date TEXT NOT NULL,
         note TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        CHECK(owner_paisa + cultivator_paisa = total_paisa)
       )
     ''');
 
@@ -895,13 +895,13 @@ class DatabaseHelper {
         crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL,
         owner_share_percent INTEGER NOT NULL CHECK(owner_share_percent >= 0 AND owner_share_percent <= 100),
         cultivator_share_percent INTEGER NOT NULL CHECK(cultivator_share_percent >= 0 AND cultivator_share_percent <= 100),
-        CHECK(owner_share_percent + cultivator_share_percent = 100),
         expense_note TEXT,
         start_date TEXT NOT NULL,
         end_date TEXT,
         status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','settled','cancelled')),
         notes TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        CHECK(owner_share_percent + cultivator_share_percent = 100)
       )
     ''');
     await db.execute('''
@@ -913,10 +913,10 @@ class DatabaseHelper {
         total_paisa INTEGER NOT NULL CHECK(total_paisa > 0),
         owner_paisa INTEGER NOT NULL,
         cultivator_paisa INTEGER NOT NULL,
-        CHECK(owner_paisa + cultivator_paisa = total_paisa),
         settle_date TEXT NOT NULL,
         note TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        CHECK(owner_paisa + cultivator_paisa = total_paisa)
       )
     ''');
     await db.execute('''
