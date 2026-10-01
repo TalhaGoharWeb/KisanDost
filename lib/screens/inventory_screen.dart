@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
 import '../models/models.dart';
+import '../services/unit_converter.dart';
 import '../widgets/empty_state_widget.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -168,106 +169,115 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         stockStatus = 'اسٹاک کم ہے!';
                       }
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: stockColor.withValues(alpha: 0.1),
-                                child: Icon(
-                                  Icons.store,
-                                  color: stockColor,
-                                  size: 28,
+                      return InkWell(
+                        onTap: () => _showHistorySheet(context, item),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: stockColor.withValues(alpha: 0.1),
+                                  child: Icon(
+                                    Icons.store,
+                                    color: stockColor,
+                                    size: 28,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                        fontFamily: 'Jameel Noori Nastaleeq',
-                                      ),
-                                    ),
-                                    Text(
-                                      catUrdu,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey,
-                                        fontFamily: 'Jameel Noori Nastaleeq',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: stockColor.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        stockStatus,
-                                        style: TextStyle(
-                                          color: stockColor,
-                                          fontSize: 12,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.name,
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 18,
                                           fontFamily: 'Jameel Noori Nastaleeq',
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${item.quantity.toStringAsFixed(1)} ${item.unit}',
-                                    style: TextStyle(
-                                      color: stockColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                      fontFamily: 'Jameel Noori Nastaleeq',
-                                    ),
-                                  ),
-                                  Text(
-                                    'شرح: ${item.costPerUnit.toStringAsFixed(0)} روپے',
-                                    style: const TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                      fontFamily: 'Jameel Noori Nastaleeq',
-                                    ),
-                                  ),
-                                  Text(
-                                    'کل قیمت: ${(item.quantity * item.costPerUnit).toStringAsFixed(0)} روپے',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      fontFamily: 'Jameel Noori Nastaleeq',
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_outlined, color: Colors.blueGrey, size: 20),
-                                        onPressed: () => _showEditStockDialog(context, item),
+                                      Text(
+                                        catUrdu,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey,
+                                          fontFamily: 'Jameel Noori Nastaleeq',
+                                        ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 20),
-                                        onPressed: () => _confirmDeleteStock(context, item),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: stockColor.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          stockStatus,
+                                          style: TextStyle(
+                                            color: stockColor,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Jameel Noori Nastaleeq',
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '${item.quantity.toStringAsFixed(1)} ${item.unit}',
+                                      style: TextStyle(
+                                        color: stockColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                        fontFamily: 'Jameel Noori Nastaleeq',
+                                      ),
+                                    ),
+                                    Text(
+                                      'شرح: ${item.costPerUnit.toStringAsFixed(0)} روپے',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 12,
+                                        fontFamily: 'Jameel Noori Nastaleeq',
+                                      ),
+                                    ),
+                                    Text(
+                                      'کل قیمت: ${(item.quantity * item.costPerUnit).toStringAsFixed(0)} روپے',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        fontFamily: 'Jameel Noori Nastaleeq',
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.history_outlined, color: Colors.teal, size: 20),
+                                          tooltip: 'لین دین کی تاریخ',
+                                          onPressed: () => _showHistorySheet(context, item),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.edit_outlined, color: Colors.blueGrey, size: 20),
+                                          onPressed: () => _showEditStockDialog(context, item),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 20),
+                                          onPressed: () => _confirmDeleteStock(context, item),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -319,6 +329,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final qtyController = TextEditingController();
     String selectedUnit = 'بوری';
     final priceController = TextEditingController();
+    final weightController = TextEditingController();
 
     showDialog(
       context: context,
@@ -386,7 +397,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                               validator: (value) {
                                 if (value!.isEmpty) return 'مقدار درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر';
+                                final qty = double.tryParse(value);
+                                if (qty == null) return 'صرف نمبر';
+                                if (qty <= 0) return 'مقدار صفر سے زیادہ ہونی چاہیے';
                                 return null;
                               },
                             ),
@@ -412,6 +425,26 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                         ],
                       ),
+                      // Package units (bag/bottle/packet): optional per-package
+                      // weight in kg — never assumed, needed for conversions.
+                      if (UnitConverter.isPackageUnit(selectedUnit)) ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: weightController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'فی بوری/پیکٹ وزن (کلوگرام)',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return null;
+                            final w = double.tryParse(value);
+                            if (w == null) return 'صرف نمبر';
+                            if (w <= 0) return 'صفر سے زیادہ ہونا چاہیے';
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: priceController,
@@ -422,7 +455,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                         validator: (value) {
                           if (value!.isEmpty) return 'قیمت درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر';
+                          final price = double.tryParse(value);
+                          if (price == null) return 'صرف نمبر';
+                          if (price < 0) return 'قیمت منفی نہیں ہو سکتی';
                           return null;
                         },
                       ),
@@ -436,17 +471,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   child: const Text('کینسل'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      inventoryProvider.addInventoryItem(
-                        category: selectedCategory,
-                        name: nameController.text,
-                        unit: selectedUnit,
-                        quantity: double.parse(qtyController.text),
-                        costPerUnit: double.parse(priceController.text),
-                      );
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      final messenger = ScaffoldMessenger.of(context);
+                      final navigator = Navigator.of(ctx);
+                      final double? weight = weightController.text.isEmpty
+                          ? null
+                          : double.parse(weightController.text);
+                      try {
+                        await inventoryProvider.recordPurchase(
+                          category: selectedCategory,
+                          name: nameController.text,
+                          unit: selectedUnit,
+                          quantity: double.parse(qtyController.text),
+                          costPerUnit: double.parse(priceController.text),
+                          weightPerUnitKg: weight,
+                        );
+                      } on InventoryException catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(e.message),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      navigator.pop();
+                      messenger.showSnackBar(
                         const SnackBar(content: Text('اسٹاک گودام میں کامیابی سے شامل ہو گیا!')),
                       );
                     }
@@ -488,6 +539,83 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
+  void _showHistorySheet(BuildContext context, Inventory item) {
+    final inventoryProvider =
+        Provider.of<InventoryProvider>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        builder: (ctx, scrollController) =>
+            FutureBuilder<List<InventoryTransaction>>(
+          future: inventoryProvider.getTransactions(item.id!),
+          builder: (ctx, snapshot) {
+            final txs = snapshot.data ?? const <InventoryTransaction>[];
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '${item.name} — لین دین کی تاریخ',
+                    style: Theme.of(ctx).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'موجودہ اسٹاک: ${item.quantity.toStringAsFixed(2)} ${item.unit}',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: snapshot.connectionState == ConnectionState.waiting
+                        ? const Center(child: CircularProgressIndicator())
+                        : txs.isEmpty
+                            ? const Center(
+                                child: Text('ابھی تک کوئی لین دین نہیں ہے'),
+                              )
+                            : ListView.builder(
+                                controller: scrollController,
+                                itemCount: txs.length,
+                                itemBuilder: (ctx, i) {
+                                  final tx = txs[i];
+                                  final isIn = tx.quantity >= 0;
+                                  final note =
+                                      (tx.notes != null && tx.notes!.isNotEmpty)
+                                          ? ' — ${tx.notes}'
+                                          : '';
+                                  return ListTile(
+                                    leading: Icon(
+                                      isIn
+                                          ? Icons.add_circle
+                                          : Icons.remove_circle,
+                                      color: isIn ? Colors.green : Colors.red,
+                                    ),
+                                    title: Text(tx.typeUrdu),
+                                    subtitle: Text(
+                                      '${tx.date.length >= 10 ? tx.date.substring(0, 10) : tx.date}$note',
+                                    ),
+                                    trailing: Text(
+                                      '${isIn ? '+' : ''}${tx.quantity.toStringAsFixed(2)} ${tx.unit}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            isIn ? Colors.green : Colors.red,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   void _showEditStockDialog(BuildContext context, Inventory item) {
     final inventoryProvider = Provider.of<InventoryProvider>(context, listen: false);
     final formKey = GlobalKey<FormState>();
@@ -497,6 +625,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final qtyController = TextEditingController(text: item.quantity.toString());
     String selectedUnit = item.unit;
     final priceController = TextEditingController(text: item.costPerUnit.toString());
+    final weightController = TextEditingController(
+      text: item.weightPerUnitKg?.toString() ?? '',
+    );
 
     showDialog(
       context: context,
@@ -552,7 +683,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               ),
                               validator: (value) {
                                 if (value!.isEmpty) return 'مقدار درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر';
+                                final qty = double.tryParse(value);
+                                if (qty == null) return 'صرف نمبر';
+                                if (qty < 0) return 'مقدار منفی نہیں ہو سکتی';
                                 return null;
                               },
                             ),
@@ -578,6 +711,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                         ],
                       ),
+                      if (UnitConverter.isPackageUnit(selectedUnit)) ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: weightController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'فی بوری/پیکٹ وزن (کلوگرام)',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return null;
+                            final w = double.tryParse(value);
+                            if (w == null) return 'صرف نمبر';
+                            if (w <= 0) return 'صفر سے زیادہ ہونا چاہیے';
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: priceController,
@@ -588,7 +739,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                         validator: (value) {
                           if (value!.isEmpty) return 'قیمت درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر';
+                          final price = double.tryParse(value);
+                          if (price == null) return 'صرف نمبر';
+                          if (price < 0) return 'قیمت منفی نہیں ہو سکتی';
                           return null;
                         },
                       ),
@@ -602,18 +755,45 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   child: const Text('کینسل'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      inventoryProvider.updateInventoryItem(
-                        id: item.id!,
-                        category: selectedCategory,
-                        name: nameController.text,
-                        unit: selectedUnit,
-                        quantity: double.parse(qtyController.text),
-                        costPerUnit: double.parse(priceController.text),
-                      );
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      final messenger = ScaffoldMessenger.of(context);
+                      final navigator = Navigator.of(ctx);
+                      final double newQty = double.parse(qtyController.text);
+                      final double delta = newQty - item.quantity;
+                      final double? weight = weightController.text.isEmpty
+                          ? null
+                          : double.parse(weightController.text);
+                      try {
+                        await inventoryProvider.updateItemDetails(
+                          id: item.id!,
+                          category: selectedCategory,
+                          name: nameController.text,
+                          unit: selectedUnit,
+                          costPerUnit: double.parse(priceController.text),
+                          weightPerUnitKg: weight,
+                        );
+                        // Quantity never overwrites silently: the difference
+                        // is a ledger adjustment with a reason.
+                        if (delta != 0) {
+                          await inventoryProvider.recordAdjustment(
+                            itemId: item.id!,
+                            quantityDelta: delta,
+                            reason:
+                                'اسٹاک کی دستی تصحیح (${item.quantity.toStringAsFixed(1)} سے ${newQty.toStringAsFixed(1)} $selectedUnit)',
+                          );
+                        }
+                      } on InventoryException catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(e.message),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      navigator.pop();
+                      messenger.showSnackBar(
                         const SnackBar(content: Text('اسٹاک میں تبدیلی کامیابی سے محفوظ ہو گئی!')),
                       );
                     }

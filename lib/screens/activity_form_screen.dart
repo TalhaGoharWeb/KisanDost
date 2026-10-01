@@ -8,6 +8,7 @@ import '../providers/expense_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/task_provider.dart';
 import '../models/models.dart';
+import '../services/unit_converter.dart';
 
 class ActivityFormScreen extends StatefulWidget {
   final String activityTitle;
@@ -97,6 +98,19 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
     }
     if (existing.activity.inventoryQuantity != null) {
       _qtyController.text = existing.activity.inventoryQuantity!.toString();
+    }
+    // Restore the exact warehouse item so edit mode deducts/restores
+    // against the same row (not a fuzzy name match).
+    final int? itemId = existing.activity.inventoryItemId;
+    if (itemId != null) {
+      final inventoryProvider =
+          Provider.of<InventoryProvider>(context, listen: false);
+      for (final item in inventoryProvider.inventoryList) {
+        if (item.id == itemId) {
+          _selectedInventoryItem = item;
+          break;
+        }
+      }
     }
     if (existing.expenseAmount != null) {
       _genericCostController.text = existing.expenseAmount!.toStringAsFixed(0);
@@ -399,9 +413,18 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 if (qty == null) return 'صرف نمبر درج کریں';
                                 if (qty <= 0) return 'مقدار صفر سے زیادہ ہونی چاہیے';
                                 if (!_directPurchase && _selectedInventoryItem != null) {
-                                  final double convertedQty = convertUnit(qty, _selectedUnit, _selectedInventoryItem!.unit);
-                                  if (convertedQty > _selectedInventoryItem!.quantity) {
-                                    return 'گودام میں اتنی مقدار دستیاب نہیں ہے!';
+                                  try {
+                                    final double convertedQty = UnitConverter.convert(
+                                      qty,
+                                      _selectedUnit,
+                                      _selectedInventoryItem!.unit,
+                                      weightPerUnitKg: _selectedInventoryItem!.weightPerUnitKg,
+                                    );
+                                    if (convertedQty > _selectedInventoryItem!.quantity) {
+                                      return 'گودام میں اتنی مقدار دستیاب نہیں ہے!';
+                                    }
+                                  } on UnitConversionException catch (e) {
+                                    return e.message;
                                   }
                                 }
                                 return null;
@@ -518,6 +541,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                           String? inventoryName;
                           String? inventoryUnit;
                           double? inventoryQty;
+                          int? inventoryItemId;
 
                           // 1. Water calculations
                           if (widget.activityTitle == 'پانی لگایا') {
@@ -562,22 +586,64 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 return;
                               }
 
-                              // Create in inventory first so we can deduct it
-                              await inventoryProvider.addInventoryItem(
-                                category: _inventoryCategory!,
-                                name: inventoryName,
-                                unit: _selectedUnit,
-                                quantity: inventoryQty,
-                                costPerUnit: finalExpenseAmount / inventoryQty,
-                              );
+                              // Create in inventory first so we can deduct it.
+                              // The purchase is a proper ledger entry, and the
+                              // returned id links the activity to the exact row.
+                              try {
+                                inventoryItemId = await inventoryProvider.recordPurchase(
+                                  category: _inventoryCategory!,
+                                  name: inventoryName,
+                                  unit: _selectedUnit,
+                                  quantity: inventoryQty,
+                                  costPerUnit: finalExpenseAmount / inventoryQty,
+                                );
+                              } on InventoryException catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.message),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
                             } else {
-                              inventoryName = _selectedInventoryItem!.name;
-                              inventoryUnit = _selectedInventoryItem!.unit;
-                              // Convert entered quantity to the warehouse item's unit for deduction in SQLite
-                              inventoryQty = convertUnit(enteredQty, _selectedUnit, _selectedInventoryItem!.unit);
-                              
+                              final Inventory? selected = _selectedInventoryItem;
+                              if (selected == null) {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('گودام سے آئٹم منتخب کریں'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              inventoryItemId = selected.id;
+                              inventoryName = selected.name;
+                              // Convert entered quantity to the warehouse item's
+                              // unit; the activity snapshot is stored in the
+                              // item's own unit for exact restores.
+                              double convertedQty;
+                              try {
+                                convertedQty = UnitConverter.convert(
+                                  enteredQty,
+                                  _selectedUnit,
+                                  selected.unit,
+                                  weightPerUnitKg: selected.weightPerUnitKg,
+                                );
+                              } on UnitConversionException catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.message),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              inventoryUnit = selected.unit;
+                              inventoryQty = convertedQty;
+
                               // Calculate expense cost based on the converted quantity
-                              finalExpenseAmount = inventoryQty * _selectedInventoryItem!.costPerUnit;
+                              finalExpenseAmount = convertedQty * selected.costPerUnit;
                             }
                             _detailsController.text = 'استعمال: $inventoryName | مقدار: $enteredQty $_selectedUnit. ${_detailsController.text}';
                           }
@@ -595,36 +661,59 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             finalExpenseAmount = double.tryParse(_genericCostController.text);
                           }
 
-                          if (widget.existingActivity != null && !widget.duplicateMode) {
-                            await activityProvider.updateActivity(
-                              id: widget.existingActivity!.activity.id!,
-                              cropSeasonId: targetCropSeasonId,
-                              activityType: widget.activityTitle,
-                              date: _selectedDate.toIso8601String(),
-                              details: _detailsController.text,
-                              expenseAmount: finalExpenseAmount,
-                              expenseCategory: finalExpenseCategory,
-                              inventoryCategory: inventoryCategory,
-                              inventoryName: inventoryName,
-                              inventoryUnit: inventoryUnit,
-                              inventoryQuantity: inventoryQty,
-                              isCompleted: widget.existingActivity!.activity.isCompleted,
-                              inventoryProvider: inventoryProvider,
+                          // Inventory deductions run inside the provider transaction:
+                          // overuse or a missing item aborts the whole save
+                          // loudly instead of corrupting stock.
+                          try {
+                            if (widget.existingActivity != null && !widget.duplicateMode) {
+                              await activityProvider.updateActivity(
+                                id: widget.existingActivity!.activity.id!,
+                                cropSeasonId: targetCropSeasonId,
+                                activityType: widget.activityTitle,
+                                date: _selectedDate.toIso8601String(),
+                                details: _detailsController.text,
+                                expenseAmount: finalExpenseAmount,
+                                expenseCategory: finalExpenseCategory,
+                                inventoryCategory: inventoryCategory,
+                                inventoryName: inventoryName,
+                                inventoryUnit: inventoryUnit,
+                                inventoryQuantity: inventoryQty,
+                                inventoryItemId: inventoryItemId,
+                                isCompleted: widget.existingActivity!.activity.isCompleted,
+                                inventoryProvider: inventoryProvider,
+                              );
+                            } else {
+                              await activityProvider.addActivity(
+                                cropSeasonId: targetCropSeasonId,
+                                activityType: widget.activityTitle,
+                                date: _selectedDate.toIso8601String(),
+                                details: _detailsController.text,
+                                expenseAmount: finalExpenseAmount,
+                                expenseCategory: finalExpenseCategory,
+                                inventoryCategory: inventoryCategory,
+                                inventoryName: inventoryName,
+                                inventoryUnit: inventoryUnit,
+                                inventoryQuantity: inventoryQty,
+                                inventoryItemId: inventoryItemId,
+                                inventoryProvider: inventoryProvider,
+                              );
+                            }
+                          } on InventoryException catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(e.message),
+                                backgroundColor: Colors.red,
+                              ),
                             );
-                          } else {
-                            await activityProvider.addActivity(
-                              cropSeasonId: targetCropSeasonId,
-                              activityType: widget.activityTitle,
-                              date: _selectedDate.toIso8601String(),
-                              details: _detailsController.text,
-                              expenseAmount: finalExpenseAmount,
-                              expenseCategory: finalExpenseCategory,
-                              inventoryCategory: inventoryCategory,
-                              inventoryName: inventoryName,
-                              inventoryUnit: inventoryUnit,
-                              inventoryQuantity: inventoryQty,
-                              inventoryProvider: inventoryProvider,
+                            return;
+                          } on UnitConversionException catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(e.message),
+                                backgroundColor: Colors.red,
+                              ),
                             );
+                            return;
                           }
 
                           await expenseProvider.fetchExpenses();
@@ -657,44 +746,6 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
     );
   }
 
-  double convertUnit(double quantity, String fromUnit, String toUnit) {
-    if (fromUnit == toUnit) return quantity;
-
-    String standardize(String u) {
-      if (u == 'KG' || u == 'کلوگرام' || u == 'کلو') return 'kg';
-      if (u == 'Gram' || u == 'گرام') return 'g';
-      if (u == 'Bag' || u == 'بوری') return 'bag';
-      if (u == 'Litre' || u == 'لیٹر') return 'l';
-      if (u == 'ML' || u == 'ملی لیٹر' || u == 'ملی') return 'ml';
-      if (u == 'Ton' || u == 'ٹن') return 'ton';
-      return u.toLowerCase();
-    }
-
-    final from = standardize(fromUnit);
-    final to = standardize(toUnit);
-
-    final Map<String, double> weightInKg = {
-      'kg': 1.0,
-      'g': 0.001,
-      'bag': 50.0,
-      'ton': 1000.0,
-    };
-
-    final Map<String, double> volumeInLitre = {
-      'l': 1.0,
-      'ml': 0.001,
-    };
-
-    if (weightInKg.containsKey(from) && weightInKg.containsKey(to)) {
-      final double quantityInKg = quantity * weightInKg[from]!;
-      return quantityInKg / weightInKg[to]!;
-    }
-
-    if (volumeInLitre.containsKey(from) && volumeInLitre.containsKey(to)) {
-      final double quantityInLitre = quantity * volumeInLitre[from]!;
-      return quantityInLitre / volumeInLitre[to]!;
-    }
-
-    return quantity;
-  }
+  // Unit conversions go through the central UnitConverter
+  // (lib/services/unit_converter.dart) — no local copies.
 }
