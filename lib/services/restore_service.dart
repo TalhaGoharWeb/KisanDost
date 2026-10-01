@@ -28,6 +28,8 @@ const Map<String, String> _tableUrduNames = {
   'theka_installments': 'ٹھیکے کی قسطیں',
   'tasks': 'کام',
   'inventory_transactions': 'اسٹاک لین دین',
+  'batai_agreements': 'بٹائی معاہدے',
+  'batai_settlements': 'بٹائی چکتائیاں',
 };
 
 /// Result of [RestoreService.restoreMerge].
@@ -96,6 +98,8 @@ class RestoreService {
     'theka_installments',
     'parties',
     'party_ledger_entries',
+    'batai_agreements',
+    'batai_settlements',
     'tasks',
     'inventory_transactions',
   ];
