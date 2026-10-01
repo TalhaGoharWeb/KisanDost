@@ -86,6 +86,12 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
   }
 
   Future<void> _confirmPermanentDelete(DeletedItem item) async {
+    // Capture everything context-bound before the async gap.
+    final messenger = ScaffoldMessenger.of(context);
+    final expenses = Provider.of<ExpenseProvider>(context, listen: false);
+    final harvests = Provider.of<HarvestProvider>(context, listen: false);
+    final tasks = Provider.of<TaskProvider>(context, listen: false);
+    final parties = Provider.of<PartyProvider>(context, listen: false);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -111,30 +117,25 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
     try {
       switch (item.table) {
         case 'expenses':
-          await Provider.of<ExpenseProvider>(context, listen: false)
-              .permanentDeleteExpense(item.id);
+          await expenses.permanentDeleteExpense(item.id);
         case 'sales':
-          await Provider.of<HarvestProvider>(context, listen: false)
-              .permanentDeleteSale(item.id);
+          await harvests.permanentDeleteSale(item.id);
         case 'harvests':
-          await Provider.of<HarvestProvider>(context, listen: false)
-              .permanentDeleteHarvest(item.id);
+          await harvests.permanentDeleteHarvest(item.id);
         case 'tasks':
-          await Provider.of<TaskProvider>(context, listen: false)
-              .permanentDeleteTask(item.id);
+          await tasks.permanentDeleteTask(item.id);
         case 'parties':
-          await Provider.of<PartyProvider>(context, listen: false)
-              .permanentDeleteParty(item.id);
+          await parties.permanentDeleteParty(item.id);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('مستقل حذف ہو گیا')),
       );
       await _reload();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('حذف میں مسئلہ ہوا')),
+      messenger.showSnackBar(
+        const SnackBar(content: Text('مستقل حذف میں مسئلہ ہوا')),
       );
     }
   }
