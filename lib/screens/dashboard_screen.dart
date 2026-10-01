@@ -11,6 +11,7 @@ import '../providers/harvest_provider.dart';
 import '../providers/theka_provider.dart';
 import '../providers/crop_provider.dart';
 import '../providers/farm_provider.dart';
+import '../providers/party_provider.dart';
 import 'alarm_screen.dart';
 import 'about_us_screen.dart';
 import 'settings_screen.dart';
@@ -25,6 +26,7 @@ import 'tasks_screen.dart';
 import 'task_form_screen.dart';
 import 'theka_list_screen.dart';
 import 'ushr_screen.dart';
+import 'parties_screen.dart';
 
 /// Farmer home: answers within seconds —
 /// (1) what needs doing today, (2) the money situation, (3) crop activity —
@@ -338,16 +340,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ---------- 3. Money snapshot ----------
 
   Widget _buildMoneySection() {
-    return Consumer3<ExpenseProvider, HarvestProvider, ThekaProvider>(
-      builder: (context, expenseProvider, harvestProvider, thekaProvider, _) {
+    return Consumer4<ExpenseProvider, HarvestProvider, ThekaProvider,
+        PartyProvider>(
+      builder:
+          (context, expenseProvider, harvestProvider, thekaProvider, partyProvider, _) {
         final error = expenseProvider.errorMessage ??
             harvestProvider.errorMessage ??
-            thekaProvider.errorMessage;
+            thekaProvider.errorMessage ??
+            partyProvider.errorMessage;
         if (error != null) {
           return _sectionErrorCard(error, () {
             expenseProvider.fetchExpenses();
             harvestProvider.fetchHarvests();
             thekaProvider.fetchThekas();
+            partyProvider.fetchParties();
           });
         }
         final now = DateTime.now();
@@ -355,9 +361,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final monthExpensePaisa = expensesInMonthPaisa(expenseProvider.expenses, now);
         final monthIncomePaisa = salesInMonthPaisa(harvestProvider.sales, now);
         final dueSoon = dueSoonInstallments(thekaProvider.allInstallments, now);
+        final receivablePaisa = partyProvider.totalReceivablePaisa;
+        final payablePaisa = partyProvider.totalPayablePaisa;
         final hasAnyData = expenseProvider.expenses.isNotEmpty ||
             harvestProvider.sales.isNotEmpty ||
-            thekaProvider.allInstallments.isNotEmpty;
+            thekaProvider.allInstallments.isNotEmpty ||
+            receivablePaisa > 0 ||
+            payablePaisa > 0;
 
         return _sectionCard(
           title: 'رقم کی صورتحال',
@@ -388,10 +398,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       for (final inst in dueSoon.take(3))
                         _installmentRow(context, thekaProvider, inst, now),
                     ],
+                    if (receivablePaisa > 0 || payablePaisa > 0) ...[
+                      const SizedBox(height: 14),
+                      const Divider(height: 1),
+                      const SizedBox(height: 10),
+                      if (receivablePaisa > 0)
+                        _partyBalanceLine('لوگوں سے لینا ہے', receivablePaisa,
+                            Colors.green.shade700),
+                      if (payablePaisa > 0)
+                        _partyBalanceLine('لوگوں کو دینا ہے', payablePaisa,
+                            Colors.red.shade700),
+                    ],
                   ],
                 ),
         );
       },
+    );
+  }
+
+  Widget _partyBalanceLine(String label, int paisa, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(Icons.people_outline, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 15)),
+          const Spacer(),
+          Text(
+            Money(paisa).format(),
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
     );
   }
 
@@ -682,6 +722,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Colors.brown.shade800, () => _push(const ThekaListScreen())),
       _FeatureTile(Icons.volunteer_activism, 'عشر مینجمنٹ',
           Colors.green.shade800, () => _push(const UshrScreen())),
+      _FeatureTile(Icons.people_outline, 'پارٹی کھاتہ',
+          Colors.indigo.shade600, () => _push(const PartiesScreen())),
     ];
     return GridView.count(
       crossAxisCount: 3,

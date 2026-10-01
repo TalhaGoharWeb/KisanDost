@@ -13,6 +13,7 @@ import 'providers/expense_provider.dart';
 import 'providers/task_provider.dart';
 import 'providers/theka_provider.dart';
 import 'providers/ushr_provider.dart';
+import 'providers/party_provider.dart';
 import 'services/notification_service.dart';
 import 'services/backup_service.dart';
 
@@ -42,6 +43,7 @@ class KisanDostApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TaskProvider()..fetchTasks()),
         ChangeNotifierProvider(create: (_) => ThekaProvider()..fetchThekas()),
         ChangeNotifierProvider(create: (_) => UshrProvider()..fetchUshrRecords()),
+        ChangeNotifierProvider(create: (_) => PartyProvider()..fetchParties()),
       ],
       child: MaterialApp(
         title: 'کسان دوست',

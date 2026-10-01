@@ -158,3 +158,23 @@ List<ThekaInstallment> dueSoonInstallments(
 
 /// Remaining payable on an installment, in INTEGER paisa.
 int remainingPaisa(ThekaInstallment i) => i.amountPaisa - i.paidAmountPaisa;
+
+/// Total receivable (INTEGER paisa) across party balances: the sum of
+/// positive balances — what people owe the farmer.
+int totalReceivablePaisa(Map<int, int> balances) {
+  var total = 0;
+  for (final b in balances.values) {
+    if (b > 0) total += b;
+  }
+  return total;
+}
+
+/// Total payable (INTEGER paisa, as a positive number) across party
+/// balances: the sum of negative balances — what the farmer owes people.
+int totalPayablePaisa(Map<int, int> balances) {
+  var total = 0;
+  for (final b in balances.values) {
+    if (b < 0) total += -b;
+  }
+  return total;
+}

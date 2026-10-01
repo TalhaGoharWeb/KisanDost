@@ -94,6 +94,8 @@ class RestoreService {
     'ushr_records',
     'thekas',
     'theka_installments',
+    'parties',
+    'party_ledger_entries',
     'tasks',
     'inventory_transactions',
   ];
