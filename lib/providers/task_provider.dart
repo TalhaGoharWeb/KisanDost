@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../services/audit_service.dart';
 import '../services/notification_service.dart';
@@ -56,6 +57,15 @@ class TaskItem {
 }
 
 class TaskProvider with ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  TaskProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
   List<TaskItem> _tasks = [];
   bool _isLoading = false;
 
@@ -80,7 +90,7 @@ class TaskProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final List<Map<String, dynamic>> maps = await db.query(
       'tasks',
       where: 'deleted_at IS NULL',
@@ -93,7 +103,7 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> addTask(String title, String? description, DateTime dateTime, {String recurrence = 'none', String reminders = '0'}) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     int id = 0;
     
     try {
@@ -154,7 +164,7 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> toggleTaskCompletion(int id, bool currentStatus) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final newStatus = !currentStatus;
     
     await db.update(
@@ -196,7 +206,7 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> updateTask(int id, String title, String? description, DateTime dateTime, {String recurrence = 'none', String reminders = '0'}) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
 
     final values = {
       'title': title,
@@ -259,7 +269,7 @@ class TaskProvider with ChangeNotifier {
   /// the recycle bin. Callers keep calling [deleteTask] — the name is
   /// unchanged on purpose.
   Future<void> deleteTask(int id) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final existing = await db.query(
       'tasks',
       where: 'id = ?',
@@ -291,7 +301,7 @@ class TaskProvider with ChangeNotifier {
 
   /// Restores a soft-deleted task (recycle bin only).
   Future<void> restoreTask(int id) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.update(
       'tasks',
       {'deleted_at': null},
@@ -311,7 +321,7 @@ class TaskProvider with ChangeNotifier {
   /// Permanent delete — offered ONLY from the recycle bin, with the caller's
   /// destructive confirmation. The audit log keeps the record.
   Future<void> permanentDeleteTask(int id) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
     await AuditService.log(
       db,

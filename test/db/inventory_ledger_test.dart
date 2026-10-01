@@ -616,7 +616,7 @@ void main() {
       expect(txs[0].notes, 'اضافی اسٹاک ملا');
     });
 
-    test('deleteInventoryItem cascades the ledger rows', () async {
+    test('deleteInventoryItem is blocked when ledger rows exist', () async {
       final id = await provider.recordPurchase(
         category: 'Fertilizer',
         name: 'یوریا',
@@ -628,9 +628,26 @@ void main() {
       await provider.recordUsage(itemId: id, quantity: 2, executor: db);
       expect(await ledgerRows(db, id), hasLength(2));
 
+      // The ledger always survives: deletion is blocked (mirrors
+      // PartyProvider.deleteParty) instead of cascading.
+      expect(
+        () => provider.deleteInventoryItem(id, executor: db),
+        throwsA(isA<InventoryException>()),
+      );
+      expect(await provider.getItemById(id, executor: db), isNotNull);
+      expect(await ledgerRows(db, id), hasLength(2));
+    });
+
+    test('deleteInventoryItem is allowed with zero transactions', () async {
+      final id = await db.insert('inventory', {
+        'category': 'Seed',
+        'name': 'عارضی بیج',
+        'unit': 'کلو',
+        'quantity': 0,
+        'cost_per_unit_paisa': 0,
+      });
       await provider.deleteInventoryItem(id, executor: db);
       expect(await provider.getItemById(id, executor: db), isNull);
-      expect(await ledgerRows(db, id), isEmpty);
     });
   });
 }

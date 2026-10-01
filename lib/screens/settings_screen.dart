@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../services/notification_service.dart';
 import '../database/db_helper.dart';
 import 'backup_screen.dart';
+import 'recycle_bin_screen.dart';
 import '../providers/task_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/crop_provider.dart';
@@ -483,18 +484,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: ListTile(
-                leading: const Icon(Icons.backup, color: Colors.deepPurple),
-                title: const Text('ڈیٹا بیک اپ اور بحالی',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                subtitle: const Text('بیک اپ بنائیں، بحال کریں یا شیئر کریں'),
-                trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const BackupScreen()),
-                  );
-                },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.backup, color: Colors.deepPurple),
+                    title: const Text('ڈیٹا بیک اپ اور بحالی',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    subtitle: const Text('بیک اپ بنائیں، بحال کریں یا شیئر کریں'),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const BackupScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline, color: Colors.deepPurple),
+                    title: const Text('حذف شدہ',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    subtitle: const Text('حذف شدہ ریکارڈ بحال کریں یا مستقل حذف کریں'),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple, size: 18),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),

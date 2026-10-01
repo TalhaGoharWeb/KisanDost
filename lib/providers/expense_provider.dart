@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../services/audit_service.dart';
 import '../services/money.dart';
 
 class ExpenseProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  ExpenseProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly.
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<Expense> _expenses = [];
 
   List<Expense> get expenses => _expenses;
@@ -48,7 +69,7 @@ class ExpenseProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchExpenses() async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final List<Map<String, dynamic>> maps = await db.query(
       'expenses',
       where: 'deleted_at IS NULL',
@@ -70,7 +91,6 @@ class ExpenseProvider extends ChangeNotifier {
     int? fieldId,
     int? cropSeasonId,
   }) async {
-    final db = await DatabaseHelper.instance.database;
     final newExpense = Expense(
       category: category,
       amountPaisa: amountPaisa,
@@ -80,7 +100,7 @@ class ExpenseProvider extends ChangeNotifier {
       fieldId: fieldId,
       cropSeasonId: cropSeasonId,
     );
-    final id = await db.transaction((txn) async {
+    final id = await _txn((txn) async {
       final newId = await txn.insert('expenses', newExpense.toMap());
       await AuditService.log(
         txn,
@@ -105,8 +125,7 @@ class ExpenseProvider extends ChangeNotifier {
     int? fieldId,
     int? cropSeasonId,
   }) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       await txn.update(
         'expenses',
         Expense(
@@ -137,8 +156,7 @@ class ExpenseProvider extends ChangeNotifier {
   /// recycle bin. Callers keep calling [deleteExpense] — the name is
   /// unchanged on purpose.
   Future<void> deleteExpense(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final existing = await txn.query(
         'expenses',
         where: 'id = ?',
@@ -168,8 +186,7 @@ class ExpenseProvider extends ChangeNotifier {
 
   /// Restores a soft-deleted expense (recycle bin only).
   Future<void> restoreExpense(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       await txn.update(
         'expenses',
         {'deleted_at': null},
@@ -190,8 +207,7 @@ class ExpenseProvider extends ChangeNotifier {
   /// Permanent delete — offered ONLY from the recycle bin, with the caller's
   /// destructive confirmation. The audit log keeps the record.
   Future<void> permanentDeleteExpense(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       await txn.delete(
         'expenses',
         where: 'id = ?',

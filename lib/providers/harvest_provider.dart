@@ -24,6 +24,26 @@ class HarvestWithDetails {
 }
 
 class HarvestProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  HarvestProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly.
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<HarvestWithDetails> _harvests = [];
   final List<Sale> _sales = [];
 
@@ -90,7 +110,7 @@ class HarvestProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchHarvests() async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     // gross/total/net are COMPUTED in the Harvest model now — they are never
     // read from (or written to) the database.
     final String query = '''
@@ -175,7 +195,6 @@ class HarvestProvider extends ChangeNotifier {
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
-    final db = await DatabaseHelper.instance.database;
 
     final int totalExpensePaisa = transportationExpensePaisa +
         labourExpensePaisa +
@@ -184,7 +203,7 @@ class HarvestProvider extends ChangeNotifier {
         otherExpensePaisa;
     final int grossPaisa = (quantity * ratePerUnitPaisa).round();
 
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       int? expenseId;
       if (totalExpensePaisa > 0) {
         expenseId = await txn.insert('expenses', {
@@ -265,7 +284,6 @@ class HarvestProvider extends ChangeNotifier {
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
-    final db = await DatabaseHelper.instance.database;
 
     final int totalExpensePaisa = transportationExpensePaisa +
         labourExpensePaisa +
@@ -274,7 +292,7 @@ class HarvestProvider extends ChangeNotifier {
         otherExpensePaisa;
     final int grossPaisa = (quantity * ratePerUnitPaisa).round();
 
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(
         'harvests',
         where: 'id = ?',
@@ -427,8 +445,7 @@ class HarvestProvider extends ChangeNotifier {
     required String date,
     String? buyerName,
   }) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> hMaps = await txn
           .query('harvests', where: 'id = ?', whereArgs: [harvestId]);
       if (hMaps.isEmpty) return;
@@ -502,8 +519,7 @@ class HarvestProvider extends ChangeNotifier {
   /// Soft delete: the harvest, its sales and its linked harvest-expense are
   /// hidden everywhere but kept for history and the recycle bin.
   Future<void> deleteHarvest(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(
         'harvests',
         where: 'id = ?',
@@ -547,8 +563,7 @@ class HarvestProvider extends ChangeNotifier {
   /// Soft delete of one sale; the parent harvest is reset so the sale can
   /// be re-recorded.
   Future<void> deleteSale(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> sMaps = await txn.query(
         'sales',
         where: 'id = ?',
@@ -600,8 +615,7 @@ class HarvestProvider extends ChangeNotifier {
     required String date,
     String? buyerName,
   }) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       // Same rule as recordSale: the total is recomputed, never accepted
       // from the caller.
       final int totalPaisa = (quantity * pricePerUnitPaisa).round();
@@ -647,8 +661,7 @@ class HarvestProvider extends ChangeNotifier {
   /// linked expense stay deleted — they are restored individually, so a
   /// farmer never accidentally resurrects a whole subtree.
   Future<void> restoreHarvest(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       await _restoreRow(txn, 'harvests', id, 'پیداوار بحال');
     });
     await fetchHarvests();
@@ -656,8 +669,7 @@ class HarvestProvider extends ChangeNotifier {
 
   /// Restores a soft-deleted sale (recycle bin only).
   Future<void> restoreSale(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       await _restoreRow(txn, 'sales', id, 'فروخت بحال');
     });
     await fetchHarvests();
@@ -667,8 +679,7 @@ class HarvestProvider extends ChangeNotifier {
   /// with the caller's destructive confirmation. The audit log keeps the
   /// record.
   Future<void> permanentDeleteHarvest(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final existing = await txn.query(
         'harvests',
         where: 'id = ?',
@@ -695,8 +706,7 @@ class HarvestProvider extends ChangeNotifier {
 
   /// Permanent delete of a sale — recycle bin only.
   Future<void> permanentDeleteSale(int id) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       await txn.delete('sales', where: 'id = ?', whereArgs: [id]);
       await AuditService.log(
         txn,
