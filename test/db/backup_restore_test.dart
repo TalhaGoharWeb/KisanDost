@@ -476,6 +476,7 @@ void main() {
           'batai_settlements',
           'tasks',
           'inventory_transactions',
+          'audit_log',
         ]),
       );
     });

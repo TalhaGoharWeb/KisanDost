@@ -7,7 +7,8 @@ import 'package:kisan_dost/providers/party_provider.dart';
 import 'package:kisan_dost/services/restore_service.dart';
 
 /// Hermetic tests for the v13 party ledger (udhaar). They exercise the REAL
-/// migration SQL ([DatabaseHelper.migrateV12ToV13]) and the REAL provider
+/// migration SQL ([DatabaseHelper.migrateV12ToV13], then the v14→v15
+/// soft-delete migration) and the REAL provider
 /// against an in-memory FFI database (via PartyProvider's test executor) —
 /// the app singleton is never touched.
 ///
@@ -34,6 +35,9 @@ void main() {
   Future<PartyProvider> openProvider() async {
     final db = await openV12Db();
     await DatabaseHelper.migrateV12ToV13(db);
+    // The current provider expects the v15 schema (soft-delete columns);
+    // chain the real v14→v15 migration on top.
+    await DatabaseHelper.migrateV14ToV15(db);
     // FFI in-memory databases are shared across openDatabase() calls in one
     // test run: start every test from empty tables.
     await db.delete('party_ledger_entries');

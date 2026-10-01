@@ -177,11 +177,17 @@ class PartyProvider extends ChangeNotifier {
         'اس پارٹی کے کھاتے میں اندراجات موجود ہیں، اس لیے اسے حذف نہیں کیا جا سکتا۔ پہلے حساب برابر کریں۔',
       );
     }
-    final bataiCount = await db.rawQuery(
-      'SELECT COUNT(*) AS c FROM batai_agreements WHERE other_party_id = ?',
-      [partyId],
-    );
-    final bataiRefs = ((bataiCount.first['c'] as num?) ?? 0).toInt();
+    // A missing batai_agreements table (pre-v14 schema) means no references.
+    int bataiRefs = 0;
+    try {
+      final bataiCount = await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM batai_agreements WHERE other_party_id = ?',
+        [partyId],
+      );
+      bataiRefs = ((bataiCount.first['c'] as num?) ?? 0).toInt();
+    } on DatabaseException catch (e) {
+      if (!e.toString().contains('no such table')) rethrow;
+    }
     if (bataiRefs > 0) {
       throw PartyException(
         'اس پارٹی کا بٹائی معاہدہ موجود ہے، اس لیے اسے حذف نہیں کیا جا سکتا۔',
