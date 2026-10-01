@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 14;
+  static const _databaseVersion = 15;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -117,7 +117,8 @@ class DatabaseHelper {
         description TEXT,
         farm_id INTEGER REFERENCES farms (id) ON DELETE SET NULL,
         field_id INTEGER REFERENCES fields (id) ON DELETE SET NULL,
-        crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL
+        crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL,
+        deleted_at TEXT
       )
     ''');
 
@@ -191,6 +192,7 @@ class DatabaseHelper {
         payment_status TEXT DEFAULT 'Pending',
         notes TEXT,
         expense_id INTEGER,
+        deleted_at TEXT,
         FOREIGN KEY (crop_season_id) REFERENCES crop_seasons (id) ON DELETE CASCADE
       )
     ''');
@@ -228,6 +230,7 @@ class DatabaseHelper {
         price_per_unit_paisa INTEGER NOT NULL,
         total_amount_paisa INTEGER NOT NULL,
         date TEXT NOT NULL,
+        deleted_at TEXT,
         FOREIGN KEY (harvest_id) REFERENCES harvests (id) ON DELETE CASCADE
       )
     ''');
@@ -241,7 +244,8 @@ class DatabaseHelper {
         date_time TEXT NOT NULL,
         is_completed INTEGER NOT NULL DEFAULT 0,
         recurrence TEXT NOT NULL DEFAULT 'none',
-        reminders TEXT NOT NULL DEFAULT '0'
+        reminders TEXT NOT NULL DEFAULT '0',
+        deleted_at TEXT
       )
     ''');
 
@@ -283,7 +287,8 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         phone TEXT,
         notes TEXT,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        deleted_at TEXT
       )
     ''');
 
@@ -344,6 +349,25 @@ class DatabaseHelper {
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_batai_settlements_agreement
         ON batai_settlements (agreement_id)
+    ''');
+
+    // v15: append-only audit trail of who-changed-what. No FK references —
+    // it must survive the rows it describes.
+    await db.execute('''
+      CREATE TABLE audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts TEXT NOT NULL,
+        table_name TEXT NOT NULL,
+        row_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_audit_log_table_row
+        ON audit_log (table_name, row_id)
     ''');
   }
 
@@ -519,6 +543,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 14) {
       await migrateV13ToV14(db);
+    }
+    if (oldVersion < 15) {
+      await migrateV14ToV15(db);
     }
   }
 
@@ -925,6 +952,47 @@ class DatabaseHelper {
     ''');
   }
 
+  /// v14 -> v15 migration, exposed for tests: soft delete + audit log.
+  ///
+  /// 1. Adds `deleted_at` (ISO timestamp, NULL = live) to expenses, sales,
+  ///    harvests, tasks and parties. Deletes on these tables become soft
+  ///    deletes; every list query filters `deleted_at IS NULL`.
+  /// 2. Creates the append-only `audit_log` table (no FK references — it
+  ///    must survive the rows it describes).
+  /// Idempotent: ALTERs are wrapped in try/catch (partially migrated
+  /// devices), table creation uses IF NOT EXISTS.
+  @visibleForTesting
+  static Future<void> migrateV14ToV15(Database db) async {
+    for (final table in [
+      'expenses',
+      'sales',
+      'harvests',
+      'tasks',
+      'parties',
+    ]) {
+      try {
+        await db.execute('ALTER TABLE $table ADD COLUMN deleted_at TEXT');
+      } catch (_) {
+        // Column might already exist on partially migrated devices.
+      }
+    }
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts TEXT NOT NULL,
+        table_name TEXT NOT NULL,
+        row_id INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_audit_log_table_row
+        ON audit_log (table_name, row_id)
+    ''');
+  }
+
   /// v9 -> v10 migration, exposed for tests.
   ///
   /// 1. Orphan repair: deletes child rows whose parent no longer exists.
@@ -974,21 +1042,28 @@ class DatabaseHelper {
     }
   }
 
+  /// Empties every table. Order is children-before-parents so FK RESTRICT
+  /// constraints (party_ledger_entries, batai_agreements/settlements) hold.
   Future<void> clearAllTables() async {
     final db = await database;
+    await db.delete('audit_log');
+    await db.delete('batai_settlements');
+    await db.delete('party_ledger_entries');
+    await db.delete('batai_agreements');
+    await db.delete('parties');
     await db.delete('ushr_records');
     await db.delete('theka_installments');
     await db.delete('thekas');
-    await db.delete('farms');
-    await db.delete('fields');
-    await db.delete('crop_seasons');
-    await db.delete('crop_season_fields');
+    await db.delete('activities');
+    await db.delete('sales');
+    await db.delete('harvests');
     await db.delete('expenses');
+    await db.delete('crop_season_fields');
+    await db.delete('crop_seasons');
     await db.delete('inventory_transactions');
     await db.delete('inventory');
-    await db.delete('activities');
-    await db.delete('harvests');
-    await db.delete('sales');
+    await db.delete('fields');
+    await db.delete('farms');
     await db.delete('tasks');
   }
 }

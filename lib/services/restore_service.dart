@@ -30,6 +30,7 @@ const Map<String, String> _tableUrduNames = {
   'inventory_transactions': 'اسٹاک لین دین',
   'batai_agreements': 'بٹائی معاہدے',
   'batai_settlements': 'بٹائی چکتائیاں',
+  'audit_log': 'تبدیلیوں کا ریکارڈ',
 };
 
 /// Result of [RestoreService.restoreMerge].
@@ -102,6 +103,8 @@ class RestoreService {
     'batai_settlements',
     'tasks',
     'inventory_transactions',
+    // Audit log last: it references every other table but has no FKs.
+    'audit_log',
   ];
 
   /// Replaces the live database with [backupPath].
