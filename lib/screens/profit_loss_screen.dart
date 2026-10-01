@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../widgets/digit_text.dart';
 import '../providers/crop_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/expense_provider.dart';
@@ -247,8 +248,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    Money(netProfit.abs()).format(),
+                  DigitText(Money(netProfit.abs()).format(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
@@ -304,8 +304,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      Money(totalSales).format(),
+                    DigitText(Money(totalSales).format(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -336,8 +335,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      Money(totalExpenses).format(),
+                    DigitText(Money(totalExpenses).format(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -688,8 +686,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             fontFamily: 'Jameel Noori Nastaleeq',
           ),
         ),
-        Text(
-          Money(amount).format(),
+        DigitText(Money(amount).format(),
           style: TextStyle(
             fontSize: 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
@@ -890,8 +887,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       ),
                     ],
                   ),
-                  trailing: Text(
-                    Money(actwd.expenseAmountPaisa ?? 0).format(),
+                  trailing: DigitText(Money(actwd.expenseAmountPaisa ?? 0).format(),
                     style: const TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
@@ -1241,9 +1237,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       return TableRow(
                         children: [
                           TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(farm.name))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(fTotal).format()))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(fPaid).format(), style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(fPending).format(), style: const TextStyle(color: Colors.red)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(fTotal).format()))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(fPaid).format(), style: const TextStyle(color: Colors.green)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(fPending).format(), style: const TextStyle(color: Colors.red)))),
                         ],
                       );
                     }),
@@ -1297,9 +1293,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       return TableRow(
                         children: [
                           TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(entry.key))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(sTotal).format()))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(sPaid).format(), style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(sPending).format(), style: const TextStyle(color: Colors.red)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(sTotal).format()))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(sPaid).format(), style: const TextStyle(color: Colors.green)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(sPending).format(), style: const TextStyle(color: Colors.red)))),
                         ],
                       );
                     }),
@@ -1353,9 +1349,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                       return TableRow(
                         children: [
                           TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${entry.key}ء'))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(yTotal).format()))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(yPaid).format(), style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(yPending).format(), style: const TextStyle(color: Colors.red)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(yTotal).format()))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(yPaid).format(), style: const TextStyle(color: Colors.green)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: DigitText(Money(yPending).format(), style: const TextStyle(color: Colors.red)))),
                         ],
                       );
                     }),
@@ -1374,8 +1370,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       children: [
         Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
         const SizedBox(height: 6),
-        Text(
-          Money(amount).format(),
+        DigitText(Money(amount).format(),
           style: TextStyle(
             color: textCol,
             fontSize: 16,

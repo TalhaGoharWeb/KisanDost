@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/digit_text.dart';
 import '../providers/theka_provider.dart';
 import '../providers/farm_provider.dart';
 import '../models/models.dart';
@@ -325,8 +326,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
           style: const TextStyle(color: Colors.white60, fontSize: 13),
         ),
         const SizedBox(height: 4),
-        Text(
-          Money(amount).format(),
+        DigitText(Money(amount).format(),
           style: TextStyle(
             color: color,
             fontSize: 17,
@@ -346,8 +346,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
           style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
         ),
         const SizedBox(height: 2),
-        Text(
-          Money(amount).format(),
+        DigitText(Money(amount).format(),
           style: TextStyle(
             color: amountColor,
             fontWeight: FontWeight.bold,

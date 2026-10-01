@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../widgets/digit_text.dart';
 import '../services/notification_service.dart';
 import '../services/today_summary.dart';
 import '../services/money.dart';
@@ -427,8 +428,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(fontSize: 15)),
           const Spacer(),
-          Text(
-            Money(paisa).format(),
+          DigitText(Money(paisa).format(),
             style: TextStyle(
                 fontSize: 16, fontWeight: FontWeight.bold, color: color),
           ),
@@ -450,8 +450,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
             const SizedBox(height: 6),
-            Text(
-              Money(paisa).format(),
+            DigitText(Money(paisa).format(),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
               textAlign: TextAlign.center,
             ),
@@ -509,8 +508,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          Text(
-            Money(remainingPaisa(inst)).format(),
+          DigitText(Money(remainingPaisa(inst)).format(),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -608,8 +606,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: const TextStyle(fontSize: 15),
                             ),
                           ),
-                          Text(
-                            Money(latestSale.totalAmountPaisa).format(),
+                          DigitText(Money(latestSale.totalAmountPaisa).format(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

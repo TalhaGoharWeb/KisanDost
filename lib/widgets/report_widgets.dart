@@ -12,10 +12,12 @@
 // Design notes: fixed logical width (720), white background, generous
 // Nastaleeq line heights (2.0) so nothing clips.
 import 'package:flutter/material.dart';
+import 'digit_text.dart';
 import '../models/party.dart';
 import '../services/export_service.dart';
 import '../services/money.dart';
 import '../services/pnl_summary.dart';
+import '../l10n/strings.dart';
 
 const String _font = 'Jameel Noori Nastaleeq';
 const double _reportWidth = 720.0;
@@ -102,7 +104,7 @@ class PnlReportWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: _ts(16, color: Colors.black87)),
-          Text(Money(paisa).format(),
+          DigitText(Money(paisa).format(),
               style: _ts(18, weight: bold ? FontWeight.bold : null, color: color)),
         ],
       ),
@@ -149,7 +151,7 @@ class PnlReportWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text('$label:', style: _ts(15, color: Colors.black87)),
-          Text(Money(paisa).format(),
+          DigitText(Money(paisa).format(),
               style:
                   _ts(16, weight: bold ? FontWeight.bold : null, color: color)),
         ],
@@ -184,7 +186,7 @@ class ReceiptWidget extends StatelessWidget {
             _row('پارٹی', data.partyName),
             _row('قسم', typeLabel),
             _row('رقم', Money(e.amountPaisa.abs()).format()),
-            _row('تاریخ', e.date),
+            _row(Strings.date, e.date),
             if (e.note != null && e.note!.isNotEmpty) _row('نوٹ', e.note!),
             const Divider(height: 28),
             _row('اس اندراج کے بعد بیلنس', _balanceText(data.balanceAfterPaisa)),
