@@ -472,6 +472,8 @@ void main() {
           'theka_installments',
           'parties',
           'party_ledger_entries',
+          'batai_agreements',
+          'batai_settlements',
           'tasks',
           'inventory_transactions',
         ]),
