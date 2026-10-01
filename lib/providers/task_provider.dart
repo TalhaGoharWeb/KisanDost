@@ -53,10 +53,24 @@ class TaskProvider with ChangeNotifier {
   List<TaskItem> _tasks = [];
   bool _isLoading = false;
 
+  /// Last load failure, if any. Sections show it as a retryable Urdu error.
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   List<TaskItem> get tasks => _tasks;
   bool get isLoading => _isLoading;
 
   Future<void> fetchTasks() async {
+    _errorMessage = null;
+    try {
+      await _fetchTasks();
+    } catch (_) {
+      _errorMessage = 'کاموں کی فہرست لوڈ نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchTasks() async {
     _isLoading = true;
     notifyListeners();
 

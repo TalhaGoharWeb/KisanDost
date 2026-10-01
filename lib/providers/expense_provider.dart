@@ -7,6 +7,10 @@ class ExpenseProvider extends ChangeNotifier {
 
   List<Expense> get expenses => _expenses;
 
+  /// Last load failure, if any. Sections show it as a retryable Urdu error.
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   /// Total in INTEGER paisa.
   int get totalExpensesPaisa =>
       _expenses.fold(0, (sum, item) => sum + item.amountPaisa);
@@ -32,6 +36,16 @@ class ExpenseProvider extends ChangeNotifier {
   };
 
   Future<void> fetchExpenses() async {
+    _errorMessage = null;
+    try {
+      await _fetchExpenses();
+    } catch (_) {
+      _errorMessage = 'اخراجات لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchExpenses() async {
     final db = await DatabaseHelper.instance.database;
     final List<Map<String, dynamic>> maps = await db.query('expenses', orderBy: 'id DESC');
     _expenses = List.generate(maps.length, (i) => Expense.fromMap(maps[i]));

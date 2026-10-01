@@ -27,7 +27,21 @@ class HarvestProvider extends ChangeNotifier {
   List<HarvestWithDetails> get harvests => _harvests;
   List<Sale> get sales => _sales;
 
+  /// Last load failure, if any. Sections show it as a retryable Urdu error.
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   Future<void> fetchHarvests() async {
+    _errorMessage = null;
+    try {
+      await _fetchHarvests();
+    } catch (_) {
+      _errorMessage = 'پیداوار کا ریکارڈ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchHarvests() async {
     final db = await DatabaseHelper.instance.database;
     // gross/total/net are COMPUTED in the Harvest model now — they are never
     // read from (or written to) the database.

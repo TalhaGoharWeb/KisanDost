@@ -9,11 +9,36 @@ class ThekaProvider extends ChangeNotifier {
 
   List<Theka> get thekas => _thekas;
 
+  /// Last load failure, if any. Sections show it as a retryable Urdu error.
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   List<ThekaInstallment> getInstallmentsForTheka(int thekaId) {
     return _thekaInstallments[thekaId] ?? [];
   }
 
+  /// All installments across all thekas, read-only (for the home snapshot).
+  List<ThekaInstallment> get allInstallments =>
+      _thekaInstallments.values.expand((list) => list).toList();
+
+  Theka? getThekaById(int id) {
+    for (final t in _thekas) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
   Future<void> fetchThekas() async {
+    _errorMessage = null;
+    try {
+      await _fetchThekas();
+    } catch (_) {
+      _errorMessage = 'ٹھیکے کا ریکارڈ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchThekas() async {
     final db = await DatabaseHelper.instance.database;
     final List<Map<String, dynamic>> maps = await db.query('thekas', orderBy: 'id DESC');
     _thekas = List.generate(maps.length, (i) => Theka.fromMap(maps[i]));

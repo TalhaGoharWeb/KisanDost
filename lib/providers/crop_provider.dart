@@ -46,6 +46,10 @@ class CropProvider extends ChangeNotifier {
   List<CropSeasonWithDetails> get activeCropSeasons => _activeCropSeasons;
   List<CropSeasonWithDetails> get harvestedCropSeasons => _harvestedCropSeasons;
 
+  /// Last load failure, if any. Sections show it as a retryable Urdu error.
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   // Predefined crops and their translation to Urdu
   final Map<String, String> predefinedCrops = {
     'Wheat': 'گندم',
@@ -86,6 +90,16 @@ class CropProvider extends ChangeNotifier {
   }
 
   Future<void> fetchCropSeasons() async {
+    _errorMessage = null;
+    try {
+      await _fetchCropSeasons();
+    } catch (_) {
+      _errorMessage = 'فصلوں کی فہرست لوڈ نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchCropSeasons() async {
     final db = await DatabaseHelper.instance.database;
 
     final List<Map<String, dynamic>> seasonRows = await db.rawQuery('''

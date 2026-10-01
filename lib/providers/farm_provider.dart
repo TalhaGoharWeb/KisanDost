@@ -7,12 +7,26 @@ class FarmProvider extends ChangeNotifier {
   final Map<int, List<Field>> _farmFields = {}; // farmId -> fields
 
   List<Farm> get farms => _farms;
+
+  /// Last load failure, if any. Sections show it as a retryable Urdu error.
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
   
   List<Field> getFieldsForFarm(int farmId) {
     return _farmFields[farmId] ?? [];
   }
 
   Future<void> fetchFarms() async {
+    _errorMessage = null;
+    try {
+      await _fetchFarms();
+    } catch (_) {
+      _errorMessage = 'زمینوں کی فہرست لوڈ نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchFarms() async {
     final db = await DatabaseHelper.instance.database;
     final List<Map<String, dynamic>> maps = await db.query('farms', orderBy: 'id DESC');
     _farms = List.generate(maps.length, (i) => Farm.fromMap(maps[i]));
