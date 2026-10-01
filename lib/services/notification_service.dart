@@ -30,7 +30,8 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
         'is_completed': 1,
         'snoozed_until': null,
       },
-      where: 'id = ?',
+      // A soft-deleted task ignores notification actions.
+      where: 'id = ? AND deleted_at IS NULL',
       whereArgs: [taskId],
     );
     
@@ -61,7 +62,8 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
 
     final List<Map<String, dynamic>> maps = await db.query(
       'tasks',
-      where: 'id = ?',
+      // A soft-deleted task ignores notification actions.
+      where: 'id = ? AND deleted_at IS NULL',
       whereArgs: [taskId],
     );
     
@@ -420,7 +422,8 @@ class NotificationService {
       final db = await DatabaseHelper.instance.database;
       final List<Map<String, dynamic>> maps = await db.query(
         'tasks',
-        where: 'is_completed = ?',
+        // Soft-deleted tasks must never get alarms rescheduled.
+        where: 'is_completed = ? AND deleted_at IS NULL',
         whereArgs: [0],
       );
       final List<TaskItem> pendingTasks = maps.map((e) => TaskItem.fromMap(e)).toList();
