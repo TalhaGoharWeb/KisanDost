@@ -10,6 +10,7 @@ import '../providers/farm_provider.dart';
 import '../providers/ushr_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
+import '../services/pnl_summary.dart';
 
 class ProfitLossScreen extends StatefulWidget {
   const ProfitLossScreen({super.key});
@@ -31,86 +32,33 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     final farmProvider = Provider.of<FarmProvider>(context);
     final ushrProvider = Provider.of<UshrProvider>(context);
 
-    // 1. Overall Calculations (all money summed as INTEGER paisa)
-    // Revenue = sum of all sales
-    final totalSales = harvestProvider.harvests
-        .where((h) => h.sale != null)
-        .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
+    // 1+2. Overall + crop-wise P&L — computed by the shared service so the
+    // on-screen report and the exported PDF can never disagree.
+    final pnl = computeFarmPnl(
+      harvests: harvestProvider.harvests,
+      totalExpensesPaisa: expenseProvider.totalExpensesPaisa,
+      seasons: [
+        ...cropProvider.activeCropSeasons,
+        ...cropProvider.harvestedCropSeasons
+      ],
+      activities: activityProvider.activities,
+      expenses: expenseProvider.expenses,
+      ushrRecords: ushrProvider.ushrRecords,
+    );
+    final totalSales = pnl.totalSalesPaisa;
+    final totalExpenses = pnl.totalExpensesPaisa;
+    final netProfit = pnl.netPaisa;
 
-    // Expense = sum of all expenses
-    final totalExpenses = expenseProvider.totalExpensesPaisa;
-
-    // Net Profit / Loss
-    final netProfit = totalSales - totalExpenses;
-
-    // 2. Crop-wise Calculations
-    final allSeasons = [
-      ...cropProvider.activeCropSeasons,
-      ...cropProvider.harvestedCropSeasons
-    ];
-
-    final List<CropPL> cropPLList = allSeasons.map((details) {
-      final seasonId = details.cropSeason.id;
-
-      // Expenses for this season:
-      //  (a) expenses linked via activities (legacy path — incl. the auto-created
-      //      activity the Expenses screen adds for a crop-linked expense), and
-      //  (b) expenses linked directly via expenses.crop_season_id (new path).
-      // Dedupe by expense id so an expense linked both ways is counted once.
-      final cropActivities = activityProvider.activities
-          .where((act) => act.activity.cropSeasonId == seasonId)
-          .toList();
-      final linkedExpenseIds = <int>{};
-      int activityLinkedExpenses = 0;
-      for (final act in cropActivities) {
-        final expId = act.activity.expenseId;
-        if (expId != null && linkedExpenseIds.add(expId)) {
-          activityLinkedExpenses += act.expenseAmountPaisa ?? 0;
-        }
-      }
-      int directExpenses = 0;
-      for (final exp in expenseProvider.expenses) {
-        final expId = exp.id;
-        if (exp.cropSeasonId == seasonId &&
-            expId != null &&
-            !linkedExpenseIds.contains(expId)) {
-          directExpenses += exp.amountPaisa;
-        }
-      }
-      final cropExpenses = activityLinkedExpenses + directExpenses;
-
-      // Income for this season: cash received from sales of this season's
-      // harvests. Uses sale.totalAmount — the SAME definition as the overall
-      // header above — so the two can never disagree. Unsold harvests
-      // contribute 0 (no phantom income from unsold stock).
-      final cropHarvests = harvestProvider.harvests
-          .where((h) => h.harvest.cropSeasonId == seasonId)
-          .toList();
-      final cropIncome = cropHarvests
-          .where((h) => h.sale != null)
-          .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
-
-      final cropHarvestExpenses = cropHarvests.fold<int>(
-          0, (sum, h) => sum + h.harvest.totalExpensePaisa);
-
-      // Ushr stays counted as a crop expense exactly as before — only the
-      // field types moved to paisa. (Ushr policy itself is deliberately
-      // deferred; this screen fixes types only.)
-      final cropUshrExpenses = ushrProvider.ushrRecords
-          .where((u) => u.ushrRecord.cropSeasonId == seasonId)
-          .fold<int>(0, (sum, u) => sum + u.ushrRecord.ushrAmountPaisa);
-
-      final totalCropExpenses = cropExpenses + cropHarvestExpenses + cropUshrExpenses;
-
-      return CropPL(
-        details: details,
-        income: cropIncome,
-        expenses: totalCropExpenses,
-        net: cropIncome - totalCropExpenses,
-        harvests: cropHarvests,
-        activities: cropActivities,
-      );
-    }).toList();
+    final List<CropPL> cropPLList = pnl.crops
+        .map((r) => CropPL(
+              details: r.details,
+              income: r.incomePaisa,
+              expenses: r.expensesPaisa,
+              net: r.netPaisa,
+              harvests: r.harvests,
+              activities: r.activities,
+            ))
+        .toList();
 
     // 3. Filtered Crops list
     final filteredCropPLList = cropPLList.where((pl) {
