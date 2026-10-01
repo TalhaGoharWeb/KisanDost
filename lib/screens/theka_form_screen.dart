@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/farm_provider.dart';
 import '../providers/theka_provider.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 
 class ThekaFormScreen extends StatefulWidget {
   final Theka? theka; // For editing if applicable
@@ -29,7 +30,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
 
   // Installment support
   final _numInstallmentsController = TextEditingController(text: '2');
-  List<Map<String, dynamic>> _installments = []; // List of { 'amount': double, 'dueDate': DateTime }
+  List<Map<String, dynamic>> _installments = []; // List of { 'amount': int (paisa), 'dueDate': DateTime }
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       _selectedFieldId = t.fieldId;
       _selectedDurationType = t.durationType;
       _durationDetailsController.text = t.durationDetails ?? '';
-      _totalAmountController.text = t.totalAmount.toStringAsFixed(0);
+      _totalAmountController.text = Money(t.totalAmountPaisa).format();
       _selectedPaymentMethod = t.paymentMethod;
       if (t.startDate != null) _startDate = DateTime.parse(t.startDate!);
       if (t.endDate != null) _endDate = DateTime.parse(t.endDate!);
@@ -51,7 +52,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
         final instList = thekaProv.getInstallmentsForTheka(t.id!);
         setState(() {
           _installments = instList.map((inst) => {
-            'amount': inst.amount,
+            'amount': inst.amountPaisa,
             'dueDate': DateTime.parse(inst.dueDate),
           }).toList();
         });
@@ -68,22 +69,33 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
   }
 
   void _generateInstallments() {
-    final double? totalAmt = double.tryParse(_totalAmountController.text);
+    int totalPaisa;
+    try {
+      totalPaisa = Money.parse(_totalAmountController.text).paisa;
+    } on MoneyParseException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     final int? numInst = int.tryParse(_numInstallmentsController.text);
 
-    if (totalAmt == null || numInst == null || numInst <= 0) {
+    if (numInst == null || numInst <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('براہ کرم کل رقم اور اقساط کی تعداد درست درج کریں۔'),
+          content: Text('براہ کرم اقساط کی تعداد درست درج کریں۔'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    final double baseAmount = (totalAmt / numInst).roundToDouble();
-    double sum = 0.0;
-    
+    final int baseAmount = totalPaisa ~/ numInst;
+    int sum = 0;
+
     final List<Map<String, dynamic>> temp = [];
     
     // Spacing logic: if yearly, space by 12/N months. If seasonal, space by 6/N months. Otherwise, space by 1 month.
@@ -96,10 +108,10 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
     if (intervalMonths < 1) intervalMonths = 1;
 
     for (int i = 0; i < numInst; i++) {
-      double amt = baseAmount;
+      int amt = baseAmount;
       if (i == numInst - 1) {
-        // Adjust last installment to handle rounding differences
-        amt = totalAmt - sum;
+        // Adjust last installment to handle the remainder
+        amt = totalPaisa - sum;
       }
       sum += amt;
 
@@ -121,8 +133,8 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
     });
   }
 
-  double _getInstallmentsSum() {
-    return _installments.fold(0.0, (sum, inst) => sum + (inst['amount'] as double));
+  int _getInstallmentsSum() {
+    return _installments.fold(0, (sum, inst) => sum + (inst['amount'] as int));
   }
 
   void _saveForm() async {
@@ -138,7 +150,18 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       return;
     }
 
-    final double totalAmount = double.parse(_totalAmountController.text);
+    late final int totalAmountPaisa;
+    try {
+      totalAmountPaisa = Money.parse(_totalAmountController.text).paisa;
+    } on MoneyParseException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     List<ThekaInstallment> instModels = [];
 
@@ -146,7 +169,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       // Create single installment equal to total amount
       instModels.add(ThekaInstallment(
         thekaId: 0,
-        amount: totalAmount,
+        amountPaisa: totalAmountPaisa,
         dueDate: DateFormat('yyyy-MM-dd').format(_startDate),
         status: 'Pending',
       ));
@@ -161,11 +184,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
         return;
       }
 
-      final double sum = _getInstallmentsSum();
-      if ((sum - totalAmount).abs() > 0.01) {
+      final int sum = _getInstallmentsSum();
+      if (sum != totalAmountPaisa) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('اقساط کا مجموعہ (${sum.toStringAsFixed(0)} روپے) کل رقم (${totalAmount.toStringAsFixed(0)} روپے) کے برابر ہونا چاہیے۔'),
+            content: Text('اقساط کا مجموعہ (${Money(sum).format()}) کل رقم (${Money(totalAmountPaisa).format()}) کے برابر ہونا چاہیے۔'),
             backgroundColor: Colors.red,
           ),
         );
@@ -175,7 +198,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       for (var inst in _installments) {
         instModels.add(ThekaInstallment(
           thekaId: 0,
-          amount: inst['amount'],
+          amountPaisa: inst['amount'] as int,
           dueDate: DateFormat('yyyy-MM-dd').format(inst['dueDate']),
           status: 'Pending',
         ));
@@ -186,7 +209,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       id: widget.theka?.id,
       farmId: _selectedFarmId!,
       fieldId: _selectedFieldId,
-      totalAmount: totalAmount,
+      totalAmountPaisa: totalAmountPaisa,
       durationType: _selectedDurationType,
       durationDetails: _durationDetailsController.text,
       paymentMethod: _selectedPaymentMethod,
@@ -444,7 +467,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                         ),
                         validator: (value) {
                           if (value!.isEmpty) return 'براہ کرم ٹھیکہ رقم درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          try {
+                            Money.parse(value);
+                          } on MoneyParseException {
+                            return 'صرف نمبر درج کریں';
+                          }
                           return null;
                         },
                         onChanged: (val) {
@@ -532,7 +559,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           itemCount: _installments.length,
                           itemBuilder: (context, idx) {
                             final inst = _installments[idx];
-                            final amountController = TextEditingController(text: inst['amount'].toStringAsFixed(0));
+                            final amountController = TextEditingController(text: Money(inst['amount'] as int).format());
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12.0),
@@ -553,10 +580,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                         border: OutlineInputBorder(),
                                       ),
                                       onChanged: (val) {
-                                        final double? parsed = double.tryParse(val);
-                                        if (parsed != null) {
-                                          _installments[idx]['amount'] = parsed;
+                                        try {
+                                          _installments[idx]['amount'] = Money.parse(val).paisa;
                                           setState(() {}); // refresh sum check
+                                        } on MoneyParseException {
+                                          // Keep the previous valid amount.
                                         }
                                       },
                                     ),
@@ -609,7 +637,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           onPressed: () {
                             setState(() {
                               _installments.add({
-                                'amount': 0.0,
+                                'amount': 0,
                                 'dueDate': DateTime.now().add(const Duration(days: 30)),
                               });
                             });
@@ -648,11 +676,16 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
   }
 
   Widget _buildInstallmentValidationSummary() {
-    final double totalAmt = double.tryParse(_totalAmountController.text) ?? 0.0;
-    final double instSum = _getInstallmentsSum();
-    final double diff = totalAmt - instSum;
+    int totalAmtPaisa;
+    try {
+      totalAmtPaisa = Money.parse(_totalAmountController.text).paisa;
+    } on MoneyParseException {
+      totalAmtPaisa = 0;
+    }
+    final int instSum = _getInstallmentsSum();
+    final int diff = totalAmtPaisa - instSum;
 
-    final isMatched = diff.abs() < 0.01;
+    final isMatched = diff == 0;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -668,11 +701,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'کل رقم: ${totalAmt.toStringAsFixed(0)} روپے',
+                'کل رقم: ${Money(totalAmtPaisa).format()}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(
-                'اقساط کا مجموعہ: ${instSum.toStringAsFixed(0)} روپے',
+                'اقساط کا مجموعہ: ${Money(instSum).format()}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isMatched ? Colors.green : Colors.red,
@@ -684,8 +717,8 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
             const SizedBox(height: 6),
             Text(
               diff > 0
-                  ? 'رقم کم ہے: ${diff.toStringAsFixed(0)} روپے اور تقسیم کریں'
-                  : 'رقم زیادہ ہے: ${diff.abs().toStringAsFixed(0)} روپے اقساط سے کم کریں',
+                  ? 'رقم کم ہے: ${Money(diff).format()} اور تقسیم کریں'
+                  : 'رقم زیادہ ہے: ${Money(diff.abs()).format()} اقساط سے کم کریں',
               style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ],

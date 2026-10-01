@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/theka_provider.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 import 'theka_details_screen.dart';
 import 'theka_form_screen.dart';
@@ -585,11 +586,11 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
 
     final theka = currentThekas.first;
     final insts = thekaProvider.getInstallmentsForTheka(theka.id!);
-    double paidAmt = 0.0;
+    int paidAmt = 0;
     for (var inst in insts) {
-      paidAmt += inst.paidAmount;
+      paidAmt += inst.paidAmountPaisa;
     }
-    final double pendingAmt = theka.totalAmount - paidAmt;
+    final int pendingAmt = theka.totalAmountPaisa - paidAmt;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -621,9 +622,9 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('کل ٹھیکہ: ${theka.totalAmount.toStringAsFixed(0)} روپے', style: const TextStyle(fontSize: 13)),
-              Text('ادا شدہ: ${paidAmt.toStringAsFixed(0)} روپے', style: const TextStyle(fontSize: 13, color: Colors.green)),
-              Text('باقی: ${pendingAmt.toStringAsFixed(0)} روپے', style: const TextStyle(fontSize: 13, color: Colors.red)),
+              Text('کل ٹھیکہ: ${Money(theka.totalAmountPaisa).format()}', style: const TextStyle(fontSize: 13)),
+              Text('ادا شدہ: ${Money(paidAmt).format()}', style: const TextStyle(fontSize: 13, color: Colors.green)),
+              Text('باقی: ${Money(pendingAmt).format()}', style: const TextStyle(fontSize: 13, color: Colors.red)),
             ],
           ),
         ],

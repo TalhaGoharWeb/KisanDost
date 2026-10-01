@@ -8,6 +8,7 @@ import '../providers/expense_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/task_provider.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 import '../services/unit_converter.dart';
 
 class ActivityFormScreen extends StatefulWidget {
@@ -112,10 +113,11 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
         }
       }
     }
-    if (existing.expenseAmount != null) {
-      _genericCostController.text = existing.expenseAmount!.toStringAsFixed(0);
-      _priceController.text = existing.expenseAmount!.toStringAsFixed(0);
-      _waterCostController.text = existing.expenseAmount!.toStringAsFixed(0);
+    if (existing.expenseAmountPaisa != null) {
+      final restored = Money(existing.expenseAmountPaisa!).format();
+      _genericCostController.text = restored;
+      _priceController.text = restored;
+      _waterCostController.text = restored;
     }
   }
 
@@ -535,7 +537,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                           final int targetCropSeasonId = _selectedCropSeasonId ?? activeSeasons.first.cropSeason.id!;
                           
                           // Smart Automation logic variables
-                          double? finalExpenseAmount;
+                          int? finalExpenseAmountPaisa;
                           String? finalExpenseCategory = widget.activityTitle;
                           String? inventoryCategory;
                           String? inventoryName;
@@ -547,7 +549,18 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                           if (widget.activityTitle == 'پانی لگایا') {
                             finalExpenseCategory = 'Water';
                             if (_waterSource != 'نہر') {
-                              finalExpenseAmount = double.tryParse(_waterCostController.text);
+                              try {
+                                finalExpenseAmountPaisa =
+                                    Money.parse(_waterCostController.text).paisa;
+                              } on MoneyParseException catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.message),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
                             }
                             String unitsStr = '';
                             if (_waterSource == 'ٹیوب ویل' || _waterSource == 'بورنگ') {
@@ -570,13 +583,24 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                               inventoryName = _itemNameController.text;
                               inventoryQty = enteredQty;
                               inventoryUnit = _selectedUnit;
-                              finalExpenseAmount = double.tryParse(_priceController.text);
+                              try {
+                                finalExpenseAmountPaisa =
+                                    Money.parse(_priceController.text).paisa;
+                              } on MoneyParseException catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.message),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
 
                               // Guard: never divide by a null price or a
                               // zero/negative quantity. Validators should catch
                               // this first, but a division must never trust the
                               // form alone — show an error instead of crashing.
-                              if (finalExpenseAmount == null || inventoryQty <= 0) {
+                              if (inventoryQty <= 0) {
                                 messenger.showSnackBar(
                                   const SnackBar(
                                     content: Text('مقدار اور قیمت درست درج کریں (صفر سے زیادہ)'),
@@ -595,7 +619,9 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                   name: inventoryName,
                                   unit: _selectedUnit,
                                   quantity: inventoryQty,
-                                  costPerUnit: finalExpenseAmount / inventoryQty,
+                                  costPerUnitPaisa:
+                                      (finalExpenseAmountPaisa / inventoryQty)
+                                          .round(),
                                 );
                               } on InventoryException catch (e) {
                                 messenger.showSnackBar(
@@ -643,7 +669,9 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                               inventoryQty = convertedQty;
 
                               // Calculate expense cost based on the converted quantity
-                              finalExpenseAmount = convertedQty * selected.costPerUnit;
+                              finalExpenseAmountPaisa =
+                                  (convertedQty * selected.costPerUnitPaisa)
+                                      .round();
                             }
                             _detailsController.text = 'استعمال: $inventoryName | مقدار: $enteredQty $_selectedUnit. ${_detailsController.text}';
                           }
@@ -651,14 +679,47 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                           // 3. Labor and Generic calculations
                           else if (widget.activityTitle == 'مزدور لگائے') {
                             finalExpenseCategory = 'Labour';
-                            finalExpenseAmount = double.tryParse(_genericCostController.text);
+                            try {
+                              finalExpenseAmountPaisa =
+                                  Money.parse(_genericCostController.text).paisa;
+                            } on MoneyParseException catch (e) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(e.message),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
                             _detailsController.text = 'مزدور تعداد: ${_qtyController.text}. ${_detailsController.text}';
                           } else if (widget.activityTitle == 'مشینری کا استعمال') {
                             finalExpenseCategory = 'Machinery';
-                            finalExpenseAmount = double.tryParse(_genericCostController.text);
+                            try {
+                              finalExpenseAmountPaisa =
+                                  Money.parse(_genericCostController.text).paisa;
+                            } on MoneyParseException catch (e) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(e.message),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
                             _detailsController.text = 'مشینری: ${_itemNameController.text}. ${_detailsController.text}';
                           } else {
-                            finalExpenseAmount = double.tryParse(_genericCostController.text);
+                            try {
+                              finalExpenseAmountPaisa =
+                                  Money.parse(_genericCostController.text).paisa;
+                            } on MoneyParseException catch (e) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(e.message),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
                           }
 
                           // Inventory deductions run inside the provider transaction:
@@ -672,7 +733,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 activityType: widget.activityTitle,
                                 date: _selectedDate.toIso8601String(),
                                 details: _detailsController.text,
-                                expenseAmount: finalExpenseAmount,
+                                expenseAmountPaisa: finalExpenseAmountPaisa,
                                 expenseCategory: finalExpenseCategory,
                                 inventoryCategory: inventoryCategory,
                                 inventoryName: inventoryName,
@@ -688,7 +749,7 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 activityType: widget.activityTitle,
                                 date: _selectedDate.toIso8601String(),
                                 details: _detailsController.text,
-                                expenseAmount: finalExpenseAmount,
+                                expenseAmountPaisa: finalExpenseAmountPaisa,
                                 expenseCategory: finalExpenseCategory,
                                 inventoryCategory: inventoryCategory,
                                 inventoryName: inventoryName,

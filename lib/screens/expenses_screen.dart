@@ -6,6 +6,7 @@ import '../providers/crop_provider.dart';
 import '../providers/activity_provider.dart';
 import '../providers/farm_provider.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 
 class ExpensesScreen extends StatefulWidget {
@@ -66,7 +67,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${expenseProvider.totalExpenses.toStringAsFixed(0)} روپے',
+                  Money(expenseProvider.totalExpensesPaisa).format(),
                   style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -121,7 +122,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '${exp.amount.toStringAsFixed(0)} روپے',
+                                Money(exp.amountPaisa).format(),
                                 style: const TextStyle(
                                   color: Colors.red,
                                   fontWeight: FontWeight.bold,
@@ -312,7 +313,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         ),
                         validator: (value) {
                           if (value!.isEmpty) return 'رقم درج کریں';
-                          if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
+                          try {
+                            Money.parse(value);
+                          } on MoneyParseException {
+                            return 'صرف نمبر درج کریں';
+                          }
                           return null;
                         },
                       ),
@@ -354,7 +359,20 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      final double amountVal = double.parse(amountController.text);
+                      int amountPaisa;
+                      try {
+                        amountPaisa = Money.parse(amountController.text).paisa;
+                      } on MoneyParseException catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.message),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                        return;
+                      }
                       final String categoryUrdu = expenseProvider.expenseCategories[selectedCategory] ?? selectedCategory;
                       final String finalDesc = descController.text.isNotEmpty 
                           ? descController.text 
@@ -363,7 +381,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       // 1. Add general expense entry to SQL table
                       final int expenseId = await expenseProvider.addExpense(
                         category: selectedCategory,
-                        amount: amountVal,
+                        amountPaisa: amountPaisa,
                         date: selectedDate.toIso8601String(),
                         description: finalDesc,
                         farmId: selectedFarmId,

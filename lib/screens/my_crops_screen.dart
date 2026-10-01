@@ -5,6 +5,7 @@ import '../providers/crop_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/activity_provider.dart';
 import '../providers/harvest_provider.dart';
+import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 
 class MyCropsScreen extends StatefulWidget {
@@ -114,31 +115,27 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                   cropActivities.map((e) => e.activity).toList(),
                 );
 
-                final totalExpense = cropActivities.fold<double>(
-                  0.0,
-                  (sum, act) => sum + (act.expenseAmount ?? 0.0),
+                final totalExpensePaisa = cropActivities.fold<int>(
+                  0,
+                  (sum, act) => sum + (act.expenseAmountPaisa ?? 0),
                 );
-                final totalIncome = cropHarvests
+                final totalIncomePaisa = cropHarvests
                     .where((h) => h.sale != null)
-                    .fold<double>(0.0, (sum, h) => sum + h.sale!.totalAmount);
+                    .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
                 final totalYield = cropHarvests.fold<double>(
                   0.0,
                   (sum, h) => sum + h.harvest.quantity,
                 );
                 final fieldCount = details.fields.isEmpty ? 1 : details.fields.length;
-                final expensePerField = cropProvider.splitAmountAcrossFields(
-                  amount: totalExpense,
-                  fieldCount: fieldCount,
-                );
-                final incomePerField = cropProvider.splitAmountAcrossFields(
-                  amount: totalIncome,
-                  fieldCount: fieldCount,
-                );
-                final yieldPerField = cropProvider.splitAmountAcrossFields(
-                  amount: totalYield,
-                  fieldCount: fieldCount,
-                );
-                final profitPerField = incomePerField - expensePerField;
+                // Per-field averages stay in integer paisa.
+                final expensePerFieldPaisa = cropProvider
+                    .splitAmountAcrossFields(
+                        amountPaisa: totalExpensePaisa, fieldCount: fieldCount);
+                final incomePerFieldPaisa = cropProvider
+                    .splitAmountAcrossFields(
+                        amountPaisa: totalIncomePaisa, fieldCount: fieldCount);
+                final yieldPerField = totalYield / fieldCount;
+                final profitPerFieldPaisa = incomePerFieldPaisa - expensePerFieldPaisa;
 
                 // Status border coloring matching premium layout
                 final sideColor = isActive ? Colors.green.shade600 : Colors.brown.shade500;
@@ -253,10 +250,10 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text('کل خرچہ: ${totalExpense.toStringAsFixed(0)} روپے'),
+                                Text('کل خرچہ: ${Money(totalExpensePaisa).format()}'),
                                 Text('کل پیداوار: ${totalYield.toStringAsFixed(1)}'),
-                                Text('کل آمدن: ${totalIncome.toStringAsFixed(0)} روپے'),
-                                Text('کل منافع: ${(totalIncome - totalExpense).toStringAsFixed(0)} روپے'),
+                                Text('کل آمدن: ${Money(totalIncomePaisa).format()}'),
+                                Text('کل منافع: ${Money(totalIncomePaisa - totalExpensePaisa).format()}'),
                               ],
                             ),
                           ),
@@ -284,7 +281,7 @@ class _MyCropsScreenState extends State<MyCropsScreen> with SingleTickerProvider
                                   return Padding(
                                     padding: const EdgeInsets.only(bottom: 6),
                                     child: Text(
-                                      '${field.name}: خرچہ ${expensePerField.toStringAsFixed(0)} روپے، پیداوار ${yieldPerField.toStringAsFixed(1)}، منافع ${profitPerField.toStringAsFixed(0)} روپے',
+                                      '${field.name}: خرچہ ${Money(expensePerFieldPaisa).format()}، پیداوار ${yieldPerField.toStringAsFixed(1)}، منافع ${Money(profitPerFieldPaisa).format()}',
                                       style: const TextStyle(fontSize: 13),
                                     ),
                                   );

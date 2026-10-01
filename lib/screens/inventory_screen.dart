@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/inventory_provider.dart';
 import '../models/models.dart';
 import '../services/unit_converter.dart';
+import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 
 class InventoryScreen extends StatefulWidget {
@@ -32,10 +33,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget build(BuildContext context) {
     final inventoryProvider = Provider.of<InventoryProvider>(context);
 
-    // 1. Calculate Total Stock Value
-    final double totalStockValue = inventoryProvider.inventoryList.fold(
-      0.0,
-      (sum, item) => sum + (item.quantity * item.costPerUnit),
+    // 1. Calculate Total Stock Value (integer paisa)
+    final int totalStockValuePaisa = inventoryProvider.inventoryList.fold<int>(
+      0,
+      (sum, item) => sum + (item.quantity * item.costPerUnitPaisa).round(),
     );
 
     // 2. Filter Stock List
@@ -94,7 +95,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${totalStockValue.toStringAsFixed(0)} روپے',
+                  Money(totalStockValuePaisa).format(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 36,
@@ -241,7 +242,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'شرح: ${item.costPerUnit.toStringAsFixed(0)} روپے',
+                                      'شرح: ${Money(item.costPerUnitPaisa).format()}',
                                       style: const TextStyle(
                                         color: Colors.grey,
                                         fontSize: 12,
@@ -249,7 +250,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'کل قیمت: ${(item.quantity * item.costPerUnit).toStringAsFixed(0)} روپے',
+                                      'کل قیمت: ${Money((item.quantity * item.costPerUnitPaisa).round()).format()}',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
@@ -454,10 +455,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value!.isEmpty) return 'قیمت درج کریں';
-                          final price = double.tryParse(value);
-                          if (price == null) return 'صرف نمبر';
-                          if (price < 0) return 'قیمت منفی نہیں ہو سکتی';
+                          if (value == null || value.isEmpty) return 'قیمت درج کریں';
+                          try {
+                            Money.parse(value);
+                          } on MoneyParseException catch (e) {
+                            return e.message;
+                          }
                           return null;
                         },
                       ),
@@ -478,13 +481,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       final double? weight = weightController.text.isEmpty
                           ? null
                           : double.parse(weightController.text);
+                      final int costPerUnitPaisa;
+                      try {
+                        costPerUnitPaisa = Money.parse(priceController.text).paisa;
+                      } on MoneyParseException catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(e.message),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
                       try {
                         await inventoryProvider.recordPurchase(
                           category: selectedCategory,
                           name: nameController.text,
                           unit: selectedUnit,
                           quantity: double.parse(qtyController.text),
-                          costPerUnit: double.parse(priceController.text),
+                          costPerUnitPaisa: costPerUnitPaisa,
                           weightPerUnitKg: weight,
                         );
                       } on InventoryException catch (e) {
@@ -624,7 +639,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final nameController = TextEditingController(text: item.name);
     final qtyController = TextEditingController(text: item.quantity.toString());
     String selectedUnit = item.unit;
-    final priceController = TextEditingController(text: item.costPerUnit.toString());
+    final priceController = TextEditingController(text: (item.costPerUnitPaisa / 100).toString());
     final weightController = TextEditingController(
       text: item.weightPerUnitKg?.toString() ?? '',
     );
@@ -738,10 +753,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          if (value!.isEmpty) return 'قیمت درج کریں';
-                          final price = double.tryParse(value);
-                          if (price == null) return 'صرف نمبر';
-                          if (price < 0) return 'قیمت منفی نہیں ہو سکتی';
+                          if (value == null || value.isEmpty) return 'قیمت درج کریں';
+                          try {
+                            Money.parse(value);
+                          } on MoneyParseException catch (e) {
+                            return e.message;
+                          }
                           return null;
                         },
                       ),
@@ -764,13 +781,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       final double? weight = weightController.text.isEmpty
                           ? null
                           : double.parse(weightController.text);
+                      final int costPerUnitPaisa;
+                      try {
+                        costPerUnitPaisa = Money.parse(priceController.text).paisa;
+                      } on MoneyParseException catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(e.message),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
                       try {
                         await inventoryProvider.updateItemDetails(
                           id: item.id!,
                           category: selectedCategory,
                           name: nameController.text,
                           unit: selectedUnit,
-                          costPerUnit: double.parse(priceController.text),
+                          costPerUnitPaisa: costPerUnitPaisa,
                           weightPerUnitKg: weight,
                         );
                         // Quantity never overwrites silently: the difference

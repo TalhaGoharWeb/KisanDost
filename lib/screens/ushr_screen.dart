@@ -6,6 +6,7 @@ import '../providers/crop_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 
 class UshrScreen extends StatefulWidget {
   const UshrScreen({super.key});
@@ -15,21 +16,49 @@ class UshrScreen extends StatefulWidget {
 }
 
 class _UshrScreenState extends State<UshrScreen> {
+  /// Parses an optional money field: blank means 0 paisa; garbage throws
+  /// [MoneyParseException] (Urdu message, safe for a SnackBar).
+  int _parsePaisaOrThrow(String text) {
+    if (text.trim().isEmpty) return 0;
+    return Money.parse(text).paisa;
+  }
+
+  /// Lenient parse for live previews: blank or garbage shows as 0 paisa.
+  int _parsePaisaOrZero(String text) {
+    try {
+      return _parsePaisaOrThrow(text);
+    } on MoneyParseException {
+      return 0;
+    }
+  }
+
+  /// Money-aware validator: accepts Urdu digits, commas and روپے suffix.
+  String? _moneyValidator(String? value, String emptyMessage) {
+    if (value == null || value.isEmpty) return emptyMessage;
+    try {
+      Money.parse(value);
+    } on MoneyParseException {
+      return 'صرف نمبر درج کریں';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ushrProvider = Provider.of<UshrProvider>(context);
     final cropProvider = Provider.of<CropProvider>(context);
 
-    double totalUshr = 0.0;
-    double totalPaid = 0.0;
-    double totalPending = 0.0;
+    int totalUshrPaisa = 0;
+    int totalPaidPaisa = 0;
+    int totalPendingPaisa = 0;
 
     for (final item in ushrProvider.ushrRecords) {
       final u = item.ushrRecord;
-      totalUshr += u.ushrAmount;
-      final paidValue = u.cashPaid + (u.qtyPaid * u.ratePerUnit);
-      totalPaid += paidValue;
-      totalPending += u.remainingBalance;
+      totalUshrPaisa += u.ushrAmountPaisa;
+      final paidValuePaisa =
+          u.cashPaidPaisa + (u.qtyPaid * u.ratePerUnitPaisa).round();
+      totalPaidPaisa += paidValuePaisa;
+      totalPendingPaisa += u.remainingBalancePaisa;
     }
 
     return Scaffold(
@@ -60,7 +89,7 @@ class _UshrScreenState extends State<UshrScreen> {
                 itemCount: ushrProvider.ushrRecords.length + 1,
                 itemBuilder: (context, index) {
                   if (index == 0) {
-                    return _buildSummaryCards(totalUshr, totalPaid, totalPending);
+                    return _buildSummaryCards(totalUshrPaisa, totalPaidPaisa, totalPendingPaisa);
                   }
 
                   final item = ushrProvider.ushrRecords[index - 1];
@@ -81,7 +110,8 @@ class _UshrScreenState extends State<UshrScreen> {
                     payMethodUrdu = 'مخلوط نقد+جنس (Mixed)';
                   }
 
-                  final paidValue = u.cashPaid + (u.qtyPaid * u.ratePerUnit);
+                  final paidValuePaisa =
+                    u.cashPaidPaisa + (u.qtyPaid * u.ratePerUnitPaisa).round();
 
                   return Card(
                     elevation: 2,
@@ -120,7 +150,7 @@ class _UshrScreenState extends State<UshrScreen> {
                           const SizedBox(height: 6),
                           Text('زمین: ${item.farmName} - ${item.fieldName}'),
                           const SizedBox(height: 4),
-                          Text('پیداوار مقدار: ${u.harvestQty.toStringAsFixed(0)} من | مارکیٹ ویلیو: Rs. ${u.marketValue.toStringAsFixed(0)}'),
+                          Text('پیداوار مقدار: ${u.harvestQty.toStringAsFixed(0)} من | مارکیٹ ویلیو: ${Money(u.marketValuePaisa).format()}'),
                           const Divider(height: 20),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -137,7 +167,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                 children: [
                                   const Text('عشر واجب الادا', style: TextStyle(fontSize: 12, color: Colors.grey)),
                                   Text(
-                                    'Rs. ${u.ushrAmount.toStringAsFixed(0)}',
+                                    Money(u.ushrAmountPaisa).format(),
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green),
                                   ),
                                 ],
@@ -168,7 +198,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text('نقد ادا شدہ:', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-                                    Text('Rs. ${u.cashPaid.toStringAsFixed(0)}', style: const TextStyle(fontSize: 13)),
+                                    Text(Money(u.cashPaidPaisa).format(), style: const TextStyle(fontSize: 13)),
                                   ],
                                 ),
                                 const SizedBox(height: 4),
@@ -176,7 +206,7 @@ class _UshrScreenState extends State<UshrScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text('جنس ادا شدہ:', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-                                    Text('${u.qtyPaid.toStringAsFixed(1)} من (قیمت: Rs. ${(u.qtyPaid * u.ratePerUnit).toStringAsFixed(0)})', style: const TextStyle(fontSize: 13)),
+                                    Text('${u.qtyPaid.toStringAsFixed(1)} من (قیمت: ${Money((u.qtyPaid * u.ratePerUnitPaisa).round()).format()})', style: const TextStyle(fontSize: 13)),
                                   ],
                                 ),
                                 const Divider(),
@@ -184,16 +214,16 @@ class _UshrScreenState extends State<UshrScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text('کل ادا شدہ قدر:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
-                                    Text('Rs. ${paidValue.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
+                                    Text(Money(paidValuePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green)),
                                   ],
                                 ),
-                                if (u.remainingBalance > 0) ...[
+                                if (u.remainingBalancePaisa > 0) ...[
                                   const SizedBox(height: 4),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text('باقی واجب الادا عشر:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
-                                      Text('Rs. ${u.remainingBalance.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
+                                      Text(Money(u.remainingBalancePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
                                     ],
                                   ),
                                 ],
@@ -250,7 +280,7 @@ class _UshrScreenState extends State<UshrScreen> {
     );
   }
 
-  Widget _buildSummaryCards(double total, double paid, double pending) {
+  Widget _buildSummaryCards(int totalPaisa, int paidPaisa, int pendingPaisa) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
@@ -258,7 +288,7 @@ class _UshrScreenState extends State<UshrScreen> {
           Expanded(
             child: _buildSummaryCard(
               title: 'کل واجب عشر',
-              value: 'Rs. ${total.toStringAsFixed(0)}',
+              value: Money(totalPaisa).format(),
               color: Colors.green.shade800,
               bgColor: Colors.green.shade50,
             ),
@@ -267,7 +297,7 @@ class _UshrScreenState extends State<UshrScreen> {
           Expanded(
             child: _buildSummaryCard(
               title: 'کل ادا شدہ عشر',
-              value: 'Rs. ${paid.toStringAsFixed(0)}',
+              value: Money(paidPaisa).format(),
               color: Colors.green.shade900,
               bgColor: Colors.teal.shade50,
             ),
@@ -276,7 +306,7 @@ class _UshrScreenState extends State<UshrScreen> {
           Expanded(
             child: _buildSummaryCard(
               title: 'کل باقی عشر',
-              value: 'Rs. ${pending.toStringAsFixed(0)}',
+              value: Money(pendingPaisa).format(),
               color: Colors.red.shade800,
               bgColor: Colors.red.shade50,
             ),
@@ -343,13 +373,23 @@ class _UshrScreenState extends State<UshrScreen> {
 
     // Input Controllers
     final qtyController = TextEditingController(text: existingRecord?.harvestQty.toString() ?? '');
-    final marketRateController = TextEditingController(text: existingRecord?.ratePerUnit.toString() ?? '');
-    final marketValueController = TextEditingController(text: existingRecord?.marketValue.toString() ?? '');
+    final marketRateController = TextEditingController(
+        text: existingRecord != null
+            ? Money(existingRecord.ratePerUnitPaisa).format()
+            : '');
+    final marketValueController = TextEditingController(
+        text: existingRecord != null
+            ? Money(existingRecord.marketValuePaisa).format()
+            : '');
     final customPercentageController = TextEditingController(text: existingRecord?.ushrPercentage.toString() ?? '10.0');
     final notesController = TextEditingController(text: existingRecord?.notes ?? '');
 
-    final qtyPaidController = TextEditingController(text: existingRecord?.qtyPaid.toString() ?? '0.0');
-    final cashPaidController = TextEditingController(text: existingRecord?.cashPaid.toString() ?? '0.0');
+    final qtyPaidController = TextEditingController(
+        text: existingRecord?.qtyPaid.toString() ?? '0.0');
+    final cashPaidController = TextEditingController(
+        text: existingRecord != null
+            ? Money(existingRecord.cashPaidPaisa).format()
+            : '0.0');
 
     int? selectedCropSeasonId = existingRecord?.cropSeasonId ?? (activeSeasons.isNotEmpty ? activeSeasons.first.cropSeason.id : null);
     int? selectedHarvestId = existingRecord?.harvestId;
@@ -366,10 +406,12 @@ class _UshrScreenState extends State<UshrScreen> {
           builder: (context, setState) {
             // Conversions & calculations
             final double qty = double.tryParse(qtyController.text) ?? 0.0;
-            final double rate = double.tryParse(marketRateController.text) ?? 0.0;
-            final double marketValue = qty * rate;
-            if (marketValueController.text != marketValue.toStringAsFixed(0) && marketValue > 0) {
-              marketValueController.text = marketValue.toStringAsFixed(0);
+            final int ratePaisa = _parsePaisaOrZero(marketRateController.text);
+            final int marketValuePaisa = (qty * ratePaisa).round();
+            final String marketValueText = Money(marketValuePaisa).format();
+            if (marketValueController.text != marketValueText &&
+                marketValuePaisa > 0) {
+              marketValueController.text = marketValueText;
             }
 
             double percentage = 10.0;
@@ -382,19 +424,22 @@ class _UshrScreenState extends State<UshrScreen> {
             }
 
             final double ushrQty = (qty * percentage) / 100.0;
-            final double calculatedUshrAmount = (marketValue * percentage) / 100.0;
+            final int ushrAmountPaisa =
+                (marketValuePaisa * percentage / 100.0).round();
 
             // Unit Conversions
             final double ushrQtyKg = ushrQty * 40.0; // 1 Maund = 40 KG
 
             // Payment Calculations
-            final double qtyPaid = double.tryParse(qtyPaidController.text) ?? 0.0;
-            final double cashPaid = double.tryParse(cashPaidController.text) ?? 0.0;
-            final double totalPaidPkr = cashPaid + (qtyPaid * rate);
-            final double remainingBalance = calculatedUshrAmount - totalPaidPkr;
+            final double qtyPaid =
+                double.tryParse(qtyPaidController.text) ?? 0.0;
+            final int cashPaidPaisa = _parsePaisaOrZero(cashPaidController.text);
+            final int totalPaidPaisa =
+                cashPaidPaisa + (qtyPaid * ratePaisa).round();
+            final int remainingBalancePaisa = ushrAmountPaisa - totalPaidPaisa;
 
             // Auto status logic
-            status = remainingBalance <= 0.0 ? 'Paid' : 'Pending';
+            status = remainingBalancePaisa <= 0 ? 'Paid' : 'Pending';
 
             return AlertDialog(
               title: Text(existingRecord == null ? 'عشر کا حساب لگائیں' : 'عشر کا ریکارڈ تبدیل کریں'),
@@ -434,8 +479,10 @@ class _UshrScreenState extends State<UshrScreen> {
                                 final selectedH = harvestsList.firstWhere((h) => h.harvest.id == val);
                                 selectedCropSeasonId = selectedH.harvest.cropSeasonId;
                                 qtyController.text = selectedH.harvest.quantity.toString();
-                                marketRateController.text = selectedH.harvest.ratePerUnit.toString();
-                                marketValueController.text = selectedH.harvest.grossAmount.toString();
+                                marketRateController.text =
+                                  Money(selectedH.harvest.ratePerUnitPaisa).format();
+                                marketValueController.text =
+                                  Money(selectedH.harvest.grossPaisa).format();
                               }
                             });
                           },
@@ -495,11 +542,8 @@ class _UshrScreenState extends State<UshrScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (v) => setState(() {}),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) return 'ریٹ درج کریں';
-                                if (double.tryParse(value) == null) return 'صرف نمبر درج کریں';
-                                return null;
-                              },
+                              validator: (value) =>
+                                  _moneyValidator(value, 'ریٹ درج کریں'),
                             ),
                           ),
                         ],
@@ -576,13 +620,14 @@ class _UshrScreenState extends State<UshrScreen> {
                             payMethod = val!;
                             if (payMethod == 'Cash') {
                               qtyPaidController.text = '0.0';
-                              cashPaidController.text = calculatedUshrAmount.toStringAsFixed(0);
+                              cashPaidController.text = Money(ushrAmountPaisa).format();
                             } else if (payMethod == 'Crop') {
                               cashPaidController.text = '0.0';
                               qtyPaidController.text = ushrQty.toStringAsFixed(1);
                             } else {
                               qtyPaidController.text = (ushrQty / 2.0).toStringAsFixed(1);
-                              cashPaidController.text = (calculatedUshrAmount / 2.0).toStringAsFixed(0);
+                              cashPaidController.text =
+                                Money((ushrAmountPaisa / 2).round()).format();
                             }
                           });
                         },
@@ -666,7 +711,7 @@ class _UshrScreenState extends State<UshrScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'یا نقد رقم میں: Rs. ${calculatedUshrAmount.toStringAsFixed(0)} (روپے)',
+                              'یا نقد رقم میں: ${Money(ushrAmountPaisa).format()} (روپے)',
                               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800, fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
@@ -675,15 +720,15 @@ class _UshrScreenState extends State<UshrScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('کل ادا شدہ قدر:', style: TextStyle(fontSize: 13, color: Colors.green.shade800)),
-                                Text('Rs. ${totalPaidPkr.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade900)),
+                                Text(Money(totalPaidPaisa).format(), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade900)),
                               ],
                             ),
-                            if (remainingBalance > 0)
+                            if (remainingBalancePaisa > 0)
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('باقی واجب الادا:', style: TextStyle(fontSize: 13, color: Colors.red)),
-                                  Text('Rs. ${remainingBalance.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  Text(Money(remainingBalancePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               )
                             else
@@ -708,23 +753,38 @@ class _UshrScreenState extends State<UshrScreen> {
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade800, foregroundColor: Colors.white),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
+                      final int cashPaidSubmitPaisa;
+                      final int rateSubmitPaisa;
+                      try {
+                        cashPaidSubmitPaisa =
+                            _parsePaisaOrThrow(cashPaidController.text);
+                        rateSubmitPaisa =
+                            _parsePaisaOrThrow(marketRateController.text);
+                      } on MoneyParseException catch (e) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text(e.message),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
                       if (existingRecord == null) {
                         ushrProvider.addUshrRecord(
                           cropSeasonId: selectedCropSeasonId!,
                           harvestId: selectedHarvestId,
                           harvestQty: double.parse(qtyController.text),
-                          marketValue: marketValue,
+                          marketValuePaisa: marketValuePaisa,
                           ushrMethod: selectedMethod,
                           ushrPercentage: percentage,
-                          ushrAmount: calculatedUshrAmount,
+                          ushrAmountPaisa: ushrAmountPaisa,
                           status: status,
                           datePaid: status == 'Paid' ? selectedDatePaid.toIso8601String() : null,
                           notes: notesController.text,
                           payMethod: payMethod,
                           qtyPaid: qtyPaid,
-                          cashPaid: cashPaid,
-                          remainingBalance: remainingBalance > 0.0 ? remainingBalance : 0.0,
-                          ratePerUnit: rate,
+                          cashPaidPaisa: cashPaidSubmitPaisa,
+                          ratePerUnitPaisa: rateSubmitPaisa,
                         );
                       } else {
                         ushrProvider.updateUshrRecord(
@@ -732,18 +792,17 @@ class _UshrScreenState extends State<UshrScreen> {
                           cropSeasonId: selectedCropSeasonId!,
                           harvestId: selectedHarvestId ?? existingRecord.harvestId,
                           harvestQty: double.parse(qtyController.text),
-                          marketValue: marketValue,
+                          marketValuePaisa: marketValuePaisa,
                           ushrMethod: selectedMethod,
                           ushrPercentage: percentage,
-                          ushrAmount: calculatedUshrAmount,
+                          ushrAmountPaisa: ushrAmountPaisa,
                           status: status,
                           datePaid: status == 'Paid' ? selectedDatePaid.toIso8601String() : null,
                           notes: notesController.text,
                           payMethod: payMethod,
                           qtyPaid: qtyPaid,
-                          cashPaid: cashPaid,
-                          remainingBalance: remainingBalance > 0.0 ? remainingBalance : 0.0,
-                          ratePerUnit: rate,
+                          cashPaidPaisa: cashPaidSubmitPaisa,
+                          ratePerUnitPaisa: rateSubmitPaisa,
                         );
                       }
                       Navigator.pop(ctx);

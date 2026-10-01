@@ -5,6 +5,7 @@ import '../providers/theka_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/expense_provider.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 import 'theka_form_screen.dart';
 
 class ThekaDetailsScreen extends StatefulWidget {
@@ -31,9 +32,9 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     final formKey = GlobalKey<FormState>();
     // Incremental payment: the field is pre-filled with the REMAINING amount.
     // payInstallment ADDS this to the already-recorded paid amount.
-    final double remaining = inst.amount - inst.paidAmount;
+    final int remaining = inst.amountPaisa - inst.paidAmountPaisa;
     final amountController = TextEditingController(
-      text: remaining.toStringAsFixed(0),
+      text: Money(remaining).format(),
     );
     DateTime selectedDate = inst.paidDate != null ? DateTime.parse(inst.paidDate!) : DateTime.now();
 
@@ -50,13 +51,13 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'قسط رقم: ${inst.amount.toStringAsFixed(0)} روپے',
+                      'قسط رقم: ${Money(inst.amountPaisa).format()}',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    if (inst.paidAmount > 0) ...[
+                    if (inst.paidAmountPaisa > 0) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'ادا شدہ: ${inst.paidAmount.toStringAsFixed(0)} روپے | بقایا: ${remaining.toStringAsFixed(0)} روپے',
+                        'ادا شدہ: ${Money(inst.paidAmountPaisa).format()} | بقایا: ${Money(remaining).format()}',
                         style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
                       ),
                     ],
@@ -70,10 +71,15 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                       ),
                       validator: (value) {
                         if (value!.isEmpty) return 'رقم درج کریں';
-                        final double? parsed = double.tryParse(value);
-                        if (parsed == null || parsed <= 0) return 'صحیح رقم درج کریں';
-                        if (parsed > remaining) {
-                          return 'رقم بقایا رقم (${remaining.toStringAsFixed(0)} روپے) سے زیادہ نہیں ہو سکتی';
+                        int parsedPaisa;
+                        try {
+                          parsedPaisa = Money.parse(value).paisa;
+                        } on MoneyParseException {
+                          return 'صحیح رقم درج کریں';
+                        }
+                        if (parsedPaisa <= 0) return 'صحیح رقم درج کریں';
+                        if (parsedPaisa > remaining) {
+                          return 'رقم بقایا رقم (${Money(remaining).format()}) سے زیادہ نہیں ہو سکتی';
                         }
                         return null;
                       },
@@ -108,7 +114,20 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      final double paidAmount = double.parse(amountController.text);
+                      int paidAmountPaisa;
+                      try {
+                        paidAmountPaisa = Money.parse(amountController.text).paisa;
+                      } on MoneyParseException catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.message),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                        return;
+                      }
                       final String dateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
 
                       final thekaProv = Provider.of<ThekaProvider>(context, listen: false);
@@ -117,7 +136,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                       try {
                         await thekaProv.payInstallment(
                           installmentId: inst.id!,
-                          paidAmount: paidAmount,
+                          paidAmountPaisa: paidAmountPaisa,
                           paidDate: dateStr,
                           farmName: farmName,
                           installmentIndex: index,
@@ -236,11 +255,11 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     }
 
     final insts = thekaProvider.getInstallmentsForTheka(theka.id!);
-    double paidAmt = 0.0;
+    int paidAmt = 0;
     for (var inst in insts) {
-      paidAmt += inst.paidAmount;
+      paidAmt += inst.paidAmountPaisa;
     }
-    final double pendingAmt = theka.totalAmount - paidAmt;
+    final int pendingAmt = theka.totalAmountPaisa - paidAmt;
     final bool hasPayments = insts.any((inst) => inst.status != 'Pending');
 
     String durationUrdu = theka.durationType;
@@ -320,7 +339,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildSummaryHeaderItem('ٹھیکہ رقم', theka.totalAmount, Colors.white),
+                        _buildSummaryHeaderItem('ٹھیکہ رقم', theka.totalAmountPaisa, Colors.white),
                         _buildSummaryHeaderItem('ادا شدہ', paidAmt, Colors.greenAccent),
                         _buildSummaryHeaderItem('باقی واجب الادا', pendingAmt, Colors.orangeAccent),
                       ],
@@ -432,10 +451,10 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildInfoCol('رقم', '${inst.amount.toStringAsFixed(0)} روپے'),
+                            _buildInfoCol('رقم', Money(inst.amountPaisa).format()),
                             _buildInfoCol('آخری تاریخ', inst.dueDate),
                             if (inst.status != 'Pending') ...[
-                              _buildInfoCol('ادا شدہ رقم', '${inst.paidAmount.toStringAsFixed(0)} روپے', color: Colors.green.shade700),
+                              _buildInfoCol('ادا شدہ رقم', Money(inst.paidAmountPaisa).format(), color: Colors.green.shade700),
                               _buildInfoCol('تاریخ ادائیگی', inst.paidDate ?? '-'),
                             ],
                           ],
@@ -458,7 +477,7 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                             else ...[
                               // Record an additional payment only while a
                               // balance remains; overpayment is rejected.
-                              if (inst.paidAmount < inst.amount)
+                              if (inst.paidAmountPaisa < inst.amountPaisa)
                                 OutlinedButton.icon(
                                   onPressed: () => _showRecordPaymentDialog(context, inst, farm.name, instIdx),
                                   icon: const Icon(Icons.add_circle_outline, size: 16),
@@ -508,14 +527,14 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     );
   }
 
-  Widget _buildSummaryHeaderItem(String label, double amount, Color textCol) {
+  Widget _buildSummaryHeaderItem(String label, int amount, Color textCol) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
         const SizedBox(height: 4),
         Text(
-          '${amount.toStringAsFixed(0)} روپے',
+          Money(amount).format(),
           style: TextStyle(color: textCol, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ],

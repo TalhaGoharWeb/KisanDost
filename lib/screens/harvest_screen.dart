@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/crop_provider.dart';
 import '../widgets/empty_state_widget.dart';
+import '../services/money.dart';
 
 class HarvestScreen extends StatefulWidget {
   const HarvestScreen({super.key});
@@ -13,6 +14,39 @@ class HarvestScreen extends StatefulWidget {
 }
 
 class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProviderStateMixin {
+  /// Parses an optional money field: blank means 0 paisa; garbage throws
+  /// [MoneyParseException] (Urdu message, safe for a SnackBar).
+  int _parsePaisaOrThrow(String text) {
+    if (text.trim().isEmpty) return 0;
+    return Money.parse(text).paisa;
+  }
+
+  /// Lenient parse for live-preview cards: blank or garbage shows as 0 paisa.
+  int _parsePaisaOrZero(String text) {
+    try {
+      return _parsePaisaOrThrow(text);
+    } on MoneyParseException {
+      return 0;
+    }
+  }
+
+  /// Lenient parse returning null on blank or garbage (for onChanged previews).
+  int? _tryPaisa(String text) {
+    if (text.trim().isEmpty) return null;
+    try {
+      return Money.parse(text).paisa;
+    } on MoneyParseException {
+      return null;
+    }
+  }
+
+  /// Shows an Urdu money-parse error without closing the dialog.
+  void _showMoneyError(BuildContext ctx, MoneyParseException e) {
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+    );
+  }
+
   late TabController _tabController;
 
   @override
@@ -64,14 +98,14 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
   }
 
   Widget _buildSummaryCards(List<HarvestWithDetails> items) {
-    double totalGross = 0.0;
-    double totalExpenses = 0.0;
-    double totalNet = 0.0;
+    int totalGrossPaisa = 0;
+    int totalExpensesPaisa = 0;
+    int totalNetPaisa = 0;
 
     for (final item in items) {
-      totalGross += item.harvest.grossAmount;
-      totalExpenses += item.harvest.totalExpense;
-      totalNet += item.harvest.netIncome;
+      totalGrossPaisa += item.harvest.grossPaisa;
+      totalExpensesPaisa += item.harvest.totalExpensePaisa;
+      totalNetPaisa += item.harvest.netIncomePaisa;
     }
 
     return Padding(
@@ -81,7 +115,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
           Expanded(
             child: _buildSummaryCard(
               title: 'کل آمدنی',
-              value: 'Rs. ${totalGross.toStringAsFixed(0)}',
+              value: Money(totalGrossPaisa).format(),
               color: Colors.green.shade800,
               bgColor: Colors.green.shade50,
             ),
@@ -90,7 +124,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
           Expanded(
             child: _buildSummaryCard(
               title: 'کل اخراجات',
-              value: 'Rs. ${totalExpenses.toStringAsFixed(0)}',
+              value: Money(totalExpensesPaisa).format(),
               color: Colors.red.shade800,
               bgColor: Colors.red.shade50,
             ),
@@ -99,7 +133,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
           Expanded(
             child: _buildSummaryCard(
               title: 'خالص آمدنی',
-              value: 'Rs. ${totalNet.toStringAsFixed(0)}',
+              value: Money(totalNetPaisa).format(),
               color: Colors.orange.shade800,
               bgColor: Colors.orange.shade50,
             ),
@@ -254,7 +288,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('کل فروخت', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text('Rs. ${h.grossAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                  Text(Money(h.grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                                 ],
                               ),
                             ),
@@ -263,7 +297,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('کل اخراجات', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                  Text('Rs. ${h.totalExpense.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  Text(Money(h.totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               ),
                             ),
@@ -273,20 +307,20 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 children: [
                                   const Text('خالص آمدنی', style: TextStyle(fontSize: 12, color: Colors.grey)),
                                   Text(
-                                    'Rs. ${h.netIncome.toStringAsFixed(0)}',
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: h.netIncome >= 0 ? Colors.green.shade800 : Colors.red.shade800),
+                                    Money(h.netIncomePaisa).format(),
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: h.netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800),
                                   ),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        if (h.ratePerUnit > 0) ...[
+                        if (h.ratePerUnitPaisa > 0) ...[
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('ریٹ: Rs. ${h.ratePerUnit.toStringAsFixed(0)} فی ${h.unit}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                              Text('ریٹ: ${Money(h.ratePerUnitPaisa).format()} فی ${h.unit}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
                               if (h.buyerName != null && h.buyerName!.isNotEmpty)
                                 Text('خریدار: ${h.buyerName}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
                             ],
@@ -300,7 +334,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            if (h.grossAmount == 0)
+                            if (h.grossPaisa == 0)
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
@@ -398,13 +432,13 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                         const SizedBox(height: 8),
                         Text('زمین: ${item.farmName} - ${item.fieldName}'),
                         const SizedBox(height: 4),
-                        Text('مقدار: ${s.quantity.toStringAsFixed(0)} ${item.harvest.unit} | ریٹ: Rs. ${s.pricePerUnit.toStringAsFixed(0)} فی ${item.harvest.unit}'),
+                        Text('مقدار: ${s.quantity.toStringAsFixed(0)} ${item.harvest.unit} | ریٹ: ${Money(s.pricePerUnitPaisa).format()} فی ${item.harvest.unit}'),
                         const Divider(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'کل رقم: Rs. ${s.totalAmount.toStringAsFixed(0)}',
+                              Money(s.totalAmountPaisa).format(),
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                             ),
                             Text(
@@ -486,16 +520,17 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
         return StatefulBuilder(
           builder: (context, setState) {
             final double qty = double.tryParse(qtyController.text) ?? 0.0;
-            final double rate = double.tryParse(rateController.text) ?? 0.0;
-            final double trans = double.tryParse(transController.text) ?? 0.0;
-            final double labour = double.tryParse(labourController.text) ?? 0.0;
-            final double harvesting = double.tryParse(harvestController.text) ?? 0.0;
-            final double commission = double.tryParse(commissionController.text) ?? 0.0;
-            final double other = double.tryParse(otherController.text) ?? 0.0;
+            final int ratePaisa = _parsePaisaOrZero(rateController.text);
+            final int transPaisa = _parsePaisaOrZero(transController.text);
+            final int labourPaisa = _parsePaisaOrZero(labourController.text);
+            final int harvestingPaisa = _parsePaisaOrZero(harvestController.text);
+            final int commissionPaisa = _parsePaisaOrZero(commissionController.text);
+            final int otherPaisa = _parsePaisaOrZero(otherController.text);
 
-            final double grossAmount = qty * rate;
-            final double totalExpense = trans + labour + harvesting + commission + other;
-            final double netIncome = grossAmount - totalExpense;
+            final int grossPaisa = (qty * ratePaisa).round();
+            final int totalExpensePaisa =
+                transPaisa + labourPaisa + harvestingPaisa + commissionPaisa + otherPaisa;
+            final int netIncomePaisa = grossPaisa - totalExpensePaisa;
 
             return AlertDialog(
               title: const Text('پیداوار کا ریکارڈ درج کریں'),
@@ -727,7 +762,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل آمدنی:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('Rs. ${grossAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                  Text(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                                 ],
                               ),
                               const Divider(),
@@ -735,7 +770,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل اخراجات:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  Text(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               ),
                               const Divider(),
@@ -744,10 +779,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 children: [
                                   const Text('خالص نفع/نقصان:', style: TextStyle(fontWeight: FontWeight.bold)),
                                   Text(
-                                    'Rs. ${netIncome.toStringAsFixed(0)}',
+                                    Money(netIncomePaisa).format(),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: netIncome >= 0 ? Colors.green.shade800 : Colors.red.shade800,
+                                      color: netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800,
                                     ),
                                   ),
                                 ],
@@ -769,17 +804,34 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
+                      final int ratePaisa;
+                      final int transPaisa;
+                      final int labourPaisa;
+                      final int harvestingPaisa;
+                      final int commissionPaisa;
+                      final int otherPaisa;
+                      try {
+                        ratePaisa = _parsePaisaOrThrow(rateController.text);
+                        transPaisa = _parsePaisaOrThrow(transController.text);
+                        labourPaisa = _parsePaisaOrThrow(labourController.text);
+                        harvestingPaisa = _parsePaisaOrThrow(harvestController.text);
+                        commissionPaisa = _parsePaisaOrThrow(commissionController.text);
+                        otherPaisa = _parsePaisaOrThrow(otherController.text);
+                      } on MoneyParseException catch (e) {
+                        _showMoneyError(ctx, e);
+                        return;
+                      }
                       harvestProvider.addHarvest(
                         cropSeasonId: selectedCropSeasonId!,
                         quantity: double.parse(qtyController.text),
                         unit: selectedUnit,
                         date: selectedDate.toIso8601String(),
-                        ratePerUnit: double.tryParse(rateController.text) ?? 0.0,
-                        transportationExpense: double.tryParse(transController.text) ?? 0.0,
-                        labourExpense: double.tryParse(labourController.text) ?? 0.0,
-                        harvestingExpense: double.tryParse(harvestController.text) ?? 0.0,
-                        commissionExpense: double.tryParse(commissionController.text) ?? 0.0,
-                        otherExpense: double.tryParse(otherController.text) ?? 0.0,
+                        ratePerUnitPaisa: ratePaisa,
+                        transportationExpensePaisa: transPaisa,
+                        labourExpensePaisa: labourPaisa,
+                        harvestingExpensePaisa: harvestingPaisa,
+                        commissionExpensePaisa: commissionPaisa,
+                        otherExpensePaisa: otherPaisa,
                         buyerName: buyerNameController.text,
                         paymentStatus: paymentStatus,
                         notes: notesController.text,
@@ -808,12 +860,24 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
 
     int? selectedCropSeasonId = h.cropSeasonId;
     final qtyController = TextEditingController(text: h.quantity.toString());
-    final rateController = TextEditingController(text: h.ratePerUnit == 0 ? '' : h.ratePerUnit.toString());
-    final transController = TextEditingController(text: h.transportationExpense == 0 ? '' : h.transportationExpense.toString());
-    final labourController = TextEditingController(text: h.labourExpense == 0 ? '' : h.labourExpense.toString());
-    final harvestController = TextEditingController(text: h.harvestingExpense == 0 ? '' : h.harvestingExpense.toString());
-    final commissionController = TextEditingController(text: h.commissionExpense == 0 ? '' : h.commissionExpense.toString());
-    final otherController = TextEditingController(text: h.otherExpense == 0 ? '' : h.otherExpense.toString());
+    final rateController = TextEditingController(
+        text: h.ratePerUnitPaisa == 0 ? '' : Money(h.ratePerUnitPaisa).format());
+    final transController = TextEditingController(
+        text: h.transportationExpensePaisa == 0
+            ? ''
+            : Money(h.transportationExpensePaisa).format());
+    final labourController = TextEditingController(
+        text: h.labourExpensePaisa == 0 ? '' : Money(h.labourExpensePaisa).format());
+    final harvestController = TextEditingController(
+        text: h.harvestingExpensePaisa == 0
+            ? ''
+            : Money(h.harvestingExpensePaisa).format());
+    final commissionController = TextEditingController(
+        text: h.commissionExpensePaisa == 0
+            ? ''
+            : Money(h.commissionExpensePaisa).format());
+    final otherController = TextEditingController(
+        text: h.otherExpensePaisa == 0 ? '' : Money(h.otherExpensePaisa).format());
     final buyerNameController = TextEditingController(text: h.buyerName ?? '');
     final notesController = TextEditingController(text: h.notes ?? '');
 
@@ -829,16 +893,17 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
         return StatefulBuilder(
           builder: (context, setState) {
             final double qty = double.tryParse(qtyController.text) ?? 0.0;
-            final double rate = double.tryParse(rateController.text) ?? 0.0;
-            final double trans = double.tryParse(transController.text) ?? 0.0;
-            final double labour = double.tryParse(labourController.text) ?? 0.0;
-            final double harvesting = double.tryParse(harvestController.text) ?? 0.0;
-            final double commission = double.tryParse(commissionController.text) ?? 0.0;
-            final double other = double.tryParse(otherController.text) ?? 0.0;
+            final int ratePaisa = _parsePaisaOrZero(rateController.text);
+            final int transPaisa = _parsePaisaOrZero(transController.text);
+            final int labourPaisa = _parsePaisaOrZero(labourController.text);
+            final int harvestingPaisa = _parsePaisaOrZero(harvestController.text);
+            final int commissionPaisa = _parsePaisaOrZero(commissionController.text);
+            final int otherPaisa = _parsePaisaOrZero(otherController.text);
 
-            final double grossAmount = qty * rate;
-            final double totalExpense = trans + labour + harvesting + commission + other;
-            final double netIncome = grossAmount - totalExpense;
+            final int grossPaisa = (qty * ratePaisa).round();
+            final int totalExpensePaisa =
+                transPaisa + labourPaisa + harvestingPaisa + commissionPaisa + otherPaisa;
+            final int netIncomePaisa = grossPaisa - totalExpensePaisa;
 
             return AlertDialog(
               title: const Text('پیداوار کے ریکارڈ میں ترمیم'),
@@ -1069,7 +1134,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل آمدنی:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('Rs. ${grossAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                  Text(Money(grossPaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                                 ],
                               ),
                               const Divider(),
@@ -1077,7 +1142,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text('کل اخراجات:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                                  Text(Money(totalExpensePaisa).format(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                                 ],
                               ),
                               const Divider(),
@@ -1086,10 +1151,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                                 children: [
                                   const Text('خالص نفع/نقصان:', style: TextStyle(fontWeight: FontWeight.bold)),
                                   Text(
-                                    'Rs. ${netIncome.toStringAsFixed(0)}',
+                                    Money(netIncomePaisa).format(),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: netIncome >= 0 ? Colors.green.shade800 : Colors.red.shade800,
+                                      color: netIncomePaisa >= 0 ? Colors.green.shade800 : Colors.red.shade800,
                                     ),
                                   ),
                                 ],
@@ -1111,18 +1176,35 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, foregroundColor: Colors.white),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
+                      final int ratePaisa;
+                      final int transPaisa;
+                      final int labourPaisa;
+                      final int harvestingPaisa;
+                      final int commissionPaisa;
+                      final int otherPaisa;
+                      try {
+                        ratePaisa = _parsePaisaOrThrow(rateController.text);
+                        transPaisa = _parsePaisaOrThrow(transController.text);
+                        labourPaisa = _parsePaisaOrThrow(labourController.text);
+                        harvestingPaisa = _parsePaisaOrThrow(harvestController.text);
+                        commissionPaisa = _parsePaisaOrThrow(commissionController.text);
+                        otherPaisa = _parsePaisaOrThrow(otherController.text);
+                      } on MoneyParseException catch (e) {
+                        _showMoneyError(ctx, e);
+                        return;
+                      }
                       harvestProvider.updateHarvest(
                         id: h.id!,
                         cropSeasonId: selectedCropSeasonId!,
                         quantity: double.parse(qtyController.text),
                         unit: selectedUnit,
                         date: selectedDate.toIso8601String(),
-                        ratePerUnit: double.tryParse(rateController.text) ?? 0.0,
-                        transportationExpense: double.tryParse(transController.text) ?? 0.0,
-                        labourExpense: double.tryParse(labourController.text) ?? 0.0,
-                        harvestingExpense: double.tryParse(harvestController.text) ?? 0.0,
-                        commissionExpense: double.tryParse(commissionController.text) ?? 0.0,
-                        otherExpense: double.tryParse(otherController.text) ?? 0.0,
+                        ratePerUnitPaisa: ratePaisa,
+                        transportationExpensePaisa: transPaisa,
+                        labourExpensePaisa: labourPaisa,
+                        harvestingExpensePaisa: harvestingPaisa,
+                        commissionExpensePaisa: commissionPaisa,
+                        otherExpensePaisa: otherPaisa,
                         buyerName: buyerNameController.text,
                         paymentStatus: paymentStatus,
                         notes: notesController.text,
@@ -1149,7 +1231,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
 
     final priceController = TextEditingController();
     final buyerController = TextEditingController();
-    double totalAmount = 0.0;
+    int totalAmountPaisa = 0;
     DateTime selectedDate = DateTime.now();
 
     showDialog(
@@ -1178,10 +1260,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           return null;
                         },
                         onChanged: (val) {
-                          final double? price = double.tryParse(val);
-                          if (price != null) {
+                          final int? pricePaisa = _tryPaisa(val);
+                          if (pricePaisa != null) {
                             setState(() {
-                              totalAmount = price * item.harvest.quantity;
+                              totalAmountPaisa =
+                                  (pricePaisa * item.harvest.quantity).round();
                             });
                           }
                         },
@@ -1222,7 +1305,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           border: Border.all(color: Colors.blue.shade200),
                         ),
                         child: Text(
-                          'کل رقم: ${totalAmount.toStringAsFixed(0)} روپے',
+                          'کل رقم: ${Money(totalAmountPaisa).format()}',
                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800, fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
@@ -1240,11 +1323,17 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
+                      final int pricePaisa;
+                      try {
+                        pricePaisa = Money.parse(priceController.text).paisa;
+                      } on MoneyParseException catch (e) {
+                        _showMoneyError(ctx, e);
+                        return;
+                      }
                       harvestProvider.recordSale(
                         harvestId: item.harvest.id!,
                         quantity: item.harvest.quantity,
-                        pricePerUnit: double.parse(priceController.text),
-                        totalAmount: totalAmount,
+                        pricePerUnitPaisa: pricePaisa,
                         date: selectedDate.toIso8601String(),
                         buyerName: buyerController.text,
                       );
@@ -1266,9 +1355,10 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
     final formKey = GlobalKey<FormState>();
     final sale = item.sale!;
 
-    final priceController = TextEditingController(text: sale.pricePerUnit.toString());
+    final priceController =
+        TextEditingController(text: Money(sale.pricePerUnitPaisa).format());
     final buyerController = TextEditingController(text: sale.buyerName ?? '');
-    double totalAmount = sale.totalAmount;
+    int totalAmountPaisa = sale.totalAmountPaisa;
     DateTime selectedDate = DateTime.parse(sale.date);
 
     showDialog(
@@ -1297,10 +1387,11 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           return null;
                         },
                         onChanged: (val) {
-                          final double? price = double.tryParse(val);
-                          if (price != null) {
+                          final int? pricePaisa = _tryPaisa(val);
+                          if (pricePaisa != null) {
                             setState(() {
-                              totalAmount = price * item.harvest.quantity;
+                              totalAmountPaisa =
+                                  (pricePaisa * item.harvest.quantity).round();
                             });
                           }
                         },
@@ -1341,7 +1432,7 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                           border: Border.all(color: Colors.blue.shade200),
                         ),
                         child: Text(
-                          'کل رقم: ${totalAmount.toStringAsFixed(0)} روپے',
+                          'کل رقم: ${Money(totalAmountPaisa).format()}',
                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800, fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
@@ -1358,12 +1449,18 @@ class _HarvestScreenState extends State<HarvestScreen> with SingleTickerProvider
                 ElevatedButton(
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
+                      final int pricePaisa;
+                      try {
+                        pricePaisa = Money.parse(priceController.text).paisa;
+                      } on MoneyParseException catch (e) {
+                        _showMoneyError(ctx, e);
+                        return;
+                      }
                       harvestProvider.updateSale(
                         id: sale.id!,
                         harvestId: item.harvest.id!,
                         quantity: item.harvest.quantity,
-                        pricePerUnit: double.parse(priceController.text),
-                        totalAmount: totalAmount,
+                        pricePerUnitPaisa: pricePaisa,
                         date: selectedDate.toIso8601String(),
                         buyerName: buyerController.text,
                       );

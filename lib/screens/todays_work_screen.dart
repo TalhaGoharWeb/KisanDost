@@ -9,6 +9,7 @@ import '../providers/inventory_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/task_provider.dart';
 import '../widgets/empty_state_widget.dart';
+import '../services/money.dart';
 
 class TodaysWorkScreen extends StatelessWidget {
   const TodaysWorkScreen({super.key});
@@ -139,9 +140,10 @@ class TodaysWorkScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                                Text('${item.fieldDisplayName} ($cropNameUrdu)'),
-                              if (item.expenseAmount != null && item.expenseAmount! > 0)
+                              if (item.expenseAmountPaisa != null &&
+                                  item.expenseAmountPaisa! > 0)
                                 Text(
-                                  '${item.expenseAmount!.toStringAsFixed(0)} روپے',
+                                  Money(item.expenseAmountPaisa!).format(),
                                   style: const TextStyle(
                                     color: Colors.red,
                                     fontWeight: FontWeight.bold,

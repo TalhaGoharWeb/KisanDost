@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theka_provider.dart';
 import '../providers/farm_provider.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 import 'theka_form_screen.dart';
 import 'theka_details_screen.dart';
@@ -31,18 +32,18 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
     final theme = Theme.of(context);
 
     // Calculate overall summaries
-    double overallTotal = 0.0;
-    double overallPaid = 0.0;
+    int overallTotal = 0;
+    int overallPaid = 0;
 
     for (var theka in thekaProvider.thekas) {
-      overallTotal += theka.totalAmount;
+      overallTotal += theka.totalAmountPaisa;
       final insts = thekaProvider.getInstallmentsForTheka(theka.id!);
       for (var inst in insts) {
-        overallPaid += inst.paidAmount;
+        overallPaid += inst.paidAmountPaisa;
       }
     }
 
-    final double overallPending = overallTotal - overallPaid;
+    final int overallPending = overallTotal - overallPaid;
 
     return Scaffold(
       appBar: AppBar(
@@ -117,16 +118,16 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
                         }
 
                         final insts = thekaProvider.getInstallmentsForTheka(theka.id!);
-                        double paidAmt = 0.0;
+                        int paidAmt = 0;
                         int paidCount = 0;
                         for (var inst in insts) {
-                          paidAmt += inst.paidAmount;
+                          paidAmt += inst.paidAmountPaisa;
                           if (inst.status == 'Paid') {
                             paidCount++;
                           }
                         }
-                        final double pendingAmt = theka.totalAmount - paidAmt;
-                        final double progress = theka.totalAmount > 0 ? (paidAmt / theka.totalAmount) : 0.0;
+                        final int pendingAmt = theka.totalAmountPaisa - paidAmt;
+                        final double progress = theka.totalAmountPaisa > 0 ? (paidAmt / theka.totalAmountPaisa) : 0.0;
 
                         // Urdu duration type mapping
                         String durationUrdu = theka.durationType;
@@ -200,7 +201,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      _buildAmountLabel('کل ٹھیکہ', theka.totalAmount, Colors.black),
+                                      _buildAmountLabel('کل ٹھیکہ', theka.totalAmountPaisa, Colors.black),
                                       _buildAmountLabel('کل ادا شدہ', paidAmt, Colors.green),
                                       _buildAmountLabel('واجب الادا', pendingAmt, Colors.red.shade700),
                                     ],
@@ -268,7 +269,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
     return id;
   }
 
-  Widget _buildSummaryHeader(double total, double paid, double pending, ThemeData theme) {
+  Widget _buildSummaryHeader(int total, int paid, int pending, ThemeData theme) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.all(12),
@@ -316,7 +317,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
     );
   }
 
-  Widget _buildHeaderItem(String label, double amount, Color color) {
+  Widget _buildHeaderItem(String label, int amount, Color color) {
     return Column(
       children: [
         Text(
@@ -325,7 +326,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          '${amount.toStringAsFixed(0)} روپے',
+          Money(amount).format(),
           style: TextStyle(
             color: color,
             fontSize: 17,
@@ -336,7 +337,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
     );
   }
 
-  Widget _buildAmountLabel(String label, double amount, Color amountColor) {
+  Widget _buildAmountLabel(String label, int amount, Color amountColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -346,7 +347,7 @@ class _ThekaListScreenState extends State<ThekaListScreen> {
         ),
         const SizedBox(height: 2),
         Text(
-          '${amount.toStringAsFixed(0)} روپے',
+          Money(amount).format(),
           style: TextStyle(
             color: amountColor,
             fontWeight: FontWeight.bold,

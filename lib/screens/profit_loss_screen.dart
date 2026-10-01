@@ -9,6 +9,7 @@ import '../providers/theka_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/ushr_provider.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 
 class ProfitLossScreen extends StatefulWidget {
   const ProfitLossScreen({super.key});
@@ -30,14 +31,14 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     final farmProvider = Provider.of<FarmProvider>(context);
     final ushrProvider = Provider.of<UshrProvider>(context);
 
-    // 1. Overall Calculations
+    // 1. Overall Calculations (all money summed as INTEGER paisa)
     // Revenue = sum of all sales
     final totalSales = harvestProvider.harvests
         .where((h) => h.sale != null)
-        .fold(0.0, (sum, h) => sum + h.sale!.totalAmount);
+        .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
 
     // Expense = sum of all expenses
-    final totalExpenses = expenseProvider.totalExpenses;
+    final totalExpenses = expenseProvider.totalExpensesPaisa;
 
     // Net Profit / Loss
     final netProfit = totalSales - totalExpenses;
@@ -60,20 +61,20 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           .where((act) => act.activity.cropSeasonId == seasonId)
           .toList();
       final linkedExpenseIds = <int>{};
-      double activityLinkedExpenses = 0.0;
+      int activityLinkedExpenses = 0;
       for (final act in cropActivities) {
         final expId = act.activity.expenseId;
         if (expId != null && linkedExpenseIds.add(expId)) {
-          activityLinkedExpenses += act.expenseAmount ?? 0.0;
+          activityLinkedExpenses += act.expenseAmountPaisa ?? 0;
         }
       }
-      double directExpenses = 0.0;
+      int directExpenses = 0;
       for (final exp in expenseProvider.expenses) {
         final expId = exp.id;
         if (exp.cropSeasonId == seasonId &&
             expId != null &&
             !linkedExpenseIds.contains(expId)) {
-          directExpenses += exp.amount;
+          directExpenses += exp.amountPaisa;
         }
       }
       final cropExpenses = activityLinkedExpenses + directExpenses;
@@ -87,14 +88,17 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           .toList();
       final cropIncome = cropHarvests
           .where((h) => h.sale != null)
-          .fold(0.0, (sum, h) => sum + h.sale!.totalAmount);
+          .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
 
-      final cropHarvestExpenses = cropHarvests.fold(
-          0.0, (sum, h) => sum + h.harvest.totalExpense);
+      final cropHarvestExpenses = cropHarvests.fold<int>(
+          0, (sum, h) => sum + h.harvest.totalExpensePaisa);
 
+      // Ushr stays counted as a crop expense exactly as before — only the
+      // field types moved to paisa. (Ushr policy itself is deliberately
+      // deferred; this screen fixes types only.)
       final cropUshrExpenses = ushrProvider.ushrRecords
           .where((u) => u.ushrRecord.cropSeasonId == seasonId)
-          .fold(0.0, (sum, u) => sum + u.ushrRecord.ushrAmount);
+          .fold<int>(0, (sum, u) => sum + u.ushrRecord.ushrAmountPaisa);
 
       final totalCropExpenses = cropExpenses + cropHarvestExpenses + cropUshrExpenses;
 
@@ -150,9 +154,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     }
 
     // 5. Category-wise Expenses Breakdown
-    final Map<String, double> categorySums = {};
+    final Map<String, int> categorySums = {};
     for (var exp in expenseProvider.expenses) {
-      categorySums[exp.category] = (categorySums[exp.category] ?? 0.0) + exp.amount;
+      categorySums[exp.category] = (categorySums[exp.category] ?? 0) + exp.amountPaisa;
     }
     final sortedCategories = categorySums.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -172,7 +176,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     }
     final linkedExpenseSum = expenseProvider.expenses
         .where((e) => e.id != null && linkedExpenseIds.contains(e.id))
-        .fold(0.0, (sum, e) => sum + e.amount);
+        .fold<int>(0, (sum, e) => sum + e.amountPaisa);
     final indirectExpenses = totalExpenses - linkedExpenseSum;
 
     return DefaultTabController(
@@ -247,9 +251,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
   // overall summary card
   Widget _buildSummaryCard(
     BuildContext context,
-    double netProfit,
-    double totalSales,
-    double totalExpenses,
+    int netProfit,
+    int totalSales,
+    int totalExpenses,
   ) {
     final isProfit = netProfit >= 0;
     final primaryGrad = isProfit ? const Color(0xFF1B5E20) : const Color(0xFFB71C1C);
@@ -296,7 +300,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${netProfit.abs().toStringAsFixed(0)} روپے',
+                    Money(netProfit.abs()).format(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
@@ -353,7 +357,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${totalSales.toStringAsFixed(0)} روپے',
+                      Money(totalSales).format(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -385,7 +389,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${totalExpenses.toStringAsFixed(0)} روپے',
+                      Money(totalExpenses).format(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -405,9 +409,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
   Widget _buildCropWiseTab(
     BuildContext context,
-    double netProfit,
-    double totalSales,
-    double totalExpenses,
+    int netProfit,
+    int totalSales,
+    int totalExpenses,
     List<CropPL> filteredList,
     CropPL? mostProfitable,
     CropPL? highestYielding,
@@ -570,7 +574,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                             ),
                           ),
                           Text(
-                            'بچت: ${mostProfitable.net.toStringAsFixed(0)} روپے',
+                            'بچت: ${Money(mostProfitable.net).format()}',
                             style: const TextStyle(
                               fontSize: 13,
                               color: Colors.black54,
@@ -724,7 +728,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     );
   }
 
-  Widget _buildMiniStat(String label, double amount, Color color, {bool isBold = false}) {
+  Widget _buildMiniStat(String label, int amount, Color color, {bool isBold = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -737,7 +741,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           ),
         ),
         Text(
-          '${amount.toStringAsFixed(0)} روپے',
+          Money(amount).format(),
           style: TextStyle(
             fontSize: 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
@@ -825,14 +829,14 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'شرح: ${s.pricePerUnit} روپے فی ${h.unit}',
+                              'شرح: ${Money(s.pricePerUnitPaisa).format()} فی ${h.unit}',
                               style: const TextStyle(
                                 fontFamily: 'Jameel Noori Nastaleeq',
                                 fontSize: 13,
                               ),
                             ),
                             Text(
-                              'آمدنی: ${s.totalAmount.toStringAsFixed(0)} روپے',
+                              'آمدنی: ${Money(s.totalAmountPaisa).format()}',
                               style: const TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
@@ -939,7 +943,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     ],
                   ),
                   trailing: Text(
-                    '${(actwd.expenseAmount ?? 0.0).toStringAsFixed(0)} روپے',
+                    Money(actwd.expenseAmountPaisa ?? 0).format(),
                     style: const TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.bold,
@@ -957,11 +961,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
   Widget _buildExpenseAnalysisTab(
     BuildContext context,
-    double netProfit,
-    double totalSales,
-    double totalExpenses,
-    List<MapEntry<String, double>> sortedCategories,
-    double indirectExpenses,
+    int netProfit,
+    int totalSales,
+    int totalExpenses,
+    List<MapEntry<String, int>> sortedCategories,
+    int indirectExpenses,
     ExpenseProvider expenseProvider,
   ) {
     final theme = Theme.of(context);
@@ -1038,7 +1042,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
   Widget _buildCategoryProgressRow(
     String categoryUrdu,
-    double amount,
+    int amount,
     double percentage,
     Color color,
   ) {
@@ -1059,7 +1063,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                 ),
               ),
               Text(
-                '${amount.toStringAsFixed(0)} روپے (${(percentage * 100).toStringAsFixed(0)}%)',
+                '${Money(amount).format()} (${(percentage * 100).toStringAsFixed(0)}%)',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade700,
@@ -1120,30 +1124,30 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     }
 
     // Calculations
-    double totalThekaAmount = 0.0;
-    double totalPaid = 0.0;
+    int totalThekaAmount = 0;
+    int totalPaid = 0;
     int totalInstallments = 0;
     int paidInstallments = 0;
     int pendingInstallments = 0;
     int partialInstallments = 0;
 
-    final Map<int, double> farmPaid = {};
-    final Map<int, double> farmTotal = {};
+    final Map<int, int> farmPaid = {};
+    final Map<int, int> farmTotal = {};
 
-    final Map<String, double> seasonalPaid = {};
-    final Map<String, double> seasonalTotal = {};
+    final Map<String, int> seasonalPaid = {};
+    final Map<String, int> seasonalTotal = {};
 
-    final Map<String, double> yearlyPaid = {};
-    final Map<String, double> yearlyTotal = {};
+    final Map<String, int> yearlyPaid = {};
+    final Map<String, int> yearlyTotal = {};
 
     for (var theka in thekas) {
-      totalThekaAmount += theka.totalAmount;
-      farmTotal[theka.farmId] = (farmTotal[theka.farmId] ?? 0.0) + theka.totalAmount;
+      totalThekaAmount += theka.totalAmountPaisa;
+      farmTotal[theka.farmId] = (farmTotal[theka.farmId] ?? 0) + theka.totalAmountPaisa;
 
       final seasonName = theka.durationDetails?.isNotEmpty == true 
           ? theka.durationDetails! 
           : (theka.durationType == 'Yearly' ? 'سالانہ ٹھیکہ' : 'دیگر ٹھیکہ');
-      seasonalTotal[seasonName] = (seasonalTotal[seasonName] ?? 0.0) + theka.totalAmount;
+      seasonalTotal[seasonName] = (seasonalTotal[seasonName] ?? 0) + theka.totalAmountPaisa;
 
       final insts = thekaProvider.getInstallmentsForTheka(theka.id!);
       totalInstallments += insts.length;
@@ -1157,21 +1161,21 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           pendingInstallments++;
         }
 
-        totalPaid += inst.paidAmount;
-        farmPaid[theka.farmId] = (farmPaid[theka.farmId] ?? 0.0) + inst.paidAmount;
-        seasonalPaid[seasonName] = (seasonalPaid[seasonName] ?? 0.0) + inst.paidAmount;
+        totalPaid += inst.paidAmountPaisa;
+        farmPaid[theka.farmId] = (farmPaid[theka.farmId] ?? 0) + inst.paidAmountPaisa;
+        seasonalPaid[seasonName] = (seasonalPaid[seasonName] ?? 0) + inst.paidAmountPaisa;
 
         // Group by year of payment (if paid) or due date (if pending)
         final String yearStr = inst.paidDate != null 
             ? inst.paidDate!.split('-').first
             : inst.dueDate.split('-').first;
         
-        yearlyTotal[yearStr] = (yearlyTotal[yearStr] ?? 0.0) + inst.amount;
-        yearlyPaid[yearStr] = (yearlyPaid[yearStr] ?? 0.0) + inst.paidAmount;
+        yearlyTotal[yearStr] = (yearlyTotal[yearStr] ?? 0) + inst.amountPaisa;
+        yearlyPaid[yearStr] = (yearlyPaid[yearStr] ?? 0) + inst.paidAmountPaisa;
       }
     }
 
-    final double totalPending = totalThekaAmount - totalPaid;
+    final int totalPending = totalThekaAmount - totalPaid;
 
     return ListView(
       padding: const EdgeInsets.all(16.0),
@@ -1283,15 +1287,15 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         orElse: () => Farm(name: 'نامعلوم فارم', totalArea: 0.0, createdAt: ''),
                       );
                       final fTotal = entry.value;
-                      final fPaid = farmPaid[entry.key] ?? 0.0;
+                      final fPaid = farmPaid[entry.key] ?? 0;
                       final fPending = fTotal - fPaid;
 
                       return TableRow(
                         children: [
                           TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(farm.name))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${fTotal.toStringAsFixed(0)} روپے'))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${fPaid.toStringAsFixed(0)} روپے', style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${fPending.toStringAsFixed(0)} روپے', style: const TextStyle(color: Colors.red)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(fTotal).format()))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(fPaid).format(), style: const TextStyle(color: Colors.green)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(fPending).format(), style: const TextStyle(color: Colors.red)))),
                         ],
                       );
                     }),
@@ -1339,15 +1343,15 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     ),
                     ...seasonalTotal.entries.map((entry) {
                       final sTotal = entry.value;
-                      final sPaid = seasonalPaid[entry.key] ?? 0.0;
+                      final sPaid = seasonalPaid[entry.key] ?? 0;
                       final sPending = sTotal - sPaid;
 
                       return TableRow(
                         children: [
                           TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(entry.key))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${sTotal.toStringAsFixed(0)} روپے'))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${sPaid.toStringAsFixed(0)} روپے', style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${sPending.toStringAsFixed(0)} روپے', style: const TextStyle(color: Colors.red)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(sTotal).format()))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(sPaid).format(), style: const TextStyle(color: Colors.green)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(sPending).format(), style: const TextStyle(color: Colors.red)))),
                         ],
                       );
                     }),
@@ -1395,15 +1399,15 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                     ),
                     ...yearlyTotal.entries.map((entry) {
                       final yTotal = entry.value;
-                      final yPaid = yearlyPaid[entry.key] ?? 0.0;
+                      final yPaid = yearlyPaid[entry.key] ?? 0;
                       final yPending = yTotal - yPaid;
 
                       return TableRow(
                         children: [
                           TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${entry.key}ء'))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${yTotal.toStringAsFixed(0)} روپے'))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${yPaid.toStringAsFixed(0)} روپے', style: const TextStyle(color: Colors.green)))),
-                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text('${yPending.toStringAsFixed(0)} روپے', style: const TextStyle(color: Colors.red)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(yTotal).format()))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(yPaid).format(), style: const TextStyle(color: Colors.green)))),
+                          TableCell(child: Padding(padding: const EdgeInsets.symmetric(vertical: 8.0), child: Text(Money(yPending).format(), style: const TextStyle(color: Colors.red)))),
                         ],
                       );
                     }),
@@ -1417,13 +1421,13 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     );
   }
 
-  Widget _buildPLSummaryCol(String label, double amount, Color textCol) {
+  Widget _buildPLSummaryCol(String label, int amount, Color textCol) {
     return Column(
       children: [
         Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
         const SizedBox(height: 6),
         Text(
-          '${amount.toStringAsFixed(0)} روپے',
+          Money(amount).format(),
           style: TextStyle(
             color: textCol,
             fontSize: 16,
@@ -1433,6 +1437,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       ],
     );
   }
+
+  /// Paisa amount as a grouped number ("1,250") without the روپے suffix —
+  /// for labels that already carry their own unit marker ("Rs.").
+  String _formatPaisaNumber(int paisa) =>
+      Money(paisa).format().replaceFirst(' روپے', '');
 
   Widget _buildUshrReportTab(
     BuildContext context,
@@ -1459,36 +1468,38 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       );
     }
 
-    double totalUshrAmount = 0.0;
-    double totalPaidUshr = 0.0;
-    double totalPendingUshr = 0.0;
-    double ushrPaidInCrop = 0.0;
-    double ushrPaidInCash = 0.0;
+    int totalUshrAmount = 0;
+    int totalPaidUshr = 0;
+    int totalPendingUshr = 0;
+    int ushrPaidInCropPaisa = 0;
+    int ushrPaidInCashPaisa = 0;
 
-    final Map<String, double> farmUshr = {};
-    final Map<String, double> seasonalUshr = {};
-    final Map<String, double> yearlyUshr = {};
+    final Map<String, int> farmUshr = {};
+    final Map<String, int> seasonalUshr = {};
+    final Map<String, int> yearlyUshr = {};
 
     for (var item in ushrRecords) {
       final u = item.ushrRecord;
-      totalUshrAmount += u.ushrAmount;
+      totalUshrAmount += u.ushrAmountPaisa;
       
-      final paidVal = u.cashPaid + (u.qtyPaid * u.ratePerUnit);
-      totalPaidUshr += paidVal;
-      ushrPaidInCrop += u.qtyPaid * u.ratePerUnit;
-      ushrPaidInCash += u.cashPaid;
+      // Same formula as UshrRecord.remainingBalancePaisa: crop-paid value is
+      // qty x rate, rounded to the paisa. Types only — inclusion logic unchanged.
+      final paidCropPaisa = (u.qtyPaid * u.ratePerUnitPaisa).round();
+      totalPaidUshr += u.cashPaidPaisa + paidCropPaisa;
+      ushrPaidInCropPaisa += paidCropPaisa;
+      ushrPaidInCashPaisa += u.cashPaidPaisa;
       
-      totalPendingUshr += u.remainingBalance;
+      totalPendingUshr += u.remainingBalancePaisa;
 
-      farmUshr[item.farmName] = (farmUshr[item.farmName] ?? 0.0) + u.ushrAmount;
+      farmUshr[item.farmName] = (farmUshr[item.farmName] ?? 0) + u.ushrAmountPaisa;
 
       final cropNameUrdu = cropProvider.predefinedCrops[item.cropName] ?? item.cropName;
-      seasonalUshr[cropNameUrdu] = (seasonalUshr[cropNameUrdu] ?? 0.0) + u.ushrAmount;
+      seasonalUshr[cropNameUrdu] = (seasonalUshr[cropNameUrdu] ?? 0) + u.ushrAmountPaisa;
 
       final String yearStr = u.datePaid != null
           ? u.datePaid!.split('-').first
           : DateTime.now().year.toString();
-      yearlyUshr[yearStr] = (yearlyUshr[yearStr] ?? 0.0) + u.ushrAmount;
+      yearlyUshr[yearStr] = (yearlyUshr[yearStr] ?? 0) + u.ushrAmountPaisa;
     }
 
     return ListView(
@@ -1524,8 +1535,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('ادا شدہ بجنس (Crop): Rs. ${ushrPaidInCrop.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                    Text('ادا شدہ بنقد (Cash): Rs. ${ushrPaidInCash.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text('ادا شدہ بجنس (Crop): Rs. ${_formatPaisaNumber(ushrPaidInCropPaisa)}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text('ادا شدہ بنقد (Cash): Rs. ${_formatPaisaNumber(ushrPaidInCashPaisa)}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                   ],
                 ),
               ],
@@ -1585,7 +1596,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text('Rs. ${entry.value.toStringAsFixed(0)}', textAlign: TextAlign.left),
+                              child: Text('Rs. ${_formatPaisaNumber(entry.value)}', textAlign: TextAlign.left),
                             ),
                           ),
                         ],
@@ -1650,7 +1661,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text('Rs. ${entry.value.toStringAsFixed(0)}', textAlign: TextAlign.left),
+                              child: Text('Rs. ${_formatPaisaNumber(entry.value)}', textAlign: TextAlign.left),
                             ),
                           ),
                         ],
@@ -1715,7 +1726,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                           TableCell(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8.0),
-                              child: Text('Rs. ${entry.value.toStringAsFixed(0)}', textAlign: TextAlign.left),
+                              child: Text('Rs. ${_formatPaisaNumber(entry.value)}', textAlign: TextAlign.left),
                             ),
                           ),
                         ],
@@ -1752,9 +1763,9 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 // Simple Helper class to hold crop P&L details
 class CropPL {
   final CropSeasonWithDetails details;
-  final double income;
-  final double expenses;
-  final double net;
+  final int income;
+  final int expenses;
+  final int net;
   final List<HarvestWithDetails> harvests;
   final List<ActivityWithDetails> activities;
 
