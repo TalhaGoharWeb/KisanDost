@@ -28,6 +28,7 @@ import 'theka_list_screen.dart';
 import 'ushr_screen.dart';
 import 'parties_screen.dart';
 import 'batai_screen.dart';
+import 'reports_screen.dart';
 
 /// Farmer home: answers within seconds —
 /// (1) what needs doing today, (2) the money situation, (3) crop activity —
@@ -727,6 +728,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Colors.indigo.shade600, () => _push(const PartiesScreen())),
       _FeatureTile(Icons.handshake_outlined, 'بٹائی',
           Colors.amber.shade800, () => _push(const BataiScreen())),
+      _FeatureTile(Icons.summarize_outlined, 'رپورٹ',
+          Colors.cyan.shade700, () => _push(const ReportsScreen())),
     ];
     return GridView.count(
       crossAxisCount: 3,
