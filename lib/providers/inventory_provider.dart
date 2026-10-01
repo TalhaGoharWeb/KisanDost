@@ -66,7 +66,7 @@ class InventoryProvider extends ChangeNotifier {
     required String name,
     required String unit,
     required double quantity,
-    required double costPerUnit,
+    required int costPerUnitPaisa,
     double? weightPerUnitKg,
     String? date,
     String? notes,
@@ -75,7 +75,7 @@ class InventoryProvider extends ChangeNotifier {
     if (quantity <= 0) {
       throw const InventoryException('خریداری کی مقدار صفر سے زیادہ ہونی چاہیے');
     }
-    if (costPerUnit < 0) {
+    if (costPerUnitPaisa < 0) {
       throw const InventoryException('فی اکائی قیمت منفی نہیں ہو سکتی');
     }
     if (weightPerUnitKg != null && weightPerUnitKg <= 0) {
@@ -88,7 +88,7 @@ class InventoryProvider extends ChangeNotifier {
           name: name,
           unit: unit,
           quantity: quantity,
-          costPerUnit: costPerUnit,
+          costPerUnitPaisa: costPerUnitPaisa,
           weightPerUnitKg: weightPerUnitKg,
           date: date,
           notes: notes,
@@ -116,7 +116,7 @@ class InventoryProvider extends ChangeNotifier {
     required String name,
     required String unit,
     required double quantity,
-    required double costPerUnit,
+    required int costPerUnitPaisa,
     double? weightPerUnitKg,
     String? date,
     String? notes,
@@ -140,14 +140,19 @@ class InventoryProvider extends ChangeNotifier {
       }
       // newQty > 0 guaranteed: the old divide-by-zero (Infinity cost) path
       // cannot happen.
-      final double newCost =
-          ((existing.quantity * existing.costPerUnit) + (quantity * costPerUnit)) /
-              newQty;
+      // Weighted average in INTEGER paisa: the numerator is a double
+      // (quantity x paisa); the average rounds to the nearest paisa
+      // (half away from zero).
+      final int newCostPaisa =
+          (((existing.quantity * existing.costPerUnitPaisa) +
+                      (quantity * costPerUnitPaisa)) /
+                  newQty)
+              .round();
       await ex.update(
         'inventory',
         {
           'quantity': newQty,
-          'cost_per_unit': newCost,
+          'cost_per_unit_paisa': newCostPaisa,
           'weight_per_unit_kg': weightPerUnitKg ?? existing.weightPerUnitKg,
         },
         where: 'id = ?',
@@ -160,7 +165,7 @@ class InventoryProvider extends ChangeNotifier {
         'name': name,
         'unit': unit,
         'quantity': quantity,
-        'cost_per_unit': costPerUnit,
+        'cost_per_unit_paisa': costPerUnitPaisa,
         'weight_per_unit_kg': weightPerUnitKg,
       });
     }
@@ -170,8 +175,8 @@ class InventoryProvider extends ChangeNotifier {
       'type': 'purchase',
       'quantity': quantity,
       'unit': unit,
-      'unit_price': costPerUnit,
-      'total_amount': quantity * costPerUnit,
+      'unit_price_paisa': costPerUnitPaisa,
+      'total_amount_paisa': (quantity * costPerUnitPaisa).round(),
       'date': date ?? now,
       'notes': notes,
       'created_at': now,
@@ -340,11 +345,11 @@ class InventoryProvider extends ChangeNotifier {
     required String category,
     required String name,
     required String unit,
-    required double costPerUnit,
+    required int costPerUnitPaisa,
     double? weightPerUnitKg,
     DatabaseExecutor? executor,
   }) async {
-    if (costPerUnit < 0) {
+    if (costPerUnitPaisa < 0) {
       throw const InventoryException('فی اکائی قیمت منفی نہیں ہو سکتی');
     }
     if (weightPerUnitKg != null && weightPerUnitKg <= 0) {
@@ -367,7 +372,7 @@ class InventoryProvider extends ChangeNotifier {
         'category': category,
         'name': name,
         'unit': unit,
-        'cost_per_unit': costPerUnit,
+        'cost_per_unit_paisa': costPerUnitPaisa,
         'weight_per_unit_kg': weightPerUnitKg,
       },
       where: 'id = ?',

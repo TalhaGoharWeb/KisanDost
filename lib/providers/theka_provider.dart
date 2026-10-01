@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/money.dart';
 
 class ThekaProvider extends ChangeNotifier {
   List<Theka> _thekas = [];
@@ -41,10 +42,10 @@ class ThekaProvider extends ChangeNotifier {
       for (var inst in installments) {
         final newInst = ThekaInstallment(
           thekaId: thekaId,
-          amount: inst.amount,
+          amountPaisa: inst.amountPaisa,
           dueDate: inst.dueDate,
           status: inst.status,
-          paidAmount: inst.paidAmount,
+          paidAmountPaisa: inst.paidAmountPaisa,
           paidDate: inst.paidDate,
           expenseId: inst.expenseId,
         );
@@ -77,16 +78,16 @@ class ThekaProvider extends ChangeNotifier {
 
   /// Records a payment against an installment.
   ///
-  /// [paidAmount] is the INCREMENTAL amount being paid right now — it is
-  /// ADDED to the already-recorded [ThekaInstallment.paidAmount], never
-  /// replacing it. The linked 'Land Rent' expense always reflects the
-  /// cumulative total paid so far.
+  /// [paidAmountPaisa] is the INCREMENTAL amount being paid right now, in
+  /// INTEGER paisa — it is ADDED to the already-recorded
+  /// [ThekaInstallment.paidAmountPaisa], never replacing it. The linked
+  /// 'Land Rent' expense always reflects the cumulative total paid so far.
   ///
   /// Throws an [Exception] with an Urdu message if the payment would take
   /// the total over the installment amount (overpayment is never recorded).
   Future<void> payInstallment({
     required int installmentId,
-    required double paidAmount,
+    required int paidAmountPaisa,
     required String paidDate,
     required String farmName,
     required int installmentIndex,
@@ -104,15 +105,18 @@ class ThekaProvider extends ChangeNotifier {
       final currentInst = ThekaInstallment.fromMap(maps.first);
 
       // 2. Accumulate: add this payment to what is already recorded.
-      final double newPaidTotal = currentInst.paidAmount + paidAmount;
+      //    All in INTEGER paisa — exact, no floating-point drift.
+      final int newPaidTotalPaisa =
+          currentInst.paidAmountPaisa + paidAmountPaisa;
 
       // 3. Overpayment guard: paid can never exceed the installment total.
-      if (newPaidTotal > currentInst.amount) {
+      if (newPaidTotalPaisa > currentInst.amountPaisa) {
+        final remaining = Money(currentInst.amountPaisa - currentInst.paidAmountPaisa);
         throw Exception(
-            'ادا شدہ رقم قسط کی کل رقم (${currentInst.amount.toStringAsFixed(0)} روپے) سے زیادہ نہیں ہو سکتی۔ بقایا رقم: ${(currentInst.amount - currentInst.paidAmount).toStringAsFixed(0)} روپے');
+            'ادا شدہ رقم قسط کی کل رقم (${Money(currentInst.amountPaisa).format()}) سے زیادہ نہیں ہو سکتی۔ بقایا رقم: ${remaining.format()}');
       }
 
-      final isFullPayment = newPaidTotal >= currentInst.amount;
+      final isFullPayment = newPaidTotalPaisa >= currentInst.amountPaisa;
       final newStatus = isFullPayment ? 'Paid' : 'Partially Paid';
 
       int? expenseId = currentInst.expenseId;
@@ -124,7 +128,7 @@ class ThekaProvider extends ChangeNotifier {
         // Insert new expense entry (cumulative total paid so far)
         expenseId = await txn.insert('expenses', {
           'category': 'Land Rent', // standard category
-          'amount': newPaidTotal,
+          'amount_paisa': newPaidTotalPaisa,
           'date': paidDate,
           'description': desc,
         });
@@ -133,7 +137,7 @@ class ThekaProvider extends ChangeNotifier {
         await txn.update(
           'expenses',
           {
-            'amount': newPaidTotal,
+            'amount_paisa': newPaidTotalPaisa,
             'date': paidDate,
             'description': desc,
           },
@@ -147,7 +151,7 @@ class ThekaProvider extends ChangeNotifier {
         'theka_installments',
         {
           'status': newStatus,
-          'paid_amount': newPaidTotal,
+          'paid_amount_paisa': newPaidTotalPaisa,
           'paid_date': paidDate,
           'expense_id': expenseId,
         },
@@ -179,7 +183,7 @@ class ThekaProvider extends ChangeNotifier {
         'theka_installments',
         {
           'status': 'Pending',
-          'paid_amount': 0.0,
+          'paid_amount_paisa': 0,
           'paid_date': null,
           'expense_id': null,
         },
@@ -210,10 +214,10 @@ class ThekaProvider extends ChangeNotifier {
       for (var inst in newSchedule) {
         final newInst = ThekaInstallment(
           thekaId: thekaId,
-          amount: inst.amount,
+          amountPaisa: inst.amountPaisa,
           dueDate: inst.dueDate,
           status: 'Pending',
-          paidAmount: 0.0,
+          paidAmountPaisa: 0,
           paidDate: null,
           expenseId: null,
         );

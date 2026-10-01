@@ -29,14 +29,16 @@ class HarvestProvider extends ChangeNotifier {
 
   Future<void> fetchHarvests() async {
     final db = await DatabaseHelper.instance.database;
+    // gross/total/net are COMPUTED in the Harvest model now — they are never
+    // read from (or written to) the database.
     final String query = '''
       SELECT 
         h.id as h_id, h.crop_season_id, h.quantity as h_qty, h.unit as h_unit, h.date as h_date,
-        h.rate_per_unit, h.gross_amount, h.transportation_expense, h.labour_expense,
-        h.harvesting_expense, h.commission_expense, h.other_expense, h.total_expense,
-        h.net_income, h.buyer_name as h_buyer_name, h.payment_status, h.notes, h.expense_id,
+        h.rate_per_unit_paisa, h.transportation_expense_paisa, h.labour_expense_paisa,
+        h.harvesting_expense_paisa, h.commission_expense_paisa, h.other_expense_paisa,
+        h.buyer_name as h_buyer_name, h.payment_status, h.notes, h.expense_id,
         cs.crop_name, f.name as field_name, f.size_acres as field_size, farm.name as farm_name,
-        s.id as s_id, s.buyer_name, s.quantity as s_qty, s.price_per_unit, s.total_amount, s.date as s_date
+        s.id as s_id, s.buyer_name, s.quantity as s_qty, s.price_per_unit_paisa, s.total_amount_paisa, s.date as s_date
       FROM harvests h
       JOIN crop_seasons cs ON h.crop_season_id = cs.id
       JOIN fields f ON cs.field_id = f.id
@@ -54,15 +56,15 @@ class HarvestProvider extends ChangeNotifier {
         quantity: results[i]['h_qty'],
         unit: results[i]['h_unit'],
         date: results[i]['h_date'],
-        ratePerUnit: (results[i]['rate_per_unit'] ?? 0.0 as num).toDouble(),
-        grossAmount: (results[i]['gross_amount'] ?? 0.0 as num).toDouble(),
-        transportationExpense: (results[i]['transportation_expense'] ?? 0.0 as num).toDouble(),
-        labourExpense: (results[i]['labour_expense'] ?? 0.0 as num).toDouble(),
-        harvestingExpense: (results[i]['harvesting_expense'] ?? 0.0 as num).toDouble(),
-        commissionExpense: (results[i]['commission_expense'] ?? 0.0 as num).toDouble(),
-        otherExpense: (results[i]['other_expense'] ?? 0.0 as num).toDouble(),
-        totalExpense: (results[i]['total_expense'] ?? 0.0 as num).toDouble(),
-        netIncome: (results[i]['net_income'] ?? 0.0 as num).toDouble(),
+        ratePerUnitPaisa: (results[i]['rate_per_unit_paisa'] ?? 0) as int,
+        transportationExpensePaisa:
+            (results[i]['transportation_expense_paisa'] ?? 0) as int,
+        labourExpensePaisa: (results[i]['labour_expense_paisa'] ?? 0) as int,
+        harvestingExpensePaisa:
+            (results[i]['harvesting_expense_paisa'] ?? 0) as int,
+        commissionExpensePaisa:
+            (results[i]['commission_expense_paisa'] ?? 0) as int,
+        otherExpensePaisa: (results[i]['other_expense_paisa'] ?? 0) as int,
         buyerName: results[i]['h_buyer_name'],
         paymentStatus: results[i]['payment_status'] ?? 'Pending',
         notes: results[i]['notes'],
@@ -76,8 +78,8 @@ class HarvestProvider extends ChangeNotifier {
           harvestId: results[i]['h_id'],
           buyerName: results[i]['buyer_name'],
           quantity: results[i]['s_qty'],
-          pricePerUnit: results[i]['price_per_unit'],
-          totalAmount: results[i]['total_amount'],
+          pricePerUnitPaisa: results[i]['price_per_unit_paisa'] as int,
+          totalAmountPaisa: results[i]['total_amount_paisa'] as int,
           date: results[i]['s_date'],
         );
       }
@@ -100,28 +102,31 @@ class HarvestProvider extends ChangeNotifier {
     required double quantity,
     required String unit,
     required String date,
-    double ratePerUnit = 0.0,
-    double transportationExpense = 0.0,
-    double labourExpense = 0.0,
-    double harvestingExpense = 0.0,
-    double commissionExpense = 0.0,
-    double otherExpense = 0.0,
+    int ratePerUnitPaisa = 0,
+    int transportationExpensePaisa = 0,
+    int labourExpensePaisa = 0,
+    int harvestingExpensePaisa = 0,
+    int commissionExpensePaisa = 0,
+    int otherExpensePaisa = 0,
     String? buyerName,
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
     final db = await DatabaseHelper.instance.database;
 
-    final double grossAmount = quantity * ratePerUnit;
-    final double totalExpense = transportationExpense + labourExpense + harvestingExpense + commissionExpense + otherExpense;
-    final double netIncome = grossAmount - totalExpense;
+    final int totalExpensePaisa = transportationExpensePaisa +
+        labourExpensePaisa +
+        harvestingExpensePaisa +
+        commissionExpensePaisa +
+        otherExpensePaisa;
+    final int grossPaisa = (quantity * ratePerUnitPaisa).round();
 
     await db.transaction((txn) async {
       int? expenseId;
-      if (totalExpense > 0) {
+      if (totalExpensePaisa > 0) {
         expenseId = await txn.insert('expenses', {
           'category': 'Harvest Expenses',
-          'amount': totalExpense,
+          'amount_paisa': totalExpensePaisa,
           'date': date,
           'description': 'کٹائی کے اخراجات برائے فصل',
         });
@@ -132,28 +137,25 @@ class HarvestProvider extends ChangeNotifier {
         'quantity': quantity,
         'unit': unit,
         'date': date,
-        'rate_per_unit': ratePerUnit,
-        'gross_amount': grossAmount,
-        'transportation_expense': transportationExpense,
-        'labour_expense': labourExpense,
-        'harvesting_expense': harvestingExpense,
-        'commission_expense': commissionExpense,
-        'other_expense': otherExpense,
-        'total_expense': totalExpense,
-        'net_income': netIncome,
+        'rate_per_unit_paisa': ratePerUnitPaisa,
+        'transportation_expense_paisa': transportationExpensePaisa,
+        'labour_expense_paisa': labourExpensePaisa,
+        'harvesting_expense_paisa': harvestingExpensePaisa,
+        'commission_expense_paisa': commissionExpensePaisa,
+        'other_expense_paisa': otherExpensePaisa,
         'buyer_name': buyerName,
         'payment_status': paymentStatus,
         'notes': notes,
         'expense_id': expenseId,
       });
 
-      if (grossAmount > 0) {
+      if (grossPaisa > 0) {
         await txn.insert('sales', {
           'harvest_id': harvestId,
           'buyer_name': buyerName,
           'quantity': quantity,
-          'price_per_unit': ratePerUnit,
-          'total_amount': grossAmount,
+          'price_per_unit_paisa': ratePerUnitPaisa,
+          'total_amount_paisa': grossPaisa,
           'date': date,
         });
       }
@@ -168,21 +170,24 @@ class HarvestProvider extends ChangeNotifier {
     required double quantity,
     required String unit,
     required String date,
-    double ratePerUnit = 0.0,
-    double transportationExpense = 0.0,
-    double labourExpense = 0.0,
-    double harvestingExpense = 0.0,
-    double commissionExpense = 0.0,
-    double otherExpense = 0.0,
+    int ratePerUnitPaisa = 0,
+    int transportationExpensePaisa = 0,
+    int labourExpensePaisa = 0,
+    int harvestingExpensePaisa = 0,
+    int commissionExpensePaisa = 0,
+    int otherExpensePaisa = 0,
     String? buyerName,
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
     final db = await DatabaseHelper.instance.database;
 
-    final double grossAmount = quantity * ratePerUnit;
-    final double totalExpense = transportationExpense + labourExpense + harvestingExpense + commissionExpense + otherExpense;
-    final double netIncome = grossAmount - totalExpense;
+    final int totalExpensePaisa = transportationExpensePaisa +
+        labourExpensePaisa +
+        harvestingExpensePaisa +
+        commissionExpensePaisa +
+        otherExpensePaisa;
+    final int grossPaisa = (quantity * ratePerUnitPaisa).round();
 
     await db.transaction((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(
@@ -191,14 +196,14 @@ class HarvestProvider extends ChangeNotifier {
         whereArgs: [id],
       );
       if (existing.isEmpty) return;
-      
+
       int? expenseId = existing.first['expense_id'] as int?;
 
-      if (totalExpense > 0) {
+      if (totalExpensePaisa > 0) {
         if (expenseId == null) {
           expenseId = await txn.insert('expenses', {
             'category': 'Harvest Expenses',
-            'amount': totalExpense,
+            'amount_paisa': totalExpensePaisa,
             'date': date,
             'description': 'کٹائی کے اخراجات برائے فصل',
           });
@@ -206,7 +211,7 @@ class HarvestProvider extends ChangeNotifier {
           await txn.update(
             'expenses',
             {
-              'amount': totalExpense,
+              'amount_paisa': totalExpensePaisa,
               'date': date,
             },
             where: 'id = ?',
@@ -227,15 +232,12 @@ class HarvestProvider extends ChangeNotifier {
           'quantity': quantity,
           'unit': unit,
           'date': date,
-          'rate_per_unit': ratePerUnit,
-          'gross_amount': grossAmount,
-          'transportation_expense': transportationExpense,
-          'labour_expense': labourExpense,
-          'harvesting_expense': harvestingExpense,
-          'commission_expense': commissionExpense,
-          'other_expense': otherExpense,
-          'total_expense': totalExpense,
-          'net_income': netIncome,
+          'rate_per_unit_paisa': ratePerUnitPaisa,
+          'transportation_expense_paisa': transportationExpensePaisa,
+          'labour_expense_paisa': labourExpensePaisa,
+          'harvesting_expense_paisa': harvestingExpensePaisa,
+          'commission_expense_paisa': commissionExpensePaisa,
+          'other_expense_paisa': otherExpensePaisa,
           'buyer_name': buyerName,
           'payment_status': paymentStatus,
           'notes': notes,
@@ -251,14 +253,14 @@ class HarvestProvider extends ChangeNotifier {
         whereArgs: [id],
       );
 
-      if (grossAmount > 0) {
+      if (grossPaisa > 0) {
         if (sales.isEmpty) {
           await txn.insert('sales', {
             'harvest_id': id,
             'buyer_name': buyerName,
             'quantity': quantity,
-            'price_per_unit': ratePerUnit,
-            'total_amount': grossAmount,
+            'price_per_unit_paisa': ratePerUnitPaisa,
+            'total_amount_paisa': grossPaisa,
             'date': date,
           });
         } else {
@@ -267,8 +269,8 @@ class HarvestProvider extends ChangeNotifier {
             {
               'buyer_name': buyerName,
               'quantity': quantity,
-              'price_per_unit': ratePerUnit,
-              'total_amount': grossAmount,
+              'price_per_unit_paisa': ratePerUnitPaisa,
+              'total_amount_paisa': grossPaisa,
               'date': date,
             },
             where: 'harvest_id = ?',
@@ -288,26 +290,25 @@ class HarvestProvider extends ChangeNotifier {
   Future<void> recordSale({
     required int harvestId,
     required double quantity,
-    required double pricePerUnit,
-    required double totalAmount,
+    required int pricePerUnitPaisa,
     required String date,
     String? buyerName,
   }) async {
     final db = await DatabaseHelper.instance.database;
     await db.transaction((txn) async {
-      final List<Map<String, dynamic>> hMaps = await txn.query('harvests', where: 'id = ?', whereArgs: [harvestId]);
+      final List<Map<String, dynamic>> hMaps = await txn
+          .query('harvests', where: 'id = ?', whereArgs: [harvestId]);
       if (hMaps.isEmpty) return;
-      final current = Harvest.fromMap(hMaps.first);
 
-      final double grossAmount = quantity * pricePerUnit;
-      final double netIncome = grossAmount - current.totalExpense;
+      // The sale total is ALWAYS recomputed from quantity x price (rounded to
+      // the paisa) — never taken from a caller-supplied total, so the sale
+      // and the harvest's rate can never disagree.
+      final int grossPaisa = (quantity * pricePerUnitPaisa).round();
 
       await txn.update(
         'harvests',
         {
-          'rate_per_unit': pricePerUnit,
-          'gross_amount': grossAmount,
-          'net_income': netIncome,
+          'rate_per_unit_paisa': pricePerUnitPaisa,
           'buyer_name': buyerName,
           'payment_status': 'Paid',
         },
@@ -315,14 +316,15 @@ class HarvestProvider extends ChangeNotifier {
         whereArgs: [harvestId],
       );
 
-      final List<Map<String, dynamic>> sMaps = await txn.query('sales', where: 'harvest_id = ?', whereArgs: [harvestId]);
+      final List<Map<String, dynamic>> sMaps = await txn
+          .query('sales', where: 'harvest_id = ?', whereArgs: [harvestId]);
       if (sMaps.isEmpty) {
         await txn.insert('sales', {
           'harvest_id': harvestId,
           'buyer_name': buyerName,
           'quantity': quantity,
-          'price_per_unit': pricePerUnit,
-          'total_amount': grossAmount,
+          'price_per_unit_paisa': pricePerUnitPaisa,
+          'total_amount_paisa': grossPaisa,
           'date': date,
         });
       } else {
@@ -331,8 +333,8 @@ class HarvestProvider extends ChangeNotifier {
           {
             'buyer_name': buyerName,
             'quantity': quantity,
-            'price_per_unit': pricePerUnit,
-            'total_amount': grossAmount,
+            'price_per_unit_paisa': pricePerUnitPaisa,
+            'total_amount_paisa': grossPaisa,
             'date': date,
           },
           where: 'harvest_id = ?',
@@ -357,7 +359,7 @@ class HarvestProvider extends ChangeNotifier {
           await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
         }
       }
-      
+
       await txn.delete('sales', where: 'harvest_id = ?', whereArgs: [id]);
       await txn.delete('harvests', where: 'id = ?', whereArgs: [id]);
     });
@@ -382,27 +384,19 @@ class HarvestProvider extends ChangeNotifier {
       );
 
       // Reset the parent harvest so the sale can be re-recorded instead of
-      // leaving stale non-zero totals, buyer and payment status behind.
+      // leaving a stale rate, buyer and payment status behind. gross/net are
+      // computed from the rate, so resetting the rate to 0 resets them too.
       if (harvestId != null) {
-        final List<Map<String, dynamic>> hMaps = await txn.query(
+        await txn.update(
           'harvests',
+          {
+            'rate_per_unit_paisa': 0,
+            'buyer_name': null,
+            'payment_status': 'Pending',
+          },
           where: 'id = ?',
           whereArgs: [harvestId],
         );
-        if (hMaps.isNotEmpty) {
-          final current = Harvest.fromMap(hMaps.first);
-          await txn.update(
-            'harvests',
-            {
-              'gross_amount': 0.0,
-              'net_income': 0.0 - current.totalExpense,
-              'buyer_name': null,
-              'payment_status': 'Pending',
-            },
-            where: 'id = ?',
-            whereArgs: [harvestId],
-          );
-        }
       }
     });
     await fetchHarvests();
@@ -412,20 +406,23 @@ class HarvestProvider extends ChangeNotifier {
     required int id,
     required int harvestId,
     required double quantity,
-    required double pricePerUnit,
-    required double totalAmount,
+    required int pricePerUnitPaisa,
     required String date,
     String? buyerName,
   }) async {
     final db = await DatabaseHelper.instance.database;
     await db.transaction((txn) async {
+      // Same rule as recordSale: the total is recomputed, never accepted
+      // from the caller.
+      final int totalPaisa = (quantity * pricePerUnitPaisa).round();
+
       await txn.update(
         'sales',
         {
           'harvest_id': harvestId,
           'quantity': quantity,
-          'price_per_unit': pricePerUnit,
-          'total_amount': totalAmount,
+          'price_per_unit_paisa': pricePerUnitPaisa,
+          'total_amount_paisa': totalPaisa,
           'date': date,
           'buyer_name': buyerName,
         },
@@ -434,26 +431,17 @@ class HarvestProvider extends ChangeNotifier {
       );
 
       // Keep the parent harvest in sync with the edited sale: the harvest's
-      // money fields mirror the sale's total so the two can never disagree.
-      final List<Map<String, dynamic>> hMaps = await txn.query(
+      // rate mirrors the sale's price; gross/net are computed from it, so
+      // the two can never disagree.
+      await txn.update(
         'harvests',
+        {
+          'rate_per_unit_paisa': pricePerUnitPaisa,
+          'buyer_name': buyerName,
+        },
         where: 'id = ?',
         whereArgs: [harvestId],
       );
-      if (hMaps.isNotEmpty) {
-        final current = Harvest.fromMap(hMaps.first);
-        await txn.update(
-          'harvests',
-          {
-            'rate_per_unit': pricePerUnit,
-            'gross_amount': totalAmount,
-            'net_income': totalAmount - current.totalExpense,
-            'buyer_name': buyerName,
-          },
-          where: 'id = ?',
-          whereArgs: [harvestId],
-        );
-      }
     });
     await fetchHarvests();
   }

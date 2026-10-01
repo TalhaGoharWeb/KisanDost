@@ -7,7 +7,9 @@ class ExpenseProvider extends ChangeNotifier {
 
   List<Expense> get expenses => _expenses;
 
-  double get totalExpenses => _expenses.fold(0.0, (sum, item) => sum + item.amount);
+  /// Total in INTEGER paisa.
+  int get totalExpensesPaisa =>
+      _expenses.fold(0, (sum, item) => sum + item.amountPaisa);
 
   // Urdu Category Map
   final Map<String, String> expenseCategories = {
@@ -38,7 +40,7 @@ class ExpenseProvider extends ChangeNotifier {
 
   Future<int> addExpense({
     required String category,
-    required double amount,
+    required int amountPaisa,
     required String date,
     String? description,
     int? farmId,
@@ -48,7 +50,7 @@ class ExpenseProvider extends ChangeNotifier {
     final db = await DatabaseHelper.instance.database;
     final newExpense = Expense(
       category: category,
-      amount: amount,
+      amountPaisa: amountPaisa,
       date: date,
       description: description,
       farmId: farmId,
@@ -63,7 +65,7 @@ class ExpenseProvider extends ChangeNotifier {
   Future<void> updateExpense({
     required int id,
     required String category,
-    required double amount,
+    required int amountPaisa,
     required String date,
     String? description,
     int? farmId,
@@ -76,7 +78,7 @@ class ExpenseProvider extends ChangeNotifier {
       Expense(
         id: id,
         category: category,
-        amount: amount,
+        amountPaisa: amountPaisa,
         date: date,
         description: description,
         farmId: farmId,

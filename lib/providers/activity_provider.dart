@@ -9,11 +9,12 @@ class ActivityWithDetails {
   final Activity activity;
   final String cropName;
   final List<String> fieldNames;
-  final double? expenseAmount;
+  /// Linked expense amount in INTEGER paisa (null when no expense).
+  final int? expenseAmountPaisa;
 
   ActivityWithDetails({
     required this.activity,
-    this.expenseAmount,
+    this.expenseAmountPaisa,
     required this.cropName,
     required this.fieldNames,
   });
@@ -52,7 +53,7 @@ class ActivityProvider extends ChangeNotifier {
         a.inventory_item_id,
         a.is_completed,
         cs.crop_name,
-        e.amount as expense_amount
+        e.amount_paisa as expense_amount_paisa
       FROM activities a
       JOIN crop_seasons cs ON a.crop_season_id = cs.id
       LEFT JOIN expenses e ON a.expense_id = e.id
@@ -97,9 +98,9 @@ class ActivityProvider extends ChangeNotifier {
         activity: activity,
         cropName: results[i]['crop_name'],
         fieldNames: seasonFields[activity.cropSeasonId] ?? [],
-        expenseAmount: results[i]['expense_amount'] == null
+        expenseAmountPaisa: results[i]['expense_amount_paisa'] == null
             ? null
-            : (results[i]['expense_amount'] as num).toDouble(),
+            : results[i]['expense_amount_paisa'] as int,
       );
     });
 
@@ -179,7 +180,7 @@ class ActivityProvider extends ChangeNotifier {
     required String activityType,
     required String date,
     required String details,
-    double? expenseAmount,
+    int? expenseAmountPaisa,
     String? expenseCategory,
     int? expenseId,
     String? inventoryCategory,
@@ -196,10 +197,10 @@ class ActivityProvider extends ChangeNotifier {
     // if the deduction is rejected (overuse / missing item), nothing is saved.
     await db.transaction((txn) async {
       int? finalExpenseId = expenseId;
-      if (finalExpenseId == null && expenseAmount != null && expenseAmount > 0) {
+      if (finalExpenseId == null && expenseAmountPaisa != null && expenseAmountPaisa > 0) {
         final newExpense = Expense(
           category: expenseCategory ?? 'Other',
-          amount: expenseAmount,
+          amountPaisa: expenseAmountPaisa,
           date: date,
           description: '$activityType: $details',
         );
@@ -260,7 +261,7 @@ class ActivityProvider extends ChangeNotifier {
     required String activityType,
     required String date,
     required String details,
-    double? expenseAmount,
+    int? expenseAmountPaisa,
     String? expenseCategory,
     String? inventoryCategory,
     String? inventoryName,
@@ -293,13 +294,13 @@ class ActivityProvider extends ChangeNotifier {
       }
 
       int? finalExpenseId = oldActivity.expenseId;
-      if (expenseAmount != null && expenseAmount > 0) {
+      if (expenseAmountPaisa != null && expenseAmountPaisa > 0) {
         if (finalExpenseId == null) {
           finalExpenseId = await txn.insert(
             'expenses',
             Expense(
               category: expenseCategory ?? 'Other',
-              amount: expenseAmount,
+              amountPaisa: expenseAmountPaisa,
               date: date,
               description: '$activityType: $details',
             ).toMap(),
@@ -309,7 +310,7 @@ class ActivityProvider extends ChangeNotifier {
             'expenses',
             {
               'category': expenseCategory ?? 'Other',
-              'amount': expenseAmount,
+              'amount_paisa': expenseAmountPaisa,
               'date': date,
               'description': '$activityType: $details',
             },
@@ -388,7 +389,7 @@ class ActivityProvider extends ChangeNotifier {
       activityType: activity.activityType,
       date: DateTime.now().toIso8601String(),
       details: activity.details ?? '',
-      expenseAmount: null,
+      expenseAmountPaisa: null,
       expenseCategory: activity.expenseCategory,
       inventoryCategory: activity.inventoryCategory,
       inventoryName: activity.inventoryName,

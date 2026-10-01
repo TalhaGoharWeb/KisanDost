@@ -112,7 +112,8 @@ class CropSeason {
 class Expense {
   final int? id;
   final String category;
-  final double amount;
+  /// Amount in INTEGER paisa. Never a double: exact money arithmetic.
+  final int amountPaisa;
   final String date;
   final String? description;
 
@@ -126,7 +127,7 @@ class Expense {
   Expense({
     this.id,
     required this.category,
-    required this.amount,
+    required this.amountPaisa,
     required this.date,
     this.description,
     this.farmId,
@@ -138,7 +139,7 @@ class Expense {
     return {
       'id': id,
       'category': category,
-      'amount': amount,
+      'amount_paisa': amountPaisa,
       'date': date,
       'description': description,
       'farm_id': farmId,
@@ -151,7 +152,7 @@ class Expense {
     return Expense(
       id: map['id'],
       category: map['category'],
-      amount: map['amount'],
+      amountPaisa: map['amount_paisa'] as int,
       date: map['date'],
       description: map['description'],
       farmId: map['farm_id'],
@@ -167,7 +168,8 @@ class Inventory {
   final String name;
   final String unit;
   final double quantity;
-  final double costPerUnit;
+  /// Cost of one unit in INTEGER paisa. Never a double.
+  final int costPerUnitPaisa;
 
   /// Farmer-entered weight of ONE package unit in kg (e.g. one bag = 50).
   /// NULL means unknown — conversions must never assume a value.
@@ -179,7 +181,7 @@ class Inventory {
     required this.name,
     required this.unit,
     required this.quantity,
-    required this.costPerUnit,
+    required this.costPerUnitPaisa,
     this.weightPerUnitKg,
   });
 
@@ -190,7 +192,7 @@ class Inventory {
       'name': name,
       'unit': unit,
       'quantity': quantity,
-      'cost_per_unit': costPerUnit,
+      'cost_per_unit_paisa': costPerUnitPaisa,
       'weight_per_unit_kg': weightPerUnitKg,
     };
   }
@@ -202,7 +204,7 @@ class Inventory {
       name: map['name'],
       unit: map['unit'],
       quantity: map['quantity'],
-      costPerUnit: map['cost_per_unit'],
+      costPerUnitPaisa: map['cost_per_unit_paisa'] as int,
       weightPerUnitKg: map['weight_per_unit_kg'] == null
           ? null
           : (map['weight_per_unit_kg'] as num).toDouble(),
@@ -218,8 +220,10 @@ class InventoryTransaction {
   final String type; // purchase | usage | adjustment | opening_balance
   final double quantity;
   final String unit;
-  final double? unitPrice;
-  final double? totalAmount;
+  /// Unit price in INTEGER paisa (nullable: adjustments may carry no price).
+  final int? unitPricePaisa;
+  /// Total in INTEGER paisa (signed like [quantity]).
+  final int? totalAmountPaisa;
   final int? activityId;
   final String date;
   final String? notes;
@@ -231,8 +235,8 @@ class InventoryTransaction {
     required this.type,
     required this.quantity,
     required this.unit,
-    this.unitPrice,
-    this.totalAmount,
+    this.unitPricePaisa,
+    this.totalAmountPaisa,
     this.activityId,
     required this.date,
     this.notes,
@@ -262,8 +266,8 @@ class InventoryTransaction {
       'type': type,
       'quantity': quantity,
       'unit': unit,
-      'unit_price': unitPrice,
-      'total_amount': totalAmount,
+      'unit_price_paisa': unitPricePaisa,
+      'total_amount_paisa': totalAmountPaisa,
       'activity_id': activityId,
       'date': date,
       'notes': notes,
@@ -278,12 +282,8 @@ class InventoryTransaction {
       type: map['type'],
       quantity: (map['quantity'] as num).toDouble(),
       unit: map['unit'],
-      unitPrice: map['unit_price'] == null
-          ? null
-          : (map['unit_price'] as num).toDouble(),
-      totalAmount: map['total_amount'] == null
-          ? null
-          : (map['total_amount'] as num).toDouble(),
+      unitPricePaisa: map['unit_price_paisa'] as int?,
+      totalAmountPaisa: map['total_amount_paisa'] as int?,
       activityId: map['activity_id'],
       date: map['date'],
       notes: map['notes'],
@@ -373,15 +373,14 @@ class Harvest {
   final double quantity;
   final String unit;
   final String date;
-  final double ratePerUnit;
-  final double grossAmount;
-  final double transportationExpense;
-  final double labourExpense;
-  final double harvestingExpense;
-  final double commissionExpense;
-  final double otherExpense;
-  final double totalExpense;
-  final double netIncome;
+  /// Rate per unit in INTEGER paisa.
+  final int ratePerUnitPaisa;
+  /// The five expense buckets in INTEGER paisa.
+  final int transportationExpensePaisa;
+  final int labourExpensePaisa;
+  final int harvestingExpensePaisa;
+  final int commissionExpensePaisa;
+  final int otherExpensePaisa;
   final String? buyerName;
   final String paymentStatus; // 'Paid', 'Pending', 'Partial'
   final String? notes;
@@ -393,20 +392,29 @@ class Harvest {
     required this.quantity,
     required this.unit,
     required this.date,
-    this.ratePerUnit = 0.0,
-    this.grossAmount = 0.0,
-    this.transportationExpense = 0.0,
-    this.labourExpense = 0.0,
-    this.harvestingExpense = 0.0,
-    this.commissionExpense = 0.0,
-    this.otherExpense = 0.0,
-    this.totalExpense = 0.0,
-    this.netIncome = 0.0,
+    this.ratePerUnitPaisa = 0,
+    this.transportationExpensePaisa = 0,
+    this.labourExpensePaisa = 0,
+    this.harvestingExpensePaisa = 0,
+    this.commissionExpensePaisa = 0,
+    this.otherExpensePaisa = 0,
     this.buyerName,
     this.paymentStatus = 'Pending',
     this.notes,
     this.expenseId,
   });
+
+  /// Computed — NEVER stored (storing them caused drift bugs when sales
+  /// were edited). All in INTEGER paisa; per-unit x quantity rounds to the
+  /// nearest paisa (half away from zero), exactly like the DB backfill.
+  int get grossPaisa => (quantity * ratePerUnitPaisa).round();
+  int get totalExpensePaisa =>
+      transportationExpensePaisa +
+      labourExpensePaisa +
+      harvestingExpensePaisa +
+      commissionExpensePaisa +
+      otherExpensePaisa;
+  int get netIncomePaisa => grossPaisa - totalExpensePaisa;
 
   Map<String, dynamic> toMap() {
     return {
@@ -415,15 +423,12 @@ class Harvest {
       'quantity': quantity,
       'unit': unit,
       'date': date,
-      'rate_per_unit': ratePerUnit,
-      'gross_amount': grossAmount,
-      'transportation_expense': transportationExpense,
-      'labour_expense': labourExpense,
-      'harvesting_expense': harvestingExpense,
-      'commission_expense': commissionExpense,
-      'other_expense': otherExpense,
-      'total_expense': totalExpense,
-      'net_income': netIncome,
+      'rate_per_unit_paisa': ratePerUnitPaisa,
+      'transportation_expense_paisa': transportationExpensePaisa,
+      'labour_expense_paisa': labourExpensePaisa,
+      'harvesting_expense_paisa': harvestingExpensePaisa,
+      'commission_expense_paisa': commissionExpensePaisa,
+      'other_expense_paisa': otherExpensePaisa,
       'buyer_name': buyerName,
       'payment_status': paymentStatus,
       'notes': notes,
@@ -438,15 +443,14 @@ class Harvest {
       quantity: (map['quantity'] as num).toDouble(),
       unit: map['unit'],
       date: map['date'],
-      ratePerUnit: (map['rate_per_unit'] ?? 0.0 as num).toDouble(),
-      grossAmount: (map['gross_amount'] ?? 0.0 as num).toDouble(),
-      transportationExpense: (map['transportation_expense'] ?? 0.0 as num).toDouble(),
-      labourExpense: (map['labour_expense'] ?? 0.0 as num).toDouble(),
-      harvestingExpense: (map['harvesting_expense'] ?? 0.0 as num).toDouble(),
-      commissionExpense: (map['commission_expense'] ?? 0.0 as num).toDouble(),
-      otherExpense: (map['other_expense'] ?? 0.0 as num).toDouble(),
-      totalExpense: (map['total_expense'] ?? 0.0 as num).toDouble(),
-      netIncome: (map['net_income'] ?? 0.0 as num).toDouble(),
+      ratePerUnitPaisa: (map['rate_per_unit_paisa'] ?? 0) as int,
+      transportationExpensePaisa:
+          (map['transportation_expense_paisa'] ?? 0) as int,
+      labourExpensePaisa: (map['labour_expense_paisa'] ?? 0) as int,
+      harvestingExpensePaisa:
+          (map['harvesting_expense_paisa'] ?? 0) as int,
+      commissionExpensePaisa: (map['commission_expense_paisa'] ?? 0) as int,
+      otherExpensePaisa: (map['other_expense_paisa'] ?? 0) as int,
       buyerName: map['buyer_name'],
       paymentStatus: map['payment_status'] ?? 'Pending',
       notes: map['notes'],
@@ -460,8 +464,10 @@ class Sale {
   final int harvestId;
   final String? buyerName;
   final double quantity;
-  final double pricePerUnit;
-  final double totalAmount;
+  /// Price per unit in INTEGER paisa.
+  final int pricePerUnitPaisa;
+  /// Total in INTEGER paisa.
+  final int totalAmountPaisa;
   final String date;
 
   Sale({
@@ -469,8 +475,8 @@ class Sale {
     required this.harvestId,
     this.buyerName,
     required this.quantity,
-    required this.pricePerUnit,
-    required this.totalAmount,
+    required this.pricePerUnitPaisa,
+    required this.totalAmountPaisa,
     required this.date,
   });
 
@@ -480,8 +486,8 @@ class Sale {
       'harvest_id': harvestId,
       'buyer_name': buyerName,
       'quantity': quantity,
-      'price_per_unit': pricePerUnit,
-      'total_amount': totalAmount,
+      'price_per_unit_paisa': pricePerUnitPaisa,
+      'total_amount_paisa': totalAmountPaisa,
       'date': date,
     };
   }
@@ -492,8 +498,8 @@ class Sale {
       harvestId: map['harvest_id'],
       buyerName: map['buyer_name'],
       quantity: map['quantity'],
-      pricePerUnit: map['price_per_unit'],
-      totalAmount: map['total_amount'],
+      pricePerUnitPaisa: map['price_per_unit_paisa'] as int,
+      totalAmountPaisa: map['total_amount_paisa'] as int,
       date: map['date'],
     );
   }
@@ -503,7 +509,8 @@ class Theka {
   final int? id;
   final int farmId;
   final int? fieldId;
-  final double totalAmount;
+  /// Total in INTEGER paisa.
+  final int totalAmountPaisa;
   final String durationType; // 'Seasonal', 'Yearly', 'Custom'
   final String? durationDetails; // e.g. 'Rabi 2026'
   final String paymentMethod; // 'Full', 'Installment'
@@ -515,7 +522,7 @@ class Theka {
     this.id,
     required this.farmId,
     this.fieldId,
-    required this.totalAmount,
+    required this.totalAmountPaisa,
     required this.durationType,
     this.durationDetails,
     required this.paymentMethod,
@@ -529,7 +536,7 @@ class Theka {
       'id': id,
       'farm_id': farmId,
       'field_id': fieldId,
-      'total_amount': totalAmount,
+      'total_amount_paisa': totalAmountPaisa,
       'duration_type': durationType,
       'duration_details': durationDetails,
       'payment_method': paymentMethod,
@@ -544,7 +551,7 @@ class Theka {
       id: map['id'],
       farmId: map['farm_id'],
       fieldId: map['field_id'],
-      totalAmount: (map['total_amount'] as num).toDouble(),
+      totalAmountPaisa: map['total_amount_paisa'] as int,
       durationType: map['duration_type'],
       durationDetails: map['duration_details'],
       paymentMethod: map['payment_method'],
@@ -558,20 +565,22 @@ class Theka {
 class ThekaInstallment {
   final int? id;
   final int thekaId;
-  final double amount;
+  /// Installment amount in INTEGER paisa.
+  final int amountPaisa;
   final String dueDate;
   final String status; // 'Pending', 'Paid', 'Partially Paid'
-  final double paidAmount;
+  /// Paid so far in INTEGER paisa (accumulates; never exceeds [amountPaisa]).
+  final int paidAmountPaisa;
   final String? paidDate;
   final int? expenseId;
 
   ThekaInstallment({
     this.id,
     required this.thekaId,
-    required this.amount,
+    required this.amountPaisa,
     required this.dueDate,
     required this.status,
-    this.paidAmount = 0.0,
+    this.paidAmountPaisa = 0,
     this.paidDate,
     this.expenseId,
   });
@@ -580,10 +589,10 @@ class ThekaInstallment {
     return {
       'id': id,
       'theka_id': thekaId,
-      'amount': amount,
+      'amount_paisa': amountPaisa,
       'due_date': dueDate,
       'status': status,
-      'paid_amount': paidAmount,
+      'paid_amount_paisa': paidAmountPaisa,
       'paid_date': paidDate,
       'expense_id': expenseId,
     };
@@ -593,10 +602,11 @@ class ThekaInstallment {
     return ThekaInstallment(
       id: map['id'],
       thekaId: map['theka_id'],
-      amount: (map['amount'] as num).toDouble(),
+      amountPaisa: map['amount_paisa'] as int,
       dueDate: map['due_date'],
       status: map['status'],
-      paidAmount: map['paid_amount'] == null ? 0.0 : (map['paid_amount'] as num).toDouble(),
+      paidAmountPaisa:
+          map['paid_amount_paisa'] == null ? 0 : map['paid_amount_paisa'] as int,
       paidDate: map['paid_date'],
       expenseId: map['expense_id'],
     );
@@ -608,39 +618,47 @@ class UshrRecord {
   final int cropSeasonId;
   final int? harvestId;
   final double harvestQty;
-  final double marketValue;
+  /// Market value in INTEGER paisa.
+  final int marketValuePaisa;
   final String ushrMethod; // 'Natural', 'Artificial', 'Custom'
   final double ushrPercentage;
-  final double ushrAmount;
+  /// Ushr due in INTEGER paisa.
+  final int ushrAmountPaisa;
   final String status; // 'Paid', 'Pending'
   final String? datePaid;
   final String? notes;
   final int? expenseId;
   final String payMethod; // 'Cash', 'Crop', 'Mixed'
   final double qtyPaid;
-  final double cashPaid;
-  final double remainingBalance;
-  final double ratePerUnit;
+  /// Cash paid in INTEGER paisa.
+  final int cashPaidPaisa;
+  /// Rate per unit for crop-paid ushr, in INTEGER paisa.
+  final int ratePerUnitPaisa;
 
   UshrRecord({
     this.id,
     required this.cropSeasonId,
     this.harvestId,
     required this.harvestQty,
-    required this.marketValue,
+    required this.marketValuePaisa,
     required this.ushrMethod,
     required this.ushrPercentage,
-    required this.ushrAmount,
+    required this.ushrAmountPaisa,
     required this.status,
     this.datePaid,
     this.notes,
     this.expenseId,
     this.payMethod = 'Cash',
     this.qtyPaid = 0.0,
-    this.cashPaid = 0.0,
-    this.remainingBalance = 0.0,
-    this.ratePerUnit = 0.0,
+    this.cashPaidPaisa = 0,
+    this.ratePerUnitPaisa = 0,
   });
+
+  /// Computed — NEVER stored (storing it caused drift when payments were
+  /// edited). In INTEGER paisa: ushr due minus cash paid minus crop paid
+  /// (qty x rate, rounded to the nearest paisa).
+  int get remainingBalancePaisa =>
+      ushrAmountPaisa - cashPaidPaisa - (qtyPaid * ratePerUnitPaisa).round();
 
   Map<String, dynamic> toMap() {
     return {
@@ -648,19 +666,18 @@ class UshrRecord {
       'crop_season_id': cropSeasonId,
       'harvest_id': harvestId,
       'harvest_qty': harvestQty,
-      'market_value': marketValue,
+      'market_value_paisa': marketValuePaisa,
       'ushr_method': ushrMethod,
       'ushr_percentage': ushrPercentage,
-      'ushr_amount': ushrAmount,
+      'ushr_amount_paisa': ushrAmountPaisa,
       'status': status,
       'date_paid': datePaid,
       'notes': notes,
       'expense_id': expenseId,
       'pay_method': payMethod,
       'qty_paid': qtyPaid,
-      'cash_paid': cashPaid,
-      'remaining_balance': remainingBalance,
-      'rate_per_unit': ratePerUnit,
+      'cash_paid_paisa': cashPaidPaisa,
+      'rate_per_unit_paisa': ratePerUnitPaisa,
     };
   }
 
@@ -670,19 +687,18 @@ class UshrRecord {
       cropSeasonId: map['crop_season_id'],
       harvestId: map['harvest_id'],
       harvestQty: (map['harvest_qty'] as num).toDouble(),
-      marketValue: (map['market_value'] as num).toDouble(),
+      marketValuePaisa: map['market_value_paisa'] as int,
       ushrMethod: map['ushr_method'],
       ushrPercentage: (map['ushr_percentage'] as num).toDouble(),
-      ushrAmount: (map['ushr_amount'] as num).toDouble(),
+      ushrAmountPaisa: map['ushr_amount_paisa'] as int,
       status: map['status'] ?? 'Pending',
       datePaid: map['date_paid'],
       notes: map['notes'],
       expenseId: map['expense_id'],
       payMethod: map['pay_method'] ?? 'Cash',
       qtyPaid: (map['qty_paid'] ?? 0.0 as num).toDouble(),
-      cashPaid: (map['cash_paid'] ?? 0.0 as num).toDouble(),
-      remainingBalance: (map['remaining_balance'] ?? 0.0 as num).toDouble(),
-      ratePerUnit: (map['rate_per_unit'] ?? 0.0 as num).toDouble(),
+      cashPaidPaisa: (map['cash_paid_paisa'] ?? 0) as int,
+      ratePerUnitPaisa: (map['rate_per_unit_paisa'] ?? 0) as int,
     );
   }
 }

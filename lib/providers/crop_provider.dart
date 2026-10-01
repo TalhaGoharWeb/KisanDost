@@ -78,11 +78,11 @@ class CropProvider extends ChangeNotifier {
     return timeline;
   }
 
-  double splitAmountAcrossFields({required double amount, required int fieldCount}) {
+  int splitAmountAcrossFields({required int amountPaisa, required int fieldCount}) {
     if (fieldCount <= 0) {
       return 0;
     }
-    return amount / fieldCount;
+    return amountPaisa ~/ fieldCount;
   }
 
   Future<void> fetchCropSeasons() async {
