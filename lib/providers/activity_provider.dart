@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/unit_converter.dart';
 import 'inventory_provider.dart';
 
 class ActivityWithDetails {
@@ -11,9 +13,9 @@ class ActivityWithDetails {
 
   ActivityWithDetails({
     required this.activity,
+    this.expenseAmount,
     required this.cropName,
     required this.fieldNames,
-    this.expenseAmount,
   });
 
   String get fieldDisplayName {
@@ -47,6 +49,7 @@ class ActivityProvider extends ChangeNotifier {
         a.inventory_name,
         a.inventory_unit,
         a.inventory_quantity,
+        a.inventory_item_id,
         a.is_completed,
         cs.crop_name,
         e.amount as expense_amount
@@ -87,6 +90,7 @@ class ActivityProvider extends ChangeNotifier {
         inventoryQuantity: results[i]['inventory_quantity'] == null
             ? null
             : (results[i]['inventory_quantity'] as num).toDouble(),
+        inventoryItemId: results[i]['inventory_item_id'],
         isCompleted: (results[i]['is_completed'] ?? 0) == 1,
       );
       return ActivityWithDetails(
@@ -102,48 +106,71 @@ class ActivityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _applyInventoryDelta({
-    required InventoryProvider inventoryProvider,
-    required String category,
-    required String name,
-    required String unit,
-    required double quantity,
-    required bool deduct,
-  }) async {
-    Inventory? target;
-    for (final item in inventoryProvider.inventoryList) {
-      if (item.category == category && item.name == name) {
-        target = item;
-        break;
-      }
-    }
-
-    if (target == null) {
-      if (deduct) {
-        return;
-      }
-      await inventoryProvider.addInventoryItem(
-        category: category,
-        name: name,
-        unit: unit,
-        quantity: quantity,
-        costPerUnit: 0,
+  /// Resolves the exact inventory row an activity consumed, for restores.
+  /// Prefers the stored [Activity.inventoryItemId]; falls back to the
+  /// (category, name, unit) snapshot for pre-v11 rows. Throws loudly when
+  /// the item no longer exists — restores are never silently skipped and
+  /// phantom zero-cost stock is never auto-created.
+  Future<Inventory> _resolveItemForRestore(
+    DatabaseExecutor ex,
+    InventoryProvider inventoryProvider,
+    Activity activity,
+  ) async {
+    if (activity.inventoryItemId != null) {
+      final Inventory? byId = await inventoryProvider.getItemById(
+        activity.inventoryItemId!,
+        executor: ex,
       );
+      if (byId != null) return byId;
+    }
+    if (activity.inventoryCategory != null &&
+        activity.inventoryName != null &&
+        activity.inventoryUnit != null) {
+      final Inventory? byKey = await inventoryProvider.findItem(
+        category: activity.inventoryCategory!,
+        name: activity.inventoryName!,
+        unit: activity.inventoryUnit!,
+        executor: ex,
+      );
+      if (byKey != null) return byKey;
+    }
+    throw const InventoryException(
+      'اس سرگرمی کا اسٹاک آئٹم گودام میں موجود نہیں ہے — پہلے آئٹم شامل کریں',
+    );
+  }
+
+  /// Returns previously deducted stock to the warehouse inside [ex].
+  /// The restore is an 'adjustment' ledger entry, never a silent add-back.
+  Future<void> _restoreInventoryTx(
+    DatabaseExecutor ex, {
+    required InventoryProvider inventoryProvider,
+    required Activity activity,
+  }) async {
+    if (activity.inventoryQuantity == null || activity.inventoryQuantity! <= 0) {
       return;
     }
-
-    final double convertedQty = _convertUnit(quantity, unit, target.unit);
-    final double newQty = deduct
-        ? (target.quantity - convertedQty).clamp(0.0, double.infinity)
-        : target.quantity + convertedQty;
-
-    await inventoryProvider.updateInventoryItem(
-      id: target.id!,
-      category: target.category,
-      name: target.name,
-      unit: target.unit,
-      quantity: newQty,
-      costPerUnit: target.costPerUnit,
+    if (activity.inventoryCategory == null ||
+        activity.inventoryName == null ||
+        activity.inventoryUnit == null) {
+      return;
+    }
+    final Inventory item =
+        await _resolveItemForRestore(ex, inventoryProvider, activity);
+    double qtyInItemUnit = activity.inventoryQuantity!;
+    if (activity.inventoryUnit != item.unit) {
+      qtyInItemUnit = UnitConverter.convert(
+        activity.inventoryQuantity!,
+        activity.inventoryUnit!,
+        item.unit,
+        weightPerUnitKg: item.weightPerUnitKg,
+      );
+    }
+    await inventoryProvider.recordAdjustment(
+      itemId: item.id!,
+      quantityDelta: qtyInItemUnit,
+      reason: 'سرگرمی حذف/تبدیل ہونے پر اسٹاک واپس',
+      date: activity.date,
+      executor: ex,
     );
   }
 
@@ -159,54 +186,63 @@ class ActivityProvider extends ChangeNotifier {
     String? inventoryName,
     String? inventoryUnit,
     double? inventoryQuantity,
+    int? inventoryItemId,
     bool isCompleted = false,
     InventoryProvider? inventoryProvider,
   }) async {
     final db = await DatabaseHelper.instance.database;
-    int? finalExpenseId = expenseId;
 
-    if (finalExpenseId == null && expenseAmount != null && expenseAmount > 0) {
-      final newExpense = Expense(
-        category: expenseCategory ?? 'Other',
-        amount: expenseAmount,
-        date: date,
-        description: '$activityType: $details',
+    // Expense + activity row + inventory deduction happen in ONE transaction:
+    // if the deduction is rejected (overuse / missing item), nothing is saved.
+    await db.transaction((txn) async {
+      int? finalExpenseId = expenseId;
+      if (finalExpenseId == null && expenseAmount != null && expenseAmount > 0) {
+        final newExpense = Expense(
+          category: expenseCategory ?? 'Other',
+          amount: expenseAmount,
+          date: date,
+          description: '$activityType: $details',
+        );
+        finalExpenseId = await txn.insert('expenses', newExpense.toMap());
+      }
+
+      final int activityId = await txn.insert(
+        'activities',
+        Activity(
+          cropSeasonId: cropSeasonId,
+          activityType: activityType,
+          date: date,
+          details: details,
+          expenseId: finalExpenseId,
+          expenseCategory: expenseCategory,
+          inventoryCategory: inventoryCategory,
+          inventoryName: inventoryName,
+          inventoryUnit: inventoryUnit,
+          inventoryQuantity: inventoryQuantity,
+          inventoryItemId: inventoryItemId,
+          isCompleted: isCompleted,
+        ).toMap(),
       );
-      finalExpenseId = await db.insert('expenses', newExpense.toMap());
-    }
 
-    if (inventoryProvider != null &&
-        inventoryCategory != null &&
-        inventoryName != null &&
-        inventoryUnit != null &&
-        inventoryQuantity != null &&
-        inventoryQuantity > 0) {
-      await _applyInventoryDelta(
-        inventoryProvider: inventoryProvider,
-        category: inventoryCategory,
-        name: inventoryName,
-        unit: inventoryUnit,
-        quantity: inventoryQuantity,
-        deduct: true,
-      );
-    }
-
-    final newActivity = Activity(
-      cropSeasonId: cropSeasonId,
-      activityType: activityType,
-      date: date,
-      details: details,
-      expenseId: finalExpenseId,
-      expenseCategory: expenseCategory,
-      inventoryCategory: inventoryCategory,
-      inventoryName: inventoryName,
-      inventoryUnit: inventoryUnit,
-      inventoryQuantity: inventoryQuantity,
-      isCompleted: isCompleted,
-    );
-    await db.insert('activities', newActivity.toMap());
+      if (inventoryProvider != null &&
+          inventoryItemId != null &&
+          inventoryQuantity != null &&
+          inventoryQuantity > 0) {
+        await inventoryProvider.recordUsage(
+          itemId: inventoryItemId,
+          quantity: inventoryQuantity,
+          fromUnit: inventoryUnit,
+          activityId: activityId,
+          date: date,
+          executor: txn,
+        );
+      }
+    });
 
     await fetchActivities();
+    if (inventoryProvider != null) {
+      await inventoryProvider.fetchInventory();
+    }
   }
 
   Future<Activity?> getActivityById(int id) async {
@@ -230,100 +266,104 @@ class ActivityProvider extends ChangeNotifier {
     String? inventoryName,
     String? inventoryUnit,
     double? inventoryQuantity,
+    int? inventoryItemId,
     bool? isCompleted,
     InventoryProvider? inventoryProvider,
   }) async {
     final db = await DatabaseHelper.instance.database;
 
-    final Activity? oldActivity = await getActivityById(id);
-    if (oldActivity == null) {
-      return;
-    }
-
-    if (inventoryProvider != null &&
-        oldActivity.inventoryCategory != null &&
-        oldActivity.inventoryName != null &&
-        oldActivity.inventoryUnit != null &&
-        oldActivity.inventoryQuantity != null &&
-        oldActivity.inventoryQuantity! > 0) {
-      await _applyInventoryDelta(
-        inventoryProvider: inventoryProvider,
-        category: oldActivity.inventoryCategory!,
-        name: oldActivity.inventoryName!,
-        unit: oldActivity.inventoryUnit!,
-        quantity: oldActivity.inventoryQuantity!,
-        deduct: false,
+    await db.transaction((txn) async {
+      final List<Map<String, dynamic>> maps = await txn.query(
+        'activities',
+        where: 'id = ?',
+        whereArgs: [id],
       );
-    }
+      if (maps.isEmpty) {
+        return;
+      }
+      final Activity oldActivity = Activity.fromMap(maps.first);
 
-    int? finalExpenseId = oldActivity.expenseId;
-    if (expenseAmount != null && expenseAmount > 0) {
-      if (finalExpenseId == null) {
-        finalExpenseId = await db.insert(
-          'expenses',
-          Expense(
-            category: expenseCategory ?? 'Other',
-            amount: expenseAmount,
-            date: date,
-            description: '$activityType: $details',
-          ).toMap(),
-        );
-      } else {
-        await db.update(
-          'expenses',
-          {
-            'category': expenseCategory ?? 'Other',
-            'amount': expenseAmount,
-            'date': date,
-            'description': '$activityType: $details',
-          },
-          where: 'id = ?',
-          whereArgs: [finalExpenseId],
+      // Return the old deduction first (loud if the item is gone).
+      if (inventoryProvider != null) {
+        await _restoreInventoryTx(
+          txn,
+          inventoryProvider: inventoryProvider,
+          activity: oldActivity,
         );
       }
-    } else if (finalExpenseId != null) {
-      await db.delete('expenses', where: 'id = ?', whereArgs: [finalExpenseId]);
-      finalExpenseId = null;
-    }
 
-    if (inventoryProvider != null &&
-        inventoryCategory != null &&
-        inventoryName != null &&
-        inventoryUnit != null &&
-        inventoryQuantity != null &&
-        inventoryQuantity > 0) {
-      await _applyInventoryDelta(
-        inventoryProvider: inventoryProvider,
-        category: inventoryCategory,
-        name: inventoryName,
-        unit: inventoryUnit,
-        quantity: inventoryQuantity,
-        deduct: true,
+      int? finalExpenseId = oldActivity.expenseId;
+      if (expenseAmount != null && expenseAmount > 0) {
+        if (finalExpenseId == null) {
+          finalExpenseId = await txn.insert(
+            'expenses',
+            Expense(
+              category: expenseCategory ?? 'Other',
+              amount: expenseAmount,
+              date: date,
+              description: '$activityType: $details',
+            ).toMap(),
+          );
+        } else {
+          await txn.update(
+            'expenses',
+            {
+              'category': expenseCategory ?? 'Other',
+              'amount': expenseAmount,
+              'date': date,
+              'description': '$activityType: $details',
+            },
+            where: 'id = ?',
+            whereArgs: [finalExpenseId],
+          );
+        }
+      } else if (finalExpenseId != null) {
+        await txn.delete('expenses',
+            where: 'id = ?', whereArgs: [finalExpenseId]);
+        finalExpenseId = null;
+      }
+
+      await txn.update(
+        'activities',
+        {
+          'crop_season_id': cropSeasonId,
+          'activity_type': activityType,
+          'date': date,
+          'details': details,
+          'expense_id': finalExpenseId,
+          'expense_category': expenseCategory,
+          'inventory_category': inventoryCategory,
+          'inventory_name': inventoryName,
+          'inventory_unit': inventoryUnit,
+          'inventory_quantity': inventoryQuantity,
+          'inventory_item_id': inventoryItemId,
+          'is_completed': isCompleted == null
+              ? (oldActivity.isCompleted ? 1 : 0)
+              : (isCompleted ? 1 : 0),
+        },
+        where: 'id = ?',
+        whereArgs: [id],
       );
-    }
 
-    await db.update(
-      'activities',
-      {
-        'crop_season_id': cropSeasonId,
-        'activity_type': activityType,
-        'date': date,
-        'details': details,
-        'expense_id': finalExpenseId,
-        'expense_category': expenseCategory,
-        'inventory_category': inventoryCategory,
-        'inventory_name': inventoryName,
-        'inventory_unit': inventoryUnit,
-        'inventory_quantity': inventoryQuantity,
-        'is_completed': isCompleted == null
-            ? (oldActivity.isCompleted ? 1 : 0)
-            : (isCompleted ? 1 : 0),
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+      if (inventoryProvider != null &&
+          inventoryItemId != null &&
+          inventoryQuantity != null &&
+          inventoryQuantity > 0) {
+        await inventoryProvider.recordUsage(
+          itemId: inventoryItemId,
+          quantity: inventoryQuantity,
+          fromUnit: inventoryUnit,
+          activityId: id,
+          date: date,
+          executor: txn,
+        );
+      }
+    });
 
     await fetchActivities();
+    if (inventoryProvider != null) {
+      await inventoryProvider.fetchInventory();
+    }
   }
 
   Future<void> toggleCompleted(int id, bool completed) async {
@@ -358,87 +398,49 @@ class ActivityProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> deleteActivity(int id, {InventoryProvider? inventoryProvider}) async {
+  Future<void> deleteActivity(int id,
+      {InventoryProvider? inventoryProvider}) async {
     final db = await DatabaseHelper.instance.database;
 
-    final Activity? activity = await getActivityById(id);
-    if (activity == null) {
-      return;
-    }
-
-    if (inventoryProvider != null &&
-        activity.inventoryCategory != null &&
-        activity.inventoryName != null &&
-        activity.inventoryUnit != null &&
-        activity.inventoryQuantity != null &&
-        activity.inventoryQuantity! > 0) {
-      await _applyInventoryDelta(
-        inventoryProvider: inventoryProvider,
-        category: activity.inventoryCategory!,
-        name: activity.inventoryName!,
-        unit: activity.inventoryUnit!,
-        quantity: activity.inventoryQuantity!,
-        deduct: false,
-      );
-    }
-
-    await db.delete(
-      'activities',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (activity.expenseId != null) {
-      await db.delete(
-        'expenses',
+    await db.transaction((txn) async {
+      final List<Map<String, dynamic>> maps = await txn.query(
+        'activities',
         where: 'id = ?',
-        whereArgs: [activity.expenseId],
+        whereArgs: [id],
       );
-    }
+      if (maps.isEmpty) {
+        return;
+      }
+      final Activity activity = Activity.fromMap(maps.first);
+
+      // Restore deducted stock first. Throws loudly when the item is gone —
+      // the delete is aborted rather than silently losing stock history.
+      if (inventoryProvider != null) {
+        await _restoreInventoryTx(
+          txn,
+          inventoryProvider: inventoryProvider,
+          activity: activity,
+        );
+      }
+
+      await txn.delete(
+        'activities',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (activity.expenseId != null) {
+        await txn.delete(
+          'expenses',
+          where: 'id = ?',
+          whereArgs: [activity.expenseId],
+        );
+      }
+    });
 
     await fetchActivities();
-  }
-
-  double _convertUnit(double quantity, String fromUnit, String toUnit) {
-    if (fromUnit == toUnit) {
-      return quantity;
+    if (inventoryProvider != null) {
+      await inventoryProvider.fetchInventory();
     }
-
-    String standardize(String u) {
-      if (u == 'KG' || u == 'کلوگرام' || u == 'کلو') return 'kg';
-      if (u == 'Gram' || u == 'گرام') return 'g';
-      if (u == 'Bag' || u == 'بوری') return 'bag';
-      if (u == 'Litre' || u == 'لیٹر') return 'l';
-      if (u == 'ML' || u == 'ملی لیٹر' || u == 'ملی') return 'ml';
-      if (u == 'Ton' || u == 'ٹن') return 'ton';
-      return u.toLowerCase();
-    }
-
-    final String from = standardize(fromUnit);
-    final String to = standardize(toUnit);
-
-    final Map<String, double> weightInKg = {
-      'kg': 1.0,
-      'g': 0.001,
-      'bag': 50.0,
-      'ton': 1000.0,
-    };
-
-    final Map<String, double> volumeInLitre = {
-      'l': 1.0,
-      'ml': 0.001,
-    };
-
-    if (weightInKg.containsKey(from) && weightInKg.containsKey(to)) {
-      final double quantityInKg = quantity * weightInKg[from]!;
-      return quantityInKg / weightInKg[to]!;
-    }
-
-    if (volumeInLitre.containsKey(from) && volumeInLitre.containsKey(to)) {
-      final double quantityInLitre = quantity * volumeInLitre[from]!;
-      return quantityInLitre / volumeInLitre[to]!;
-    }
-
-    return quantity;
   }
 }
