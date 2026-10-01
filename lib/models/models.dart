@@ -169,6 +169,10 @@ class Inventory {
   final double quantity;
   final double costPerUnit;
 
+  /// Farmer-entered weight of ONE package unit in kg (e.g. one bag = 50).
+  /// NULL means unknown — conversions must never assume a value.
+  final double? weightPerUnitKg;
+
   Inventory({
     this.id,
     required this.category,
@@ -176,6 +180,7 @@ class Inventory {
     required this.unit,
     required this.quantity,
     required this.costPerUnit,
+    this.weightPerUnitKg,
   });
 
   Map<String, dynamic> toMap() {
@@ -186,6 +191,7 @@ class Inventory {
       'unit': unit,
       'quantity': quantity,
       'cost_per_unit': costPerUnit,
+      'weight_per_unit_kg': weightPerUnitKg,
     };
   }
 
@@ -197,6 +203,91 @@ class Inventory {
       unit: map['unit'],
       quantity: map['quantity'],
       costPerUnit: map['cost_per_unit'],
+      weightPerUnitKg: map['weight_per_unit_kg'] == null
+          ? null
+          : (map['weight_per_unit_kg'] as num).toDouble(),
+    );
+  }
+}
+
+/// One immutable row in the inventory ledger. `quantity` is signed in the
+/// item's own unit: positive = stock in, negative = stock out.
+class InventoryTransaction {
+  final int? id;
+  final int inventoryId;
+  final String type; // purchase | usage | adjustment | opening_balance
+  final double quantity;
+  final String unit;
+  final double? unitPrice;
+  final double? totalAmount;
+  final int? activityId;
+  final String date;
+  final String? notes;
+  final String createdAt;
+
+  InventoryTransaction({
+    this.id,
+    required this.inventoryId,
+    required this.type,
+    required this.quantity,
+    required this.unit,
+    this.unitPrice,
+    this.totalAmount,
+    this.activityId,
+    required this.date,
+    this.notes,
+    required this.createdAt,
+  });
+
+  /// Urdu label for the transaction type, for display.
+  String get typeUrdu {
+    switch (type) {
+      case 'purchase':
+        return 'خریداری';
+      case 'usage':
+        return 'استعمال';
+      case 'adjustment':
+        return 'تصحیح';
+      case 'opening_balance':
+        return 'ابتدائی بیلنس';
+      default:
+        return type;
+    }
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'inventory_id': inventoryId,
+      'type': type,
+      'quantity': quantity,
+      'unit': unit,
+      'unit_price': unitPrice,
+      'total_amount': totalAmount,
+      'activity_id': activityId,
+      'date': date,
+      'notes': notes,
+      'created_at': createdAt,
+    };
+  }
+
+  factory InventoryTransaction.fromMap(Map<String, dynamic> map) {
+    return InventoryTransaction(
+      id: map['id'],
+      inventoryId: map['inventory_id'],
+      type: map['type'],
+      quantity: (map['quantity'] as num).toDouble(),
+      unit: map['unit'],
+      unitPrice: map['unit_price'] == null
+          ? null
+          : (map['unit_price'] as num).toDouble(),
+      totalAmount: map['total_amount'] == null
+          ? null
+          : (map['total_amount'] as num).toDouble(),
+      activityId: map['activity_id'],
+      date: map['date'],
+      notes: map['notes'],
+      createdAt: map['created_at'],
     );
   }
 }
@@ -213,6 +304,10 @@ class Activity {
   final String? inventoryName;
   final String? inventoryUnit;
   final double? inventoryQuantity;
+
+  /// Exact inventory row this activity consumed. Preferred over the
+  /// category/name/unit snapshot for restores; may be null on old rows.
+  final int? inventoryItemId;
   final bool? _isCompleted;
 
   bool get isCompleted => _isCompleted ?? false;
@@ -229,6 +324,7 @@ class Activity {
     this.inventoryName,
     this.inventoryUnit,
     this.inventoryQuantity,
+    this.inventoryItemId,
     bool? isCompleted,
   }) : _isCompleted = isCompleted ?? false;
 
@@ -245,6 +341,7 @@ class Activity {
       'inventory_name': inventoryName,
       'inventory_unit': inventoryUnit,
       'inventory_quantity': inventoryQuantity,
+      'inventory_item_id': inventoryItemId,
       'is_completed': isCompleted ? 1 : 0,
     };
   }
@@ -264,6 +361,7 @@ class Activity {
       inventoryQuantity: map['inventory_quantity'] == null
           ? null
           : (map['inventory_quantity'] as num).toDouble(),
+      inventoryItemId: map['inventory_item_id'],
       isCompleted: (map['is_completed'] ?? 0) == 1,
     );
   }

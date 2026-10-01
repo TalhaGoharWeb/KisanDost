@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 10;
+  static const _databaseVersion = 11;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -99,8 +99,30 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         unit TEXT NOT NULL,
         quantity REAL NOT NULL,
-        cost_per_unit REAL NOT NULL
+        cost_per_unit REAL NOT NULL,
+        weight_per_unit_kg REAL
       )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE inventory_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        inventory_id INTEGER NOT NULL REFERENCES inventory (id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit TEXT NOT NULL,
+        unit_price REAL,
+        total_amount REAL,
+        activity_id INTEGER REFERENCES activities (id) ON DELETE SET NULL,
+        date TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_inventory_transactions_item
+        ON inventory_transactions (inventory_id)
     ''');
 
     await db.execute('''
@@ -116,6 +138,7 @@ class DatabaseHelper {
         inventory_name TEXT,
         inventory_unit TEXT,
         inventory_quantity REAL,
+        inventory_item_id INTEGER REFERENCES inventory (id) ON DELETE SET NULL,
         is_completed INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (crop_season_id) REFERENCES crop_seasons (id) ON DELETE CASCADE,
         FOREIGN KEY (expense_id) REFERENCES expenses (id) ON DELETE SET NULL
@@ -391,6 +414,89 @@ class DatabaseHelper {
     if (oldVersion < 10) {
       await migrateV9ToV10(db);
     }
+    if (oldVersion < 11) {
+      await migrateV10ToV11(db);
+    }
+  }
+
+  /// v10 -> v11 migration, exposed for tests.
+  ///
+  /// 1. Creates the immutable `inventory_transactions` ledger table.
+  /// 2. Adds `inventory.weight_per_unit_kg` (farmer-entered weight of one
+  ///    package unit, e.g. one bag = 50 kg; NULL = unknown, never assumed).
+  /// 3. Adds `activities.inventory_item_id` so activity stock moves link to
+  ///    the exact item row instead of fuzzy name matching.
+  /// 4. Backfills one 'opening_balance' ledger row per existing inventory
+  ///    item (idempotent: skipped if any opening_balance rows exist), and
+  ///    best-effort links old activities to items by (category, name, unit).
+  @visibleForTesting
+  static Future<void> migrateV10ToV11(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        inventory_id INTEGER NOT NULL REFERENCES inventory (id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit TEXT NOT NULL,
+        unit_price REAL,
+        total_amount REAL,
+        activity_id INTEGER REFERENCES activities (id) ON DELETE SET NULL,
+        date TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_inventory_transactions_item
+        ON inventory_transactions (inventory_id)
+    ''');
+
+    for (final statement in [
+      'ALTER TABLE inventory ADD COLUMN weight_per_unit_kg REAL',
+      'ALTER TABLE activities ADD COLUMN inventory_item_id INTEGER REFERENCES inventory (id) ON DELETE SET NULL',
+    ]) {
+      try {
+        await db.execute(statement);
+      } catch (_) {
+        // Column might already exist on partially migrated devices.
+      }
+    }
+
+    // Backfill opening balances (idempotent).
+    final int existing = Sqflite.firstIntValue(await db.rawQuery(
+          "SELECT COUNT(*) FROM inventory_transactions WHERE type = 'opening_balance'",
+        )) ??
+        0;
+    if (existing == 0) {
+      final String now = DateTime.now().toIso8601String();
+      final List<Map<String, dynamic>> items = await db.query('inventory');
+      for (final item in items) {
+        await db.insert('inventory_transactions', {
+          'inventory_id': item['id'],
+          'type': 'opening_balance',
+          'quantity': item['quantity'],
+          'unit': item['unit'],
+          'date': now,
+          'notes': 'پرانے ریکارڈ کا ابتدائی بیلنس',
+          'created_at': now,
+        });
+      }
+    }
+
+    // Best-effort link of pre-v11 activities to their item rows.
+    await db.execute('''
+      UPDATE activities
+      SET inventory_item_id = (
+        SELECT id FROM inventory
+        WHERE inventory.category = activities.inventory_category
+          AND inventory.name = activities.inventory_name
+          AND inventory.unit = activities.inventory_unit
+        LIMIT 1
+      )
+      WHERE inventory_category IS NOT NULL
+        AND inventory_item_id IS NULL
+    ''');
   }
 
   /// v9 -> v10 migration, exposed for tests.
@@ -452,6 +558,7 @@ class DatabaseHelper {
     await db.delete('crop_seasons');
     await db.delete('crop_season_fields');
     await db.delete('expenses');
+    await db.delete('inventory_transactions');
     await db.delete('inventory');
     await db.delete('activities');
     await db.delete('harvests');
