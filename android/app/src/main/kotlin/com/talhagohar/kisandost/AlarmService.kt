@@ -1,4 +1,4 @@
-package com.example.kisan_dost
+package com.talhagohar.kisandost
 
 import android.app.Notification
 import android.app.NotificationChannel

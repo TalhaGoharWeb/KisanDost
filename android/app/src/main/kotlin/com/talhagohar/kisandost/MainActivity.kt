@@ -1,4 +1,4 @@
-package com.example.kisan_dost
+package com.talhagohar.kisandost
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,7 +15,7 @@ import android.content.Context
 import android.os.PowerManager
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.example.kisan_dost/share"
+    private val CHANNEL = "com.talhagohar.kisandost/share"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -200,7 +200,7 @@ class MainActivity : FlutterActivity() {
 
     private fun shareApkFile() {
         val apkFile = File(context.packageCodePath)
-        val uri = FileProvider.getUriForFile(context, "com.example.kisan_dost.fileprovider", apkFile)
+        val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", apkFile)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/vnd.android.package-archive"
             putExtra(Intent.EXTRA_STREAM, uri)

@@ -35,7 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _canFullScreen = true;
   bool _canScheduleExact = true;
 
-  static const _channel = MethodChannel('com.example.kisan_dost/share');
+  static const _channel = MethodChannel('com.talhagohar.kisandost/share');
 
   @override
   void initState() {

@@ -1,4 +1,4 @@
-package com.example.kisan_dost
+package com.talhagohar.kisandost
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -11,9 +11,9 @@ import java.time.ZoneId
 class AlarmReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "AlarmReceiver"
-        const val ACTION_ALARM = "com.example.kisan_dost.ACTION_ALARM"
-        const val ACTION_COMPLETE = "com.example.kisan_dost.ACTION_COMPLETE"
-        const val ACTION_SNOOZE = "com.example.kisan_dost.ACTION_SNOOZE"
+        const val ACTION_ALARM = "com.talhagohar.kisandost.ACTION_ALARM"
+        const val ACTION_COMPLETE = "com.talhagohar.kisandost.ACTION_COMPLETE"
+        const val ACTION_SNOOZE = "com.talhagohar.kisandost.ACTION_SNOOZE"
     }
 
     override fun onReceive(context: Context, intent: Intent) {

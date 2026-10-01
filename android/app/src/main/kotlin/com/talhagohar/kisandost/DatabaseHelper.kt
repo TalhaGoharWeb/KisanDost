@@ -1,4 +1,4 @@
-package com.example.kisan_dost
+package com.talhagohar.kisandost
 
 import android.content.ContentValues
 import android.content.Context

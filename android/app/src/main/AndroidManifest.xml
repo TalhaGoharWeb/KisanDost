@@ -46,7 +46,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.example.kisan_dost.ACTION_ALARM" />
+                <action android:name="com.talhagohar.kisandost.ACTION_ALARM" />
             </intent-filter>
         </receiver>
 

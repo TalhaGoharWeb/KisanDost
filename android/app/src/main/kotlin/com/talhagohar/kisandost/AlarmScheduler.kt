@@ -1,4 +1,4 @@
-package com.example.kisan_dost
+package com.talhagohar.kisandost
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -108,7 +108,7 @@ object AlarmScheduler {
     private fun scheduleAlarm(context: Context, alarmId: Int, triggerTimeMs: Long, taskTitle: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = "com.example.kisan_dost.ACTION_ALARM"
+            action = "com.talhagohar.kisandost.ACTION_ALARM"
             putExtra("taskId", alarmId / 10)
             putExtra("alarmId", alarmId)
             putExtra("taskTitle", taskTitle)
@@ -146,7 +146,7 @@ object AlarmScheduler {
     fun cancelAlarmsForTask(context: Context, taskId: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java).apply {
-            action = "com.example.kisan_dost.ACTION_ALARM"
+            action = "com.talhagohar.kisandost.ACTION_ALARM"
         }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

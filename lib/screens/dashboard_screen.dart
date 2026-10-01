@@ -43,7 +43,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  static const _shareChannel = MethodChannel('com.example.kisan_dost/share');
+  static const _shareChannel = MethodChannel('com.talhagohar.kisandost/share');
 
   @override
   void initState() {

@@ -138,7 +138,7 @@ class NotificationService {
   NotificationService._internal();
 
   static const MethodChannel _nativeChannel = MethodChannel(
-    'com.example.kisan_dost/share',
+    'com.talhagohar.kisandost/share',
   );
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
