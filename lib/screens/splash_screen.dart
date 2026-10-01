@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
+import 'onboarding_screen.dart';
+import '../services/onboarding_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,12 +14,20 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        );
-      }
+    Future.delayed(const Duration(seconds: 3), () async {
+      if (!mounted) return;
+      // First run ever → onboarding; afterwards straight to the dashboard.
+      final showOnboarding = await OnboardingService.shouldShowOnboarding();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder:
+              (_) =>
+                  showOnboarding
+                      ? const OnboardingScreen()
+                      : const DashboardScreen(),
+        ),
+      );
     });
   }
 
