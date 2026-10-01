@@ -162,6 +162,17 @@ Widget makeHome({
 TaskItem task(int id, String title, DateTime when, {bool done = false}) =>
     TaskItem(id: id, title: title, dateTime: when, isCompleted: done);
 
+/// A time later today that can never cross midnight: 2h ahead, but clamped
+/// to 23:59 when the suite runs after 22:00 (a +2h offset would otherwise
+/// land tomorrow and the task would correctly vanish from "due today").
+DateTime laterToday(DateTime now) {
+  final candidate = now.add(const Duration(hours: 2));
+  if (candidate.day != now.day) {
+    return DateTime(now.year, now.month, now.day, 23, 59);
+  }
+  return candidate;
+}
+
 String ymd(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -249,7 +260,7 @@ void main() {
       await tester.pumpWidget(
         makeHome(
           tasks: [
-            task(1, 'پانی لگائیں', now.add(const Duration(hours: 2))),
+            task(1, 'پانی لگائیں', laterToday(now)),
             task(2, 'سپرے کریں', now.subtract(const Duration(days: 1))),
             task(3, 'کھاد ڈالیں', now.add(const Duration(days: 5))),
             task(4, 'مکمل کام', now.add(const Duration(hours: 1)), done: true),
@@ -270,7 +281,7 @@ void main() {
       final now = DateTime.now();
       await tester.pumpWidget(
         makeHome(
-          tasks: [task(1, 'پانی لگائیں', now.add(const Duration(hours: 2)))],
+          tasks: [task(1, 'پانی لگائیں', laterToday(now))],
         ),
       );
       await tester.pumpAndSettle();
