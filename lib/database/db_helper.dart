@@ -63,6 +63,19 @@ class DatabaseHelper {
   }
 
   Future _onCreate(Database db, int version) async {
+    await _createFreshSchema(db);
+  }
+
+  /// Test-only seam: runs the exact production fresh-install schema
+  /// ([_onCreate]) against any database, so hermetic tests exercise the real
+  /// DDL instead of hand-copied CREATE TABLE strings that can drift.
+  /// No migration, no schema change — the schema itself is untouched.
+  @visibleForTesting
+  Future<void> createFreshSchemaForTests(Database db) async {
+    await _createFreshSchema(db);
+  }
+
+  Future<void> _createFreshSchema(Database db) async {
     await db.execute('''
       CREATE TABLE farms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

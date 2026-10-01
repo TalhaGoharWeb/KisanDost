@@ -5,6 +5,7 @@ import '../widgets/digit_text.dart';
 import '../services/notification_service.dart';
 import '../services/today_summary.dart';
 import '../services/money.dart';
+import '../widgets/demo_banner.dart';
 import '../models/models.dart';
 import '../providers/task_provider.dart';
 import '../providers/expense_provider.dart';
@@ -185,6 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const DemoBanner(),
             _buildHeader(),
             const SizedBox(height: 16),
             _buildTodaySection(),

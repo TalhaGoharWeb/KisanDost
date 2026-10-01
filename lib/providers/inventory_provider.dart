@@ -14,12 +14,18 @@ import '../services/unit_converter.dart';
 /// Impossible stock is rejected loudly ([InventoryException] with an Urdu
 /// message) — never clamped to zero, never silently skipped.
 class InventoryProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  InventoryProvider({this.testExecutor});
+
   List<Inventory> _inventoryList = [];
 
   List<Inventory> get inventoryList => _inventoryList;
 
   Future<void> fetchInventory() async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _executor(testExecutor);
     final List<Map<String, dynamic>> maps = await db.query(
       'inventory',
       orderBy: 'id DESC',
@@ -33,7 +39,7 @@ class InventoryProvider extends ChangeNotifier {
 
   Future<DatabaseExecutor> _executor(DatabaseExecutor? executor) async {
     if (executor != null) return executor;
-    return await DatabaseHelper.instance.database;
+    return testExecutor ?? await DatabaseHelper.instance.database;
   }
 
   /// Finds an item by its unique (category, name, unit) key.
@@ -107,8 +113,8 @@ class InventoryProvider extends ChangeNotifier {
     final DatabaseExecutor? transactionExecutor = executor;
     late final int itemId;
     if (transactionExecutor == null) {
-      final db = await DatabaseHelper.instance.database;
-      itemId = await db.transaction(run);
+      final db = await _executor(testExecutor);
+      itemId = db is Database ? await db.transaction(run) : await run(db);
     } else {
       itemId = await run(transactionExecutor);
     }
@@ -234,8 +240,12 @@ class InventoryProvider extends ChangeNotifier {
     // so tests can inject an in-memory database hermetically.
     final DatabaseExecutor? transactionExecutor = executor;
     if (transactionExecutor == null) {
-      final db = await DatabaseHelper.instance.database;
-      await db.transaction(run);
+      final db = await _executor(testExecutor);
+      if (db is Database) {
+        await db.transaction(run);
+      } else {
+        await run(db);
+      }
     } else {
       await run(transactionExecutor);
     }
@@ -359,8 +369,12 @@ class InventoryProvider extends ChangeNotifier {
     // so tests can inject an in-memory database hermetically.
     final DatabaseExecutor? transactionExecutor = executor;
     if (transactionExecutor == null) {
-      final db = await DatabaseHelper.instance.database;
-      await db.transaction(run);
+      final db = await _executor(testExecutor);
+      if (db is Database) {
+        await db.transaction(run);
+      } else {
+        await run(db);
+      }
     } else {
       await run(transactionExecutor);
     }

@@ -40,7 +40,24 @@ class CropSeasonWithDetails {
 }
 
 class CropProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  CropProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
   List<CropSeasonWithDetails> _activeCropSeasons = [];
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<CropSeasonWithDetails> _harvestedCropSeasons = [];
 
   List<CropSeasonWithDetails> get activeCropSeasons => _activeCropSeasons;
@@ -103,7 +120,7 @@ class CropProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchCropSeasons() async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
 
     final List<Map<String, dynamic>> seasonRows = await db.rawQuery('''
       SELECT
@@ -226,12 +243,11 @@ class CropProvider extends ChangeNotifier {
     required String variety,
     required String startDate,
   }) async {
-    final db = await DatabaseHelper.instance.database;
     if (fieldIds.isEmpty) {
       throw ArgumentError('At least one field must be selected.');
     }
 
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final newSeason = CropSeason(
         fieldId: fieldIds.first,
         cropName: cropName,
@@ -253,7 +269,7 @@ class CropProvider extends ChangeNotifier {
   }
 
   Future<void> updateCropSeasonStatus(int id, String status) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.update(
       'crop_seasons',
       {'status': status},
@@ -271,12 +287,11 @@ class CropProvider extends ChangeNotifier {
     required String status,
     required String startDate,
   }) async {
-    final db = await DatabaseHelper.instance.database;
     if (fieldIds.isEmpty) {
       throw ArgumentError('At least one field must be selected.');
     }
 
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       await txn.update(
         'crop_seasons',
         {
@@ -308,7 +323,7 @@ class CropProvider extends ChangeNotifier {
   }
 
   Future<void> deleteCropSeason(int id) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.delete('crop_seasons', where: 'id = ?', whereArgs: [id]);
     await fetchCropSeasons();
   }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import '../services/notification_service.dart';
+import '../services/demo_data_service.dart';
 import '../database/db_helper.dart';
 import 'backup_screen.dart';
 import 'recycle_bin_screen.dart';
@@ -226,6 +227,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  /// Settings demo tile: enter (with the alongside-data warning) or exit demo.
+  Future<void> _onDemoTileTap(DemoDataService demo) async {
+    if (demo.isActive) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: const Text('ڈیمو ختم کریں؟'),
+              content: const Text(
+                'ڈیمو کا نمونہ ڈیٹا حذف کر دیا جائے گا۔ آپ کا اپنا ڈیٹا محفوظ رہے گا۔',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('منسوخ کریں'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('ختم کریں'),
+                ),
+              ],
+            ),
+      );
+      if (proceed != true || !mounted) return;
+      final result = await demo.exitDemo();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.ok ? 'ڈیمو ڈیٹا حذف کر دیا گیا' : result.message!,
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    final hasData = await demo.hasRealData();
+    if (!mounted) return;
+    if (hasData) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: const Text('آپ کا اپنا ڈیٹا موجود ہے'),
+              content: const Text(
+                'ڈیمو کا نمونہ ڈیٹا آپ کے اصل ڈیٹا کے ساتھ شامل کیا جائے گا۔\n'
+                'ڈیمو ختم کرنے پر صرف ڈیمو کا ڈیٹا حذف ہوگا — آپ کا ڈیٹا محفوظ رہے گا۔',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('منسوخ کریں'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('ڈیمو شروع کریں'),
+                ),
+              ],
+            ),
+      );
+      if (proceed != true || !mounted) return;
+    }
+    if (!mounted) return;
+    try {
+      await demo.enterDemoFromContext(context);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ڈیمو ڈیٹا شامل کر دیا گیا')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ڈیمو شروع نہ ہو سکا: $e')));
     }
   }
 
@@ -716,6 +794,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Demo Mode Section
+            _buildSectionHeader('ڈیمو (Demo)'),
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Consumer<DemoDataService>(
+                builder:
+                    (context, demo, _) => ListTile(
+                      leading: Icon(
+                        Icons.science_outlined,
+                        color:
+                            demo.isActive ? Colors.amber.shade800 : Colors.teal,
+                      ),
+                      title: Text(
+                        demo.isActive ? 'ڈیمو ختم کریں' : 'ڈیمو دیکھیں',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        demo.isActive
+                            ? 'نمونہ ڈیٹا حذف ہوگا — بیک اپ میں ڈیمو ڈیٹا شامل ہوگا'
+                            : 'نمونہ ڈیٹا کے ساتھ ایپ آزمائیں',
+                      ),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.teal,
+                        size: 18,
+                      ),
+                      onTap: () => _onDemoTileTap(demo),
+                    ),
               ),
             ),
             const SizedBox(height: 24),

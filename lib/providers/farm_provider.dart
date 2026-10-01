@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
 
 class FarmProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  FarmProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
   List<Farm> _farms = [];
   final Map<int, List<Field>> _farmFields = {}; // farmId -> fields
 
@@ -27,7 +37,7 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchFarms() async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final List<Map<String, dynamic>> maps = await db.query(
       'farms',
       orderBy: 'id DESC',
@@ -44,7 +54,7 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> addFarm(String name, double totalArea) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final newFarm = Farm(
       name: name,
       totalArea: totalArea,
@@ -55,7 +65,7 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> fetchFields(int farmId) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final List<Map<String, dynamic>> maps = await db.query(
       'fields',
       where: 'farm_id = ?',
@@ -77,7 +87,7 @@ class FarmProvider extends ChangeNotifier {
     int tubeWellAvailable = 0,
     String? location,
   }) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final newField = Field(
       farmId: farmId,
       name: name,
@@ -91,7 +101,7 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> updateFarm(int id, String name, double totalArea) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.update(
       'farms',
       {'name': name, 'total_area': totalArea},
@@ -102,7 +112,7 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> deleteFarm(int id) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.delete('farms', where: 'id = ?', whereArgs: [id]);
     await fetchFarms();
   }
@@ -116,7 +126,7 @@ class FarmProvider extends ChangeNotifier {
     int tubeWellAvailable = 0,
     String? location,
   }) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.update(
       'fields',
       {
@@ -133,7 +143,7 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> deleteField(int id, int farmId) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.delete('fields', where: 'id = ?', whereArgs: [id]);
     await fetchFields(farmId);
   }

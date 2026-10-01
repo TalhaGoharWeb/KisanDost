@@ -19,6 +19,7 @@ import 'providers/party_provider.dart';
 import 'providers/batai_provider.dart';
 import 'services/notification_service.dart';
 import 'services/backup_service.dart';
+import 'services/demo_data_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,6 +65,8 @@ class KisanDostApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => BataiProvider()..fetchAgreements(),
         ),
+        // Demo mode state (banner + settings tile watch this).
+        ChangeNotifierProvider(create: (_) => DemoDataService()..load()),
         // App locale: text direction (RTL) comes from the locale via
         // flutter_localizations — never from a forced Directionality widget.
         ChangeNotifierProvider(create: (_) => AppLocale()..load()),
