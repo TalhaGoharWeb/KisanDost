@@ -120,8 +120,6 @@ class UshrProvider extends ChangeNotifier {
     required int cashPaidPaisa,
     required int ratePerUnitPaisa,
   }) async {
-    final db = await _db();
-
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 
@@ -182,8 +180,6 @@ class UshrProvider extends ChangeNotifier {
     required int cashPaidPaisa,
     required int ratePerUnitPaisa,
   }) async {
-    final db = await _db();
-
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 
@@ -259,7 +255,6 @@ class UshrProvider extends ChangeNotifier {
   }
 
   Future<void> deleteUshrRecord(int id) async {
-    final db = await _db();
 
     await _txn((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(

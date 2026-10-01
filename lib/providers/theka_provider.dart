@@ -83,7 +83,6 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   Future<void> addTheka(Theka theka, List<ThekaInstallment> installments) async {
-    final db = await _db();
     await _txn((txn) async {
       final thekaId = await txn.insert('thekas', theka.toMap());
       for (var inst in installments) {
@@ -113,7 +112,6 @@ class ThekaProvider extends ChangeNotifier {
   /// DELIBERATE Phase 11: deleteTheka keeps its hard-delete semantics (the
   /// delete-theka problem is deferred by design). It is logged as a delete.
   Future<void> deleteTheka(int thekaId) async {
-    final db = await _db();
     await _txn((txn) async {
       // 1. Delete associated expenses
       final List<Map<String, dynamic>> instMaps = await txn.query(
@@ -156,7 +154,6 @@ class ThekaProvider extends ChangeNotifier {
     required String farmName,
     required int installmentIndex,
   }) async {
-    final db = await _db();
     await _txn((txn) async {
       // 1. Fetch current installment
       final List<Map<String, dynamic>> maps = await txn.query(
@@ -234,7 +231,6 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   Future<void> markInstallmentPending(int installmentId) async {
-    final db = await _db();
     await _txn((txn) async {
       final List<Map<String, dynamic>> maps = await txn.query(
         'theka_installments',
@@ -273,7 +269,6 @@ class ThekaProvider extends ChangeNotifier {
   }
 
   Future<void> updateInstallmentSchedule(int thekaId, List<ThekaInstallment> newSchedule) async {
-    final db = await _db();
     await _txn((txn) async {
       // Verify no payments are recorded yet
       final List<Map<String, dynamic>> maps = await txn.query(
