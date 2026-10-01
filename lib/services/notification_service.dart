@@ -360,17 +360,24 @@ class NotificationService {
     }
   }
 
+  /// Best-effort: cancelling a reminder must NEVER break task CRUD. If the
+  /// notification plugin is unavailable (or throws), the task operation
+  /// still succeeds — the farmer's data matters more than the reminder.
   Future<void> cancelTaskNotifications(int taskId) async {
-    if (Platform.isAndroid) {
-      try {
-        await _nativeChannel.invokeMethod('cancelAlarm', {'taskId': taskId});
-      } catch (e) {
-        debugPrint('Error cancelling native alarm: $e');
+    try {
+      if (Platform.isAndroid) {
+        try {
+          await _nativeChannel.invokeMethod('cancelAlarm', {'taskId': taskId});
+        } catch (e) {
+          debugPrint('Error cancelling native alarm: $e');
+        }
+        return;
       }
-      return;
-    }
-    for (int i = 0; i < 10; i++) {
-      await flutterLocalNotificationsPlugin.cancel(taskId * 10 + i);
+      for (int i = 0; i < 10; i++) {
+        await flutterLocalNotificationsPlugin.cancel(taskId * 10 + i);
+      }
+    } catch (e) {
+      debugPrint('Error cancelling task notifications: $e');
     }
   }
 

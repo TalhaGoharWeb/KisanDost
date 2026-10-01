@@ -177,6 +177,15 @@ class HarvestProvider extends ChangeNotifier {
       );
     });
 
+    // The flat sales list (dashboard income, batai sale lookups) is derived
+    // from the same join, so it only ever contains LIVE sales — a
+    // soft-deleted sale disappears from totals the moment it is deleted.
+    // (This list was never populated before Phase 11; the dashboard's sales
+    // income always read zero.)
+    _sales
+      ..clear()
+      ..addAll(_harvests.map((h) => h.sale).whereType<Sale>());
+
     notifyListeners();
   }
 

@@ -1046,6 +1046,13 @@ class DatabaseHelper {
   /// constraints (party_ledger_entries, batai_agreements/settlements) hold.
   Future<void> clearAllTables() async {
     final db = await database;
+    await clearTables(db);
+  }
+
+  /// The wipe itself, exposed for hermetic tests (the singleton's database
+  /// file is never touched by tests).
+  @visibleForTesting
+  static Future<void> clearTables(DatabaseExecutor db) async {
     await db.delete('audit_log');
     await db.delete('batai_settlements');
     await db.delete('party_ledger_entries');
