@@ -17,6 +17,35 @@ class DatabaseHelper {
     return _database!;
   }
 
+  /// Closes the open database (if any) and forgets it, so the next
+  /// [database] access re-opens the file fresh. Backup/restore close the
+  /// DB before copying files; reopening via [database] then re-runs
+  /// [_onUpgrade], which migrates older backups forward.
+  Future<void> close() async {
+    final db = _database;
+    _database = null;
+    if (db != null) {
+      await db.close();
+    }
+  }
+
+  /// Absolute path of the live database file.
+  Future<String> get databaseFilePath async =>
+      join(await getDatabasesPath(), _databaseName);
+
+  /// Current schema version of the app (the version new installs get and
+  /// older databases are migrated up to).
+  static int get schemaVersion => _databaseVersion;
+
+  /// Merges any WAL frames back into the main database file and truncates
+  /// the WAL. No-op when the database is not open. Call before copying the
+  /// .db file so the copy is self-contained.
+  Future<void> checkpoint() async {
+    final db = _database;
+    if (db == null) return;
+    await db.execute('PRAGMA wal_checkpoint(TRUNCATE)');
+  }
+
   _initDatabase() async {
     String path = join(await getDatabasesPath(), _databaseName);
     return await openDatabase(
