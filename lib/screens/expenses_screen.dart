@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../providers/expense_provider.dart';
 import '../providers/crop_provider.dart';
 import '../providers/activity_provider.dart';
+import '../providers/farm_provider.dart';
+import '../models/models.dart';
 import '../widgets/empty_state_widget.dart';
 
 class ExpensesScreen extends StatefulWidget {
@@ -155,21 +157,38 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final expenseProvider = Provider.of<ExpenseProvider>(context, listen: false);
     final cropProvider = Provider.of<CropProvider>(context, listen: false);
     final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
+    final farmProvider = Provider.of<FarmProvider>(context, listen: false);
     final formKey = GlobalKey<FormState>();
 
     String selectedCategory = 'Miscellaneous';
+    int? selectedFarmId;
+    int? selectedFieldId;
     int? selectedCropSeasonId;
     final amountController = TextEditingController();
     final descController = TextEditingController();
     DateTime selectedDate = DateTime.now();
-
-    final activeSeasons = cropProvider.activeCropSeasons;
 
     showDialog(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setState) {
+            // Cascading pickers: Farm -> Field -> Crop season. All optional.
+            final List<Field> fieldsForFarm = selectedFarmId == null
+                ? <Field>[]
+                : farmProvider.getFieldsForFarm(selectedFarmId!);
+            final List<CropSeasonWithDetails> allSeasons = [
+              ...cropProvider.activeCropSeasons,
+              ...cropProvider.harvestedCropSeasons,
+            ];
+            final List<CropSeasonWithDetails> seasonsForField =
+                selectedFieldId == null
+                    ? <CropSeasonWithDetails>[]
+                    : allSeasons
+                        .where((d) =>
+                            d.fields.any((f) => f.id == selectedFieldId))
+                        .toList();
+
             return AlertDialog(
               title: const Text('نیا خرچہ درج کریں'),
               content: Form(
@@ -197,6 +216,64 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
+                      // 1. Farm picker (optional)
+                      DropdownButtonFormField<int?>(
+                        value: selectedFarmId,
+                        decoration: const InputDecoration(
+                          labelText: 'فارم منتخب کریں (آپشنل)',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('متفرق / غیر فصلاتی خرچہ'),
+                          ),
+                          ...farmProvider.farms.map((farm) {
+                            return DropdownMenuItem<int?>(
+                              value: farm.id,
+                              child: Text(farm.name),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            selectedFarmId = val;
+                            selectedFieldId = null;
+                            selectedCropSeasonId = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // 2. Field picker (optional; needs a farm first)
+                      DropdownButtonFormField<int?>(
+                        value: selectedFieldId,
+                        decoration: const InputDecoration(
+                          labelText: 'کھیت منتخب کریں (آپشنل)',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('پورے فارم کا خرچہ'),
+                          ),
+                          ...fieldsForFarm.map((field) {
+                            return DropdownMenuItem<int?>(
+                              value: field.id,
+                              child: Text(field.name),
+                            );
+                          }),
+                        ],
+                        onChanged: selectedFarmId == null
+                            ? null
+                            : (val) {
+                                setState(() {
+                                  selectedFieldId = val;
+                                  selectedCropSeasonId = null;
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 16),
+                      // 3. Crop season picker (optional; needs a field first)
                       DropdownButtonFormField<int?>(
                         value: selectedCropSeasonId,
                         decoration: const InputDecoration(
@@ -206,22 +283,24 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         items: [
                           const DropdownMenuItem<int?>(
                             value: null,
-                            child: Text('متفرق / غیر فصلاتی خرچہ'),
+                            child: Text('فصل سے غیر منسلک'),
                           ),
-                          ...activeSeasons.map((details) {
+                          ...seasonsForField.map((details) {
                             final season = details.cropSeason;
                             final nameUrdu = cropProvider.predefinedCrops[season.cropName] ?? season.cropName;
                             return DropdownMenuItem<int?>(
                               value: season.id,
-                              child: Text('${details.farmDisplayName} - ${details.fieldDisplayName} ($nameUrdu)'),
+                              child: Text('$nameUrdu (${season.status})'),
                             );
                           }),
                         ],
-                        onChanged: (val) {
-                          setState(() {
-                            selectedCropSeasonId = val;
-                          });
-                        },
+                        onChanged: selectedFieldId == null
+                            ? null
+                            : (val) {
+                                setState(() {
+                                  selectedCropSeasonId = val;
+                                });
+                              },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -287,6 +366,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         amount: amountVal,
                         date: selectedDate.toIso8601String(),
                         description: finalDesc,
+                        farmId: selectedFarmId,
+                        fieldId: selectedFieldId,
+                        cropSeasonId: selectedCropSeasonId,
                       );
 
                       // 2. If linked to a crop, automatically create a matching activity
