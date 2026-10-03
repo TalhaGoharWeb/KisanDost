@@ -5,6 +5,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Properties
+import java.io.FileInputStream
+
 android {
     namespace = "com.talhagohar.kisandost"
     compileSdk = flutter.compileSdkVersion
@@ -34,10 +37,10 @@ android {
         create("release") {
             // android/key.properties is gitignored and holds the real passwords.
             // CI/release machines must provide this file (or env-based equivalent).
-            val keystoreProperties = java.util.Properties()
+            val keystoreProperties = Properties()
             val keystorePropertiesFile = rootProject.file("key.properties")
             if (keystorePropertiesFile.exists()) {
-                keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
             }
             keyAlias = keystoreProperties.getProperty("keyAlias")
             keyPassword = keystoreProperties.getProperty("keyPassword")
