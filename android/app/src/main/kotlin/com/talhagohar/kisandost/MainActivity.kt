@@ -19,20 +19,13 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Configure activity to turn screen on and show when locked
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-            )
-        }
+
+        // NOTE: This activity must NOT show over the lock screen. It hosts the
+        // full app UI (financial records, parties, inventory). The lock-screen
+        // alarm experience is handled by AlarmActivity (exported=false,
+        // singleInstance). Previously setShowWhenLocked(true) here let anyone
+        // with physical access open the entire app from a locked phone via the
+        // status-bar alarm-clock icon. (Android hardening 2026-10-04)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
@@ -199,13 +192,40 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun shareApkFile() {
-        val apkFile = File(context.packageCodePath)
-        val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", apkFile)
+        // context.packageCodePath (/data/app/.../base.apk) is NOT under any
+        // FileProvider root declared in filepaths.xml, so getUriForFile()
+        // would throw IllegalArgumentException. Stage a private copy in the
+        // app cache dir (already a configured FileProvider root) and share
+        // that instead. The staged file name is fixed and no Dart arguments
+        // are honored, so the shared file can never be redirected to another
+        // path (e.g. the database or backups).
+        val stagedApk = File(context.cacheDir, "kisandost-share.apk")
+        try {
+            File(context.packageCodePath).inputStream().use { input ->
+                stagedApk.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            // Belt-and-braces: owner-only access. The app-private cache dir
+            // already blocks other apps at the directory level.
+            stagedApk.setReadable(true, true)
+            stagedApk.setWritable(true, true)
+            stagedApk.setExecutable(false, false)
+        } catch (e: Exception) {
+            stagedApk.delete()
+            throw e
+        }
+
+        val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", stagedApk)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/vnd.android.package-archive"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, "ایپ شیئر کریں"))
+        // NOTE: stagedApk is intentionally not deleted here — the receiving
+        // app reads it asynchronously after the chooser returns. It is
+        // overwritten on the next share, so at most one copy ever exists in
+        // the private cache.
     }
 }
