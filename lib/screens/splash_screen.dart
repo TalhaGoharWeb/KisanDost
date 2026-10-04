@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'onboarding_screen.dart';
 import '../services/onboarding_service.dart';
+import '../services/notification_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,6 +15,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // Ask for notification + exact-alarm permissions once the UI is up.
+    // Requesting from main() before runApp() shows no dialog on Android 13+.
+    // (Alarm diagnostic 2026-10-04.)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().requestPermissions();
+    });
     Future.delayed(const Duration(seconds: 3), () async {
       if (!mounted) return;
       // First run ever → onboarding; afterwards straight to the dashboard.

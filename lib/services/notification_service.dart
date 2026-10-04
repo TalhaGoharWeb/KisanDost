@@ -173,6 +173,29 @@ class NotificationService {
     }
   }
 
+  /// Requests notification + exact-alarm permissions. MUST be called after
+  /// the Flutter UI is attached (e.g. from SplashScreen's post-frame
+  /// callback) — calling before runApp() silently shows no dialog on
+  /// Android 13+. Safe to call repeatedly; the system only prompts once.
+  /// (Alarm diagnostic 2026-10-04.)
+  Future<void> requestPermissions() async {
+    try {
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.requestNotificationsPermission();
+
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.requestExactAlarmsPermission();
+    } catch (e) {
+      debugPrint('KisanDost: permission request failed: $e');
+    }
+  }
+
   Future<void> _initUnsafe() async {
     tz.initializeTimeZones();
     try {
@@ -207,18 +230,12 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
-    // Request permissions for Android 13+
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
-
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestExactAlarmsPermission();
+    // NOTE: Runtime permission requests (notification, exact alarm) are NOT
+    // requested here. They must run after the Flutter UI is attached —
+    // requesting from main() before runApp() silently fails on Android 13+
+    // because there is no Activity to host the dialog. SplashScreen calls
+    // NotificationService().requestPermissions() once the first frame is up.
+    // (Alarm diagnostic 2026-10-04.)
 
     // Check if the app was launched by a notification click
     final launchDetails =
@@ -457,6 +474,21 @@ class NotificationService {
       }
     }
     return true;
+  }
+
+  /// Diagnostic: asks the native side to schedule a synthetic alarm 15
+  /// seconds in the future, bypassing the database. Returns true when the
+  /// native scheduler accepted it. Used by the Settings "Test Alarm" button
+  /// to isolate native alarm delivery from task storage on the user's device.
+  Future<bool> scheduleTestAlarm() async {
+    if (!Platform.isAndroid) return false;
+    try {
+      final ok = await _nativeChannel.invokeMethod('scheduleTestAlarm');
+      return ok == true;
+    } catch (e) {
+      debugPrint('Error scheduling test alarm: $e');
+      return false;
+    }
   }
 
   Future<void> requestExactAlarmPermission() async {

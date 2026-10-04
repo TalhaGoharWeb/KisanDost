@@ -178,6 +178,16 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       }
 
       if (mounted) {
+        // Confirm the reminder so the farmer knows the alarm is armed.
+        // (Alarm diagnostic 2026-10-04.)
+        final timeStr =
+            '${taskDateTime.hour.toString().padLeft(2, '0')}:${taskDateTime.minute.toString().padLeft(2, '0')}';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('کام محفوظ ہو گیا — الارم $timeStr بجے بجے گا'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
         Navigator.pop(context);
       }
     }

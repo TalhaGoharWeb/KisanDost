@@ -13,6 +13,8 @@ import android.net.Uri
 import android.provider.Settings
 import android.content.Context
 import android.os.PowerManager
+import java.time.ZonedDateTime
+import java.time.ZoneId
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.talhagohar.kisandost/share"
@@ -149,6 +151,29 @@ class MainActivity : FlutterActivity() {
                         } else {
                             result.error("BAD_ARGUMENT", "taskId argument is missing", null)
                         }
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
+                    }
+                }
+                // Diagnostic: schedules a synthetic alarm 15 seconds out,
+                // bypassing the database. Used by the Settings "Test Alarm"
+                // button to isolate native alarm delivery from task storage.
+                "scheduleTestAlarm" -> {
+                    try {
+                        val fireTime = ZonedDateTime.now(ZoneId.of("Asia/Karachi"))
+                            .plusSeconds(15)
+                        val testTask = Task(
+                            id = 999999,
+                            title = "ٹیسٹ الارم",
+                            description = "یہ ایک ٹیسٹ الارم ہے",
+                            date_time = fireTime.toString(),
+                            snoozed_until = null,
+                            is_completed = 0,
+                            recurrence = "none",
+                            reminders = "0"
+                        )
+                        AlarmScheduler.scheduleAlarmsForTask(context, testTask)
+                        result.success(true)
                     } catch (e: Exception) {
                         result.error("ERROR", e.message, null)
                     }

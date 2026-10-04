@@ -490,6 +490,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 : null,
                       ),
                     ),
+                    ListTile(
+                      title: const Text(
+                        'ٹیسٹ الارم (Test Alarm)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        '15 سیکنڈ بعد ایک ٹیسٹ الارم بجے گا',
+                      ),
+                      trailing: ElevatedButton(
+                        onPressed: () async {
+                          final ok =
+                              await NotificationService().scheduleTestAlarm();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                ok
+                                    ? 'ٹیسٹ الارم لگ گیا — 15 سیکنڈ انتظار کریں'
+                                    : 'ٹیسٹ الارم لگانے میں ناکامی',
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('چلائیں'),
+                      ),
+                    ),
                   ],
                 ),
               ),
