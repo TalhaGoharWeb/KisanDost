@@ -1256,8 +1256,22 @@ class DatabaseHelper {
 
   /// The wipe itself, exposed for hermetic tests (the singleton's database
   /// file is never touched by tests).
+  ///
+  /// Runs inside a single transaction: either every table is emptied or the
+  /// whole wipe rolls back, so a crash/failure mid-wipe can never leave
+  /// half-deleted orphaned records behind. (Delete-all hardening 2026-10-04)
   @visibleForTesting
   static Future<void> clearTables(DatabaseExecutor db) async {
+    if (db is Database) {
+      await db.transaction((txn) async {
+        await _deleteAllTables(txn);
+      });
+      return;
+    }
+    await _deleteAllTables(db);
+  }
+
+  static Future<void> _deleteAllTables(DatabaseExecutor db) async {
     await db.delete('audit_log');
     await db.delete('batai_settlements');
     await db.delete('party_ledger_entries');
