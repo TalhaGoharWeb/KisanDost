@@ -11,8 +11,21 @@ import '../database/db_helper.dart';
 import '../screens/alarm_screen.dart';
 import '../l10n/strings.dart';
 
+/// Background notification-action handler. Runs in a separate isolate with
+/// no UI: it must NEVER throw — an unhandled error here is silent and the
+/// farmer's tap simply does nothing. (Crash-safety audit 2026-10-04.)
 @pragma('vm:entry-point')
 void notificationTapBackground(
+  NotificationResponse notificationResponse,
+) async {
+  try {
+    await _notificationTapBackgroundUnsafe(notificationResponse);
+  } catch (e) {
+    debugPrint('KisanDost: background notification action failed: $e');
+  }
+}
+
+Future<void> _notificationTapBackgroundUnsafe(
   NotificationResponse notificationResponse,
 ) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -148,7 +161,19 @@ class NotificationService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
+  /// Initializes notifications. NEVER throws: if anything here fails
+  /// (missing plugin, channel error, permission API crash), the app must
+  /// still launch — the farmer's data matters more than reminders.
+  /// (Crash-safety audit 2026-10-04.)
   Future<void> init() async {
+    try {
+      await _initUnsafe();
+    } catch (e) {
+      debugPrint('KisanDost: notification init failed, continuing: $e');
+    }
+  }
+
+  Future<void> _initUnsafe() async {
     tz.initializeTimeZones();
     try {
       tz.setLocalLocation(tz.getLocation('Asia/Karachi'));
@@ -412,8 +437,14 @@ class NotificationService {
     }
   }
 
+  /// Best-effort: cancelling one notification must never throw.
+  /// (Crash-safety audit 2026-10-04.)
   Future<void> cancelNotification(int id) async {
-    await flutterLocalNotificationsPlugin.cancel(id);
+    try {
+      await flutterLocalNotificationsPlugin.cancel(id);
+    } catch (e) {
+      debugPrint('KisanDost: cancelNotification($id) failed: $e');
+    }
   }
 
   Future<bool> canScheduleExactAlarms() async {

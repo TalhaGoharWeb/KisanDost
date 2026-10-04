@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
@@ -47,8 +49,61 @@ class DatabaseHelper {
   }
 
   _initDatabase() async {
-    String path = join(await getDatabasesPath(), _databaseName);
-    return await openDatabase(
+    final String path = join(await getDatabasesPath(), _databaseName);
+    try {
+      return await _openDatabase(path);
+    } catch (e) {
+      // The database file exists but is not a SQLite database at all
+      // (truncated copy, zeroed file, foreign bytes): quarantine it and
+      // start fresh so the app stays usable. The corrupt file is PRESERVED
+      // with a timestamped name for manual/expert recovery — never deleted.
+      // Any other failure (disk full, permissions) is rethrown: renaming a
+      // healthy database aside would be data loss.
+      // (Crash-safety audit 2026-10-04.)
+      final file = File(path);
+      if (await file.exists() && !await _hasSqliteHeader(file)) {
+        final quarantine =
+            '$path.corrupt.${DateTime.now().millisecondsSinceEpoch}';
+        try {
+          await file.rename(quarantine);
+          debugPrint('KisanDost: quarantined corrupt DB to $quarantine');
+        } catch (renameError) {
+          debugPrint(
+            'KisanDost: could not quarantine corrupt DB: $renameError',
+          );
+        }
+        return await _openDatabase(path);
+      }
+      rethrow;
+    }
+  }
+
+  /// True when the first 16 bytes are the SQLite file magic
+  /// ("SQLite format 3\0"). Missing/unreadable/short files return false.
+  Future<bool> _hasSqliteHeader(File file) async {
+    try {
+      final raf = await file.open(mode: FileMode.read);
+      try {
+        final header = await raf.read(16);
+        if (header.length < 16) return false;
+        const magic = <int>[
+          83, 81, 76, 105, 116, 101, 32, 102, // "SQLite f"
+          111, 114, 109, 97, 116, 32, 51, 0, // "ormat 3\0"
+        ];
+        for (var i = 0; i < 16; i++) {
+          if (header[i] != magic[i]) return false;
+        }
+        return true;
+      } finally {
+        await raf.close();
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Database> _openDatabase(String path) {
+    return openDatabase(
       path,
       version: _databaseVersion,
       // Enforce foreign keys: the schema declares ON DELETE CASCADE / SET NULL,
