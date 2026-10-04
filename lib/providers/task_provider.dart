@@ -174,31 +174,28 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> toggleTaskCompletion(int id, bool currentStatus) async {
+  /// Atomically flips a task's completion flag with a single SQL statement —
+  /// no read-modify-write on a possibly stale UI snapshot. Rapid double-taps
+  /// (the callers fire this unawaited) serialize in SQLite: each tap flips
+  /// exactly once, so the final state is deterministic and only one audit
+  /// row is written per tap.
+  Future<void> toggleTaskCompletion(int id) async {
     final db = await _db();
-    final newStatus = !currentStatus;
 
-    await db.update(
-      'tasks',
-      {
-        'is_completed': newStatus ? 1 : 0,
-        'snoozed_until': null, // Clear snooze on complete/uncomplete toggle
-      },
-      where: 'id = ?',
-      whereArgs: [id],
+    final changed = await db.rawUpdate(
+      'UPDATE tasks SET is_completed = 1 - is_completed, snoozed_until = NULL '
+      'WHERE id = ? AND deleted_at IS NULL',
+      [id],
     );
-    await AuditService.log(
-      db,
-      table: 'tasks',
-      rowId: id,
-      action: AuditService.update,
-      details: newStatus ? 'کام مکمل' : 'کام دوبارہ کھولا گیا',
-    );
+    if (changed == 0) {
+      return;
+    }
 
     // Refresh list and notify
     await fetchTasks();
 
-    // Handle notifications
+    // Handle notifications from the post-toggle state (read back, never
+    // from a stale argument).
     TaskItem? toggledTask;
     for (var t in _tasks) {
       if (t.id == id) {
@@ -208,7 +205,14 @@ class TaskProvider with ChangeNotifier {
     }
 
     if (toggledTask != null) {
-      if (newStatus) {
+      await AuditService.log(
+        db,
+        table: 'tasks',
+        rowId: id,
+        action: AuditService.update,
+        details: toggledTask.isCompleted ? 'کام مکمل' : 'کام دوبارہ کھولا گیا',
+      );
+      if (toggledTask.isCompleted) {
         await NotificationService().cancelTaskNotifications(id);
       } else {
         await NotificationService().scheduleTaskNotifications(toggledTask);

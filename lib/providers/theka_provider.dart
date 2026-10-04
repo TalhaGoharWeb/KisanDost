@@ -120,26 +120,89 @@ class ThekaProvider extends ChangeNotifier {
   /// delete-theka problem is deferred by design). It is logged as a delete.
   Future<void> deleteTheka(int thekaId) async {
     await _txn((txn) async {
-      // 1. Delete associated expenses
-      final List<Map<String, dynamic>> instMaps = await txn.query(
-        'theka_installments',
-        where: 'theka_id = ?',
-        whereArgs: [thekaId],
-      );
-      for (var inst in instMaps) {
-        final expenseId = inst['expense_id'] as int?;
-        if (expenseId != null) {
-          await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
-        }
-      }
-      // 2. Delete theka (cascading deletes installments due to db ON DELETE CASCADE)
-      await txn.delete('thekas', where: 'id = ?', whereArgs: [thekaId]);
+      await _deleteThekaTx(txn, thekaId);
       await AuditService.log(
         txn,
         table: 'thekas',
         rowId: thekaId,
         action: AuditService.delete,
         details: 'ٹھیکہ حذف',
+      );
+    });
+    await fetchThekas();
+  }
+
+  /// Deletes a theka row, its installments (ON DELETE CASCADE) and the
+  /// installments' linked expenses inside the caller's transaction.
+  /// The hard-delete of paid-installment expenses is the deliberate
+  /// Phase-11 behavior — every destroyed expense row is written to the
+  /// audit log first, with its amount, so the history is never silent.
+  Future<void> _deleteThekaTx(DatabaseExecutor txn, int thekaId) async {
+    final List<Map<String, dynamic>> instMaps = await txn.query(
+      'theka_installments',
+      where: 'theka_id = ?',
+      whereArgs: [thekaId],
+    );
+    for (var inst in instMaps) {
+      final expenseId = inst['expense_id'] as int?;
+      if (expenseId != null) {
+        final expRows = await txn.query(
+          'expenses',
+          columns: ['amount_paisa', 'description'],
+          where: 'id = ?',
+          whereArgs: [expenseId],
+        );
+        final expDesc =
+            expRows.isEmpty
+                ? 'قسط کا خرچہ'
+                : '${expRows.first['description']} — ${Money(expRows.first['amount_paisa'] as int? ?? 0).format()}';
+        await AuditService.log(
+          txn,
+          table: 'expenses',
+          rowId: expenseId,
+          action: AuditService.delete,
+          details: 'ٹھیکہ حذف ہونے پر خرچہ حذف: $expDesc',
+        );
+        await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
+      }
+    }
+    // Cascading deletes installments due to db ON DELETE CASCADE.
+    await txn.delete('thekas', where: 'id = ?', whereArgs: [thekaId]);
+  }
+
+  /// Atomically replaces a theka: the old row (+ installments + their
+  /// linked expenses) is deleted and the new theka + installments are
+  /// inserted inside ONE transaction. All-or-nothing — the edit form used
+  /// to delete-then-insert as two separate provider calls, which could
+  /// permanently lose the contract if the insert failed after the delete.
+  Future<void> replaceTheka(
+    int oldId,
+    Theka theka,
+    List<ThekaInstallment> installments,
+  ) async {
+    await _txn((txn) async {
+      await _deleteThekaTx(txn, oldId);
+
+      final thekaId = await txn.insert('thekas', theka.toMap());
+      for (var inst in installments) {
+        final newInst = ThekaInstallment(
+          thekaId: thekaId,
+          amountPaisa: inst.amountPaisa,
+          dueDate: inst.dueDate,
+          status: inst.status,
+          paidAmountPaisa: inst.paidAmountPaisa,
+          paidDate: inst.paidDate,
+          expenseId: inst.expenseId,
+        );
+        await txn.insert('theka_installments', newInst.toMap());
+      }
+      await AuditService.log(
+        txn,
+        table: 'thekas',
+        rowId: thekaId,
+        action: AuditService.update,
+        details:
+            'ٹھیکہ تبدیل — ${Money(theka.totalAmountPaisa).format()} (${theka.paymentMethod})',
       );
     });
     await fetchThekas();
@@ -161,6 +224,13 @@ class ThekaProvider extends ChangeNotifier {
     required String farmName,
     required int installmentIndex,
   }) async {
+    // A zero or negative "payment" must never reach the ledger: it would
+    // shrink (or leave unchanged) the cumulative expense while writing a
+    // misleading audit row. The form validates first; this is the last line
+    // of defense.
+    if (paidAmountPaisa <= 0) {
+      throw Exception('ادائیگی کی رقم صفر سے زیادہ ہونی چاہیے۔');
+    }
     await _txn((txn) async {
       // 1. Fetch current installment
       final List<Map<String, dynamic>> maps = await txn.query(
@@ -254,7 +324,21 @@ class ThekaProvider extends ChangeNotifier {
       final expenseId = currentInst.expenseId;
 
       if (expenseId != null) {
-        await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
+        // Soft-delete (never hard-delete): the 'Land Rent' expense stays
+        // restorable in the recycle bin and the audit log keeps the record.
+        await txn.update(
+          'expenses',
+          {'deleted_at': DateTime.now().toIso8601String()},
+          where: 'id = ? AND deleted_at IS NULL',
+          whereArgs: [expenseId],
+        );
+        await AuditService.log(
+          txn,
+          table: 'expenses',
+          rowId: expenseId,
+          action: AuditService.softDelete,
+          details: 'قسط دوبارہ زیر التواء — متعلقہ خرچہ حذف',
+        );
       }
 
       await txn.update(

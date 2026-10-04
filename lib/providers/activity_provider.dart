@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
 import '../services/unit_converter.dart';
 import 'inventory_provider.dart';
 
@@ -32,12 +33,44 @@ class ActivityWithDetails {
 }
 
 class ActivityProvider extends ChangeNotifier {
+  /// Test hook: when set, all DB access goes through this executor instead
+  /// of the app singleton, so tests never touch the real database file.
+  final DatabaseExecutor? testExecutor;
+
+  ActivityProvider({this.testExecutor});
+
+  Future<DatabaseExecutor> _db() async =>
+      testExecutor ?? await DatabaseHelper.instance.database;
+
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly.
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<ActivityWithDetails> _activities = [];
 
   List<ActivityWithDetails> get activities => _activities;
 
   Future<void> fetchActivities() async {
-    final db = await DatabaseHelper.instance.database;
+    // A DB failure at launch must not wipe the UI or crash the app
+    // (main.dart calls this unawaited): keep the last good list and
+    // report the failure to the console.
+    try {
+      await _fetchActivities();
+    } catch (e) {
+      debugPrint('fetchActivities failed: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> _fetchActivities() async {
+    final db = await _db();
     final String query = '''
       SELECT
         a.id as a_id,
@@ -57,7 +90,7 @@ class ActivityProvider extends ChangeNotifier {
         e.amount_paisa as expense_amount_paisa
       FROM activities a
       JOIN crop_seasons cs ON a.crop_season_id = cs.id
-      LEFT JOIN expenses e ON a.expense_id = e.id
+      LEFT JOIN expenses e ON a.expense_id = e.id AND e.deleted_at IS NULL
       ORDER BY a.date DESC, a.id DESC
     ''';
 
@@ -108,8 +141,6 @@ class ActivityProvider extends ChangeNotifier {
                 : results[i]['expense_amount_paisa'] as int,
       );
     });
-
-    notifyListeners();
   }
 
   /// Resolves the exact inventory row an activity consumed, for restores.
@@ -200,11 +231,9 @@ class ActivityProvider extends ChangeNotifier {
     bool isCompleted = false,
     InventoryProvider? inventoryProvider,
   }) async {
-    final db = await DatabaseHelper.instance.database;
-
     // Expense + activity row + inventory deduction happen in ONE transaction:
     // if the deduction is rejected (overuse / missing item), nothing is saved.
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       int? finalExpenseId = expenseId;
       if (finalExpenseId == null &&
           expenseAmountPaisa != null &&
@@ -258,7 +287,7 @@ class ActivityProvider extends ChangeNotifier {
   }
 
   Future<Activity?> getActivityById(int id) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     final maps = await db.query('activities', where: 'id = ?', whereArgs: [id]);
     if (maps.isEmpty) {
       return null;
@@ -282,9 +311,7 @@ class ActivityProvider extends ChangeNotifier {
     bool? isCompleted,
     InventoryProvider? inventoryProvider,
   }) async {
-    final db = await DatabaseHelper.instance.database;
-
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> maps = await txn.query(
         'activities',
         where: 'id = ?',
@@ -330,10 +357,20 @@ class ActivityProvider extends ChangeNotifier {
           );
         }
       } else if (finalExpenseId != null) {
-        await txn.delete(
+        // Soft-delete (never hard-delete): the expense stays restorable in
+        // the recycle bin and the audit log keeps the record.
+        await txn.update(
           'expenses',
-          where: 'id = ?',
+          {'deleted_at': DateTime.now().toIso8601String()},
+          where: 'id = ? AND deleted_at IS NULL',
           whereArgs: [finalExpenseId],
+        );
+        await AuditService.log(
+          txn,
+          table: 'expenses',
+          rowId: finalExpenseId,
+          action: AuditService.softDelete,
+          details: 'سرگرمی تبدیل ہونے پر متعلقہ خرچہ حذف',
         );
         finalExpenseId = null;
       }
@@ -383,7 +420,7 @@ class ActivityProvider extends ChangeNotifier {
   }
 
   Future<void> toggleCompleted(int id, bool completed) async {
-    final db = await DatabaseHelper.instance.database;
+    final db = await _db();
     await db.update(
       'activities',
       {'is_completed': completed ? 1 : 0},
@@ -418,9 +455,7 @@ class ActivityProvider extends ChangeNotifier {
     int id, {
     InventoryProvider? inventoryProvider,
   }) async {
-    final db = await DatabaseHelper.instance.database;
-
-    await db.transaction((txn) async {
+    await _txn((txn) async {
       final List<Map<String, dynamic>> maps = await txn.query(
         'activities',
         where: 'id = ?',
@@ -444,10 +479,20 @@ class ActivityProvider extends ChangeNotifier {
       await txn.delete('activities', where: 'id = ?', whereArgs: [id]);
 
       if (activity.expenseId != null) {
-        await txn.delete(
+        // Soft-delete the linked expense (restorable via recycle bin);
+        // the audit log keeps the record.
+        await txn.update(
           'expenses',
-          where: 'id = ?',
+          {'deleted_at': DateTime.now().toIso8601String()},
+          where: 'id = ? AND deleted_at IS NULL',
           whereArgs: [activity.expenseId],
+        );
+        await AuditService.log(
+          txn,
+          table: 'expenses',
+          rowId: activity.expenseId!,
+          action: AuditService.softDelete,
+          details: 'سرگرمی حذف ہونے پر متعلقہ خرچہ حذف',
         );
       }
     });

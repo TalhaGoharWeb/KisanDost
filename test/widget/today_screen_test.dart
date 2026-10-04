@@ -33,9 +33,9 @@ class FakeTaskProvider extends TaskProvider {
   Future<void> fetchTasks() async {}
 
   @override
-  Future<void> toggleTaskCompletion(int id, bool currentStatus) async {
+  Future<void> toggleTaskCompletion(int id) async {
     for (final t in fakeTasks) {
-      if (t.id == id) t.isCompleted = !currentStatus;
+      if (t.id == id) t.isCompleted = !t.isCompleted;
     }
     notifyListeners();
   }

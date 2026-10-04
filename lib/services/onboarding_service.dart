@@ -7,9 +7,15 @@ class OnboardingService {
   static const String onboardingDoneKey = 'onboarding_done';
 
   /// True when onboarding has never been completed (fresh install).
+  /// Fails OPEN to true: if the flag can't be read, replaying onboarding
+  /// is always the safe direction (never lock a farmer out of first-run).
   static Future<bool> shouldShowOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    return !(prefs.getBool(onboardingDoneKey) ?? false);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return !(prefs.getBool(onboardingDoneKey) ?? false);
+    } catch (_) {
+      return true;
+    }
   }
 
   /// Marks onboarding complete. Called by both the fresh-start and the

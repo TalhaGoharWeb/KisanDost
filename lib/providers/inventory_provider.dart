@@ -25,15 +25,21 @@ class InventoryProvider extends ChangeNotifier {
   List<Inventory> get inventoryList => _inventoryList;
 
   Future<void> fetchInventory() async {
-    final db = await _executor(testExecutor);
-    final List<Map<String, dynamic>> maps = await db.query(
-      'inventory',
-      orderBy: 'id DESC',
-    );
-    _inventoryList = List.generate(
-      maps.length,
-      (i) => Inventory.fromMap(maps[i]),
-    );
+    // Keep the last good list on DB failure (main.dart calls this
+    // unawaited at launch); the failure is reported, never thrown.
+    try {
+      final db = await _executor(testExecutor);
+      final List<Map<String, dynamic>> maps = await db.query(
+        'inventory',
+        orderBy: 'id DESC',
+      );
+      _inventoryList = List.generate(
+        maps.length,
+        (i) => Inventory.fromMap(maps[i]),
+      );
+    } catch (e) {
+      debugPrint('fetchInventory failed: $e');
+    }
     notifyListeners();
   }
 
@@ -290,12 +296,23 @@ class InventoryProvider extends ChangeNotifier {
     }
 
     final String now = DateTime.now().toIso8601String();
-    await ex.update(
-      'inventory',
-      {'quantity': item.quantity - qtyInItemUnit},
-      where: 'id = ?',
-      whereArgs: [itemId],
+    // Atomic check-and-decrement: the availability gate and the write are
+    // ONE statement, so two overlapping deductions can never both pass a
+    // stale Dart-side check (TOCTOU). 0 rows affected means another
+    // deduction won the race — report it loudly, never clamp.
+    final changed = await ex.rawUpdate(
+      'UPDATE inventory SET quantity = quantity - ? '
+      'WHERE id = ? AND quantity >= ?',
+      [qtyInItemUnit, itemId, qtyInItemUnit],
     );
+    if (changed == 0) {
+      final fresh = await getItemById(itemId, executor: ex);
+      final available = fresh?.quantity ?? 0.0;
+      throw InventoryException(
+        'گودام میں صرف ${available.toStringAsFixed(1)} ${item.unit} دستیاب ہے — '
+        'اتنی مقدار استعمال نہیں ہو سکتی',
+      );
+    }
     final txnId = await ex.insert('inventory_transactions', {
       'inventory_id': itemId,
       'type': 'usage',

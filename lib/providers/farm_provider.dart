@@ -65,17 +65,23 @@ class FarmProvider extends ChangeNotifier {
   }
 
   Future<void> fetchFields(int farmId) async {
-    final db = await _db();
-    final List<Map<String, dynamic>> maps = await db.query(
-      'fields',
-      where: 'farm_id = ?',
-      whereArgs: [farmId],
-      orderBy: 'id DESC',
-    );
-    _farmFields[farmId] = List.generate(
-      maps.length,
-      (i) => Field.fromMap(maps[i]),
-    );
+    // Keep the last good list on DB failure; the failure is reported,
+    // never thrown (callers may fire this unawaited at launch).
+    try {
+      final db = await _db();
+      final List<Map<String, dynamic>> maps = await db.query(
+        'fields',
+        where: 'farm_id = ?',
+        whereArgs: [farmId],
+        orderBy: 'id DESC',
+      );
+      _farmFields[farmId] = List.generate(
+        maps.length,
+        (i) => Field.fromMap(maps[i]),
+      );
+    } catch (e) {
+      debugPrint('fetchFields failed: $e');
+    }
     notifyListeners();
   }
 

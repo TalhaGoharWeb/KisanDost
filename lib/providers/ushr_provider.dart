@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
+import '../services/money.dart';
 
 class UshrWithDetails {
   final UshrRecord ushrRecord;
@@ -52,6 +54,17 @@ class UshrProvider extends ChangeNotifier {
       (marketValuePaisa * percentage / 100.0).round();
 
   Future<void> fetchUshrRecords() async {
+    // Keep the last good list on DB failure (main.dart calls this
+    // unawaited at launch); the failure is reported, never thrown.
+    try {
+      await _fetchUshrRecords();
+    } catch (e) {
+      debugPrint('fetchUshrRecords failed: $e');
+    }
+    notifyListeners();
+  }
+
+  Future<void> _fetchUshrRecords() async {
     final db = await _db();
     // remaining_balance is COMPUTED in the UshrRecord model now — never read
     // from (or written to) the database.
@@ -98,8 +111,6 @@ class UshrProvider extends ChangeNotifier {
         farmName: results[i]['farm_name'],
       );
     });
-
-    notifyListeners();
   }
 
   /// All money in INTEGER paisa. `totalPaidPaisa` is derived, never passed:
@@ -223,7 +234,21 @@ class UshrProvider extends ChangeNotifier {
         }
       } else {
         if (expenseId != null) {
-          await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
+          // Soft-delete (never hard-delete): the 'Ushr Expense' mirror stays
+          // restorable in the recycle bin and the audit log keeps the record.
+          await txn.update(
+            'expenses',
+            {'deleted_at': DateTime.now().toIso8601String()},
+            where: 'id = ? AND deleted_at IS NULL',
+            whereArgs: [expenseId],
+          );
+          await AuditService.log(
+            txn,
+            table: 'expenses',
+            rowId: expenseId,
+            action: AuditService.softDelete,
+            details: 'عشر ریکارڈ تبدیل — ادائیگی صفر ہونے پر خرچہ حذف',
+          );
           expenseId = null;
         }
       }
@@ -265,8 +290,28 @@ class UshrProvider extends ChangeNotifier {
       if (existing.isNotEmpty) {
         final int? expenseId = existing.first['expense_id'] as int?;
         if (expenseId != null) {
+          // ushr_records has no soft-delete column, so the record and its
+          // auto-created expense mirror are hard-deleted as a pair — but
+          // both deletions are written to the audit log first, with amounts,
+          // so the financial history is never silently lost.
+          await AuditService.log(
+            txn,
+            table: 'expenses',
+            rowId: expenseId,
+            action: AuditService.delete,
+            details:
+                'عشر ریکارڈ حذف ہونے پر خرچہ حذف — ${Money((existing.first['cash_paid_paisa'] as int?) ?? 0).format()}',
+          );
           await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
         }
+        await AuditService.log(
+          txn,
+          table: 'ushr_records',
+          rowId: id,
+          action: AuditService.delete,
+          details:
+              'عشر ریکارڈ حذف — واجب الادا ${Money((existing.first['ushr_amount_paisa'] as int?) ?? 0).format()}',
+        );
       }
 
       await txn.delete('ushr_records', where: 'id = ?', whereArgs: [id]);
