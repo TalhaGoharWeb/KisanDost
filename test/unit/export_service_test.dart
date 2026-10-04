@@ -33,6 +33,21 @@ void main() {
     test('newline forces quoting', () {
       expect(csvEscape('a\nb'), '"a\nb"');
     });
+
+    test('formula injection is neutralized (red-team 2026-10-04)', () {
+      // Spreadsheet formula prefixes get a single-quote text marker.
+      expect(csvEscape('=1+1'), "'=1+1");
+      expect(csvEscape('=cmd|\'/C calc\'!A0'), "'=cmd|'/C calc'!A0");
+      expect(csvEscape('+123'), "'+123");
+      expect(csvEscape('-5'), "'-5");
+      expect(csvEscape('@mention'), "'@mention");
+      expect(csvEscape('\t=1+1'), "'\t=1+1");
+      // Combined with quoting: the quote marker survives RFC 4180 quoting.
+      expect(csvEscape('=1+1,2'), "\"'=1+1,2\"");
+      // Normal values are untouched.
+      expect(csvEscape('1250'), '1250');
+      expect(csvEscape('-5 روپے'), "'-5 روپے");
+    });
   });
 
   group('BOM', () {

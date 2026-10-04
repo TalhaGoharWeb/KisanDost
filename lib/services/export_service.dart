@@ -16,9 +16,17 @@ import '../l10n/strings.dart';
 /// UTF-8 BOM — required for Excel to detect UTF-8 and render Urdu.
 const String csvBom = '\uFEFF';
 
-/// Escapes one CSV field per RFC 4180.
+/// Escapes one CSV field per RFC 4180, and neutralizes formula injection
+/// (OWASP CSV Injection): a field starting with `=`, `+`, `-`, `@`, tab or
+/// carriage return gets a single-quote prefix so spreadsheet apps treat it
+/// as plain text, never as a live formula. Without this, a pasted value
+/// like `=cmd|'/C calc'!A0` would execute when the farmer opens the export
+/// in Excel/LibreOffice. (Red-team audit 2026-10-04.)
 String csvEscape(String? value) {
-  final v = value ?? '';
+  var v = value ?? '';
+  if (v.startsWith(RegExp(r'[=+\-@\t\r]'))) {
+    v = "'$v";
+  }
   if (v.contains(',') ||
       v.contains('"') ||
       v.contains('\n') ||
