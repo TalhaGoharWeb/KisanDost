@@ -59,7 +59,13 @@ class Money {
         'رقم میں دو سے زیادہ اعشاریہ نہیں ہو سکتے (مثلاً 1250.50)',
       );
     }
-    final rupees = int.parse(match.group(1)!);
+    final rupeeDigits = match.group(1)!;
+    if (rupeeDigits.length > 12) {
+      // int.parse would throw a raw FormatException on 64-bit overflow;
+      // fail with the friendly Urdu error instead (crash-safety 2026-10-04).
+      throw MoneyParseException('رقم بہت بڑی ہے — براہ کرم چھوٹی رقم درج کریں');
+    }
+    final rupees = int.parse(rupeeDigits);
     final paisaPart = decimals.padRight(2, '0');
     final total = rupees * 100 + int.parse(paisaPart);
     return Money(total);
