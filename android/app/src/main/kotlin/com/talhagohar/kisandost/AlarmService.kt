@@ -39,14 +39,32 @@ class AlarmService : Service() {
 
         Log.d(TAG, "Starting foreground alarm service for task: $taskId")
 
-        // 1. Play looping alarm sound
-        playAlarmSound()
-
-        // 2. Vibrate
-        startVibration()
-
-        // 3. Create Notification Channel
+        // 1. Create Notification Channel (fast, no blocking I/O).
         createNotificationChannel()
+
+        // 2. Foreground IMMEDIATELY. Android 12+ kills a foreground service
+        // that doesn't call startForeground() within ~5s of start. The old
+        // order played the (blocking) alarm sound first, so on a sleeping
+        // device the system killed the service mid-beep: "beep then mute",
+        // no notification. (Alarm fix 2026-10-04.)
+        val earlyNotification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle("کسان دوست یاد دہانی")
+            .setContentText(taskTitle)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(alarmId, earlyNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        } else {
+            startForeground(alarmId, earlyNotification)
+        }
+
+        // 3. Now safe to do the slower work: sound, vibration, full UI.
+        playAlarmSound()
+        startVibration()
 
         // 4. Create intents for actions
         // The farmer's configured snooze duration (settings), default 10 min.
@@ -109,7 +127,9 @@ class AlarmService : Service() {
         val notification = builder.build()
         notification.flags = notification.flags or Notification.FLAG_INSISTENT
 
-        // 5. Start Foreground
+        // 6. Promote the early notification to the full one (actions +
+        // full-screen intent). Calling startForeground again is the reliable
+        // way to ensure the full-screen intent fires on a locked device.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(alarmId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         } else {
