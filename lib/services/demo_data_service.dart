@@ -82,6 +82,11 @@ class DemoDataService extends ChangeNotifier {
   bool _active = false;
   bool get isActive => _active;
 
+  /// Re-entrancy guard: the entry button can be double-tapped while the first
+  /// insert is still running; without this, two concurrent entries interleave
+  /// and produce duplicate demo datasets. (Race-condition audit 2026-10-04.)
+  bool _entering = false;
+
   Future<DatabaseExecutor> _ex() async =>
       testExecutor ?? await DatabaseHelper.instance.database;
 
@@ -145,7 +150,8 @@ class DemoDataService extends ChangeNotifier {
     required ThekaProvider thekas,
     required BataiProvider batai,
   }) async {
-    if (_active) return;
+    if (_active || _entering) return;
+    _entering = true;
     final before = <String, int>{};
     for (final t in trackedTables) {
       before[t] = await _maxId(t);
@@ -363,6 +369,8 @@ class DemoDataService extends ChangeNotifier {
       // Never leave half-inserted demo rows behind: remove anything new.
       await _cleanupPartial(before);
       rethrow;
+    } finally {
+      _entering = false;
     }
   }
 
