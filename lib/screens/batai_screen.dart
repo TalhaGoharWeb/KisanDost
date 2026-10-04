@@ -400,6 +400,12 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
       );
       return;
     }
+    if (owner < 0 || owner > 100 || cult < 0 || cult > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('حصہ 0 سے 100 تک ہونا چاہیے۔')),
+      );
+      return;
+    }
     try {
       final existing = widget.existing;
       if (existing == null) {

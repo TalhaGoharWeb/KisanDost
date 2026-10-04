@@ -45,6 +45,9 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
     );
     DateTime selectedDate =
         inst.paidDate != null ? DateTime.parse(inst.paidDate!) : DateTime.now();
+    // Double-tap guard: payInstallment accumulates — a second tap would
+    // record the payment twice.
+    bool isSaving = false;
 
     showDialog(
       context: context,
@@ -94,6 +97,9 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                           parsedPaisa = Money.parse(value).paisa;
                         } on MoneyParseException {
                           return 'صحیح رقم درج کریں';
+                        } on FormatException {
+                          // ~20+ digit input overflows int.parse in Money.parse.
+                          return 'رقم بہت بڑی ہے — درست رقم درج کریں';
                         }
                         if (parsedPaisa <= 0) return 'صحیح رقم درج کریں';
                         if (parsedPaisa > remaining) {
@@ -133,11 +139,27 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      int paidAmountPaisa;
+                    if (isSaving) return;
+                    setState(() => isSaving = true);
+                    try {
+                      if (formKey.currentState!.validate()) {
+                        int paidAmountPaisa;
                       try {
                         paidAmountPaisa =
                             Money.parse(amountController.text).paisa;
+                      } on FormatException {
+                        // Guarded by the validator above; belt and braces.
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'رقم بہت بڑی ہے — درست رقم درج کریں',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                        return;
                       } on MoneyParseException catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -199,6 +221,9 @@ class _ThekaDetailsScreenState extends State<ThekaDetailsScreen> {
                           );
                         }
                       }
+                      }
+                    } finally {
+                      if (ctx.mounted) setState(() => isSaving = false);
                     }
                   },
                   child: const Text(Strings.save),

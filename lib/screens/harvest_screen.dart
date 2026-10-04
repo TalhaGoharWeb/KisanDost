@@ -9,6 +9,8 @@ import '../services/money.dart';
 import '../services/quantity.dart';
 import '../services/unit_display.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
+import '../utils/error_messages.dart';
 
 class HarvestScreen extends StatefulWidget {
   const HarvestScreen({super.key});
@@ -23,7 +25,13 @@ class _HarvestScreenState extends State<HarvestScreen>
   /// [MoneyParseException] (Urdu message, safe for a SnackBar).
   int _parsePaisaOrThrow(String text) {
     if (text.trim().isEmpty) return 0;
-    return Money.parse(text).paisa;
+    try {
+      return Money.parse(text).paisa;
+    } on FormatException {
+      // ~20+ digit input overflows int.parse inside Money.parse: report it
+      // as a friendly MoneyParseException instead of a raw crash.
+      throw MoneyParseException('رقم بہت بڑی ہے — درست رقم درج کریں');
+    }
   }
 
   /// Lenient parse for live-preview cards: blank or garbage shows as 0 paisa.
@@ -31,6 +39,9 @@ class _HarvestScreenState extends State<HarvestScreen>
     try {
       return _parsePaisaOrThrow(text);
     } on MoneyParseException {
+      return 0;
+    } on FormatException {
+      // Absurdly large input overflows int.parse inside Money.parse.
       return 0;
     }
   }
@@ -41,6 +52,9 @@ class _HarvestScreenState extends State<HarvestScreen>
     try {
       return Money.parse(text).paisa;
     } on MoneyParseException {
+      return null;
+    } on FormatException {
+      // Absurdly large input: not a usable preview value.
       return null;
     }
   }
@@ -693,6 +707,10 @@ class _HarvestScreenState extends State<HarvestScreen>
 
     final List<String> unitsList = UnitDisplay.allUnits;
 
+    // Double-tap guard: the save writes harvest + sale + expense rows —
+    // a second tap would create a full duplicate set.
+    bool isSaving = false;
+
     showDialog(
       context: context,
       builder: (ctx) {
@@ -770,17 +788,9 @@ class _HarvestScreenState extends State<HarvestScreen>
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (v) => setState(() {}),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return Strings.quantityRequired;
-                                }
-                                try {
-                                  Quantity.parsePositive(value);
-                                } on QuantityParseException catch (e) {
-                                  return e.message;
-                                }
-                                return null;
-                              },
+                              validator:
+                                  (value) =>
+                                      FieldValidators.quantity(value),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1064,9 +1074,12 @@ class _HarvestScreenState extends State<HarvestScreen>
                     backgroundColor: Colors.orange.shade800,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      final int ratePaisa;
+                  onPressed: () async {
+                    if (isSaving) return;
+                    setState(() => isSaving = true);
+                    try {
+                      if (formKey.currentState!.validate()) {
+                        final int ratePaisa;
                       final int transPaisa;
                       final int labourPaisa;
                       final int harvestingPaisa;
@@ -1087,7 +1100,7 @@ class _HarvestScreenState extends State<HarvestScreen>
                         _showMoneyError(ctx, e);
                         return;
                       }
-                      harvestProvider.addHarvest(
+                      await harvestProvider.addHarvest(
                         cropSeasonId: selectedCropSeasonId!,
                         quantity: Quantity.parsePositive(qtyController.text),
                         unit: selectedUnit,
@@ -1102,14 +1115,19 @@ class _HarvestScreenState extends State<HarvestScreen>
                         paymentStatus: paymentStatus,
                         notes: notesController.text,
                       );
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'پیداوار کا ریکارڈ کامیابی سے شامل ہو گیا!',
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'پیداوار کا ریکارڈ کامیابی سے شامل ہو گیا!',
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+                      }
+                    } finally {
+                      if (ctx.mounted) setState(() => isSaving = false);
                     }
                   },
                   child: const Text(Strings.save),
@@ -1173,6 +1191,10 @@ class _HarvestScreenState extends State<HarvestScreen>
     DateTime selectedDate = DateTime.parse(h.date);
 
     final List<String> unitsList = UnitDisplay.allUnits;
+
+    // Double-tap guard: the save rewrites harvest + sale + expense rows —
+    // a second tap would duplicate the sale/expense mirrors.
+    bool isSaving = false;
 
     showDialog(
       context: context,
@@ -1251,17 +1273,9 @@ class _HarvestScreenState extends State<HarvestScreen>
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (v) => setState(() {}),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return Strings.quantityRequired;
-                                }
-                                try {
-                                  Quantity.parsePositive(value);
-                                } on QuantityParseException catch (e) {
-                                  return e.message;
-                                }
-                                return null;
-                              },
+                              validator:
+                                  (value) =>
+                                      FieldValidators.quantity(value),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1544,14 +1558,17 @@ class _HarvestScreenState extends State<HarvestScreen>
                     backgroundColor: Colors.orange.shade800,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      final int ratePaisa;
-                      final int transPaisa;
-                      final int labourPaisa;
-                      final int harvestingPaisa;
-                      final int commissionPaisa;
-                      final int otherPaisa;
+                  onPressed: () async {
+                    if (isSaving) return;
+                    setState(() => isSaving = true);
+                    try {
+                      if (formKey.currentState!.validate()) {
+                        final int ratePaisa;
+                        final int transPaisa;
+                        final int labourPaisa;
+                        final int harvestingPaisa;
+                        final int commissionPaisa;
+                        final int otherPaisa;
                       try {
                         ratePaisa = _parsePaisaOrThrow(rateController.text);
                         transPaisa = _parsePaisaOrThrow(transController.text);
@@ -1567,7 +1584,7 @@ class _HarvestScreenState extends State<HarvestScreen>
                         _showMoneyError(ctx, e);
                         return;
                       }
-                      harvestProvider.updateHarvest(
+                      await harvestProvider.updateHarvest(
                         id: h.id!,
                         cropSeasonId: selectedCropSeasonId!,
                         quantity: Quantity.parsePositive(qtyController.text),
@@ -1583,14 +1600,19 @@ class _HarvestScreenState extends State<HarvestScreen>
                         paymentStatus: paymentStatus,
                         notes: notesController.text,
                       );
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'پیداوار کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'پیداوار کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+                      }
+                    } finally {
+                      if (ctx.mounted) setState(() => isSaving = false);
                     }
                   },
                   child: const Text(Strings.save),
@@ -1639,17 +1661,11 @@ class _HarvestScreenState extends State<HarvestScreen>
                           labelText: 'ریٹ فی ${item.harvest.unit} (روپے)',
                           border: const OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'ریٹ درج کریں';
-                          }
-                          try {
-                            Money.parse(value);
-                          } on MoneyParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) => FieldValidators.money(
+                              value,
+                              emptyMessage: 'ریٹ درج کریں',
+                            ),
                         onChanged: (val) {
                           final int? pricePaisa = _tryPaisa(val);
                           if (pricePaisa != null) {
@@ -1721,7 +1737,7 @@ class _HarvestScreenState extends State<HarvestScreen>
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       final int pricePaisa;
                       try {
@@ -1730,14 +1746,20 @@ class _HarvestScreenState extends State<HarvestScreen>
                         _showMoneyError(ctx, e);
                         return;
                       }
-                      harvestProvider.recordSale(
-                        harvestId: item.harvest.id!,
-                        quantity: item.harvest.quantity,
-                        pricePerUnitPaisa: pricePaisa,
-                        date: selectedDate.toIso8601String(),
-                        buyerName: buyerController.text,
-                      );
-                      Navigator.pop(ctx);
+                      try {
+                        await harvestProvider.recordSale(
+                          harvestId: item.harvest.id!,
+                          quantity: item.harvest.quantity,
+                          pricePerUnitPaisa: pricePaisa,
+                          date: selectedDate.toIso8601String(),
+                          buyerName: buyerController.text,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          showFriendlyError(ctx, e, FailureKind.database);
+                        }
+                      }
                     }
                   },
                   child: const Text(Strings.save),
@@ -1789,17 +1811,11 @@ class _HarvestScreenState extends State<HarvestScreen>
                           labelText: 'ریٹ فی ${item.harvest.unit} (روپے)',
                           border: const OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'ریٹ درج کریں';
-                          }
-                          try {
-                            Money.parse(value);
-                          } on MoneyParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) => FieldValidators.money(
+                              value,
+                              emptyMessage: 'ریٹ درج کریں',
+                            ),
                         onChanged: (val) {
                           final int? pricePaisa = _tryPaisa(val);
                           if (pricePaisa != null) {
@@ -1867,7 +1883,7 @@ class _HarvestScreenState extends State<HarvestScreen>
                   child: const Text(Strings.cancel),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       final int pricePaisa;
                       try {
@@ -1876,22 +1892,30 @@ class _HarvestScreenState extends State<HarvestScreen>
                         _showMoneyError(ctx, e);
                         return;
                       }
-                      harvestProvider.updateSale(
-                        id: sale.id!,
-                        harvestId: item.harvest.id!,
-                        quantity: item.harvest.quantity,
-                        pricePerUnitPaisa: pricePaisa,
-                        date: selectedDate.toIso8601String(),
-                        buyerName: buyerController.text,
-                      );
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'فروخت کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
-                          ),
-                        ),
-                      );
+                      try {
+                        await harvestProvider.updateSale(
+                          id: sale.id!,
+                          harvestId: item.harvest.id!,
+                          quantity: item.harvest.quantity,
+                          pricePerUnitPaisa: pricePaisa,
+                          date: selectedDate.toIso8601String(),
+                          buyerName: buyerController.text,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'فروخت کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          showFriendlyError(ctx, e, FailureKind.database);
+                        }
+                      }
                     }
                   },
                   child: const Text(Strings.save),

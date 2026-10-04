@@ -16,6 +16,7 @@ import '../providers/task_provider.dart';
 import '../providers/theka_provider.dart';
 import '../providers/ushr_provider.dart';
 import '../l10n/strings.dart';
+import '../utils/error_messages.dart';
 
 /// ڈیٹا بیک اپ اور بحالی کی اسکرین: بیک اپ بنانا، فہرست، شیئر، حذف اور بحال (تبدیل/ضم)۔
 class BackupScreen extends StatefulWidget {
@@ -54,7 +55,7 @@ class _BackupScreenState extends State<BackupScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showSnack('بیک اپ فہرست لوڈ کرنے میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.database);
     }
   }
 
@@ -91,7 +92,7 @@ class _BackupScreenState extends State<BackupScreen> {
     } on BackupException catch (e) {
       _showSnack(e.message, Colors.red);
     } catch (e) {
-      _showSnack('بیک اپ بنانے میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.storage);
     } finally {
       if (mounted) setState(() => _isCreating = false);
     }
@@ -109,7 +110,7 @@ class _BackupScreenState extends State<BackupScreen> {
         Colors.green,
       );
     } catch (e) {
-      _showSnack('ترتیب محفوظ کرنے میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.database);
     }
   }
 
@@ -160,7 +161,7 @@ class _BackupScreenState extends State<BackupScreen> {
       await _load();
       _showSnack('بیک اپ حذف ہو گیا', Colors.green);
     } catch (e) {
-      _showSnack('بیک اپ حذف کرنے میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.storage);
     }
   }
 
@@ -170,7 +171,7 @@ class _BackupScreenState extends State<BackupScreen> {
         ShareParams(text: 'کسان دوست بیک اپ', files: [XFile(info.path)]),
       );
     } catch (e) {
-      _showSnack('شیئر کرنے میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.sharing);
     }
   }
 
@@ -189,7 +190,7 @@ class _BackupScreenState extends State<BackupScreen> {
     } on BackupException catch (e) {
       _showSnack(e.message, Colors.red);
     } catch (e) {
-      _showSnack('فائل درآمد کرنے میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.import);
     }
   }
 
@@ -400,7 +401,7 @@ class _BackupScreenState extends State<BackupScreen> {
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
-      _showSnack('بحالی میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.corruptData);
     } finally {
       if (mounted) setState(() => _isRestoring = false);
     }
@@ -421,7 +422,7 @@ class _BackupScreenState extends State<BackupScreen> {
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
-      _showSnack('بحالی میں خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.corruptData);
     } finally {
       if (mounted) setState(() => _isRestoring = false);
     }

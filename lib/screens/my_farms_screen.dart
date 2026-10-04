@@ -9,6 +9,8 @@ import '../widgets/empty_state_widget.dart';
 import 'theka_details_screen.dart';
 import 'theka_form_screen.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
+import '../utils/error_messages.dart';
 
 class MyFarmsScreen extends StatefulWidget {
   const MyFarmsScreen({super.key});
@@ -292,15 +294,12 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                     labelText: 'کل رقبہ (ایکڑ)',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) {
-                    if (value!.isEmpty) return 'براہ کرم رقبہ درج کریں';
-                    try {
-                      Quantity.parsePositive(value);
-                    } on QuantityParseException catch (e) {
-                      return e.message;
-                    }
-                    return null;
-                  },
+                  validator:
+                      (value) => FieldValidators.quantity(
+                        value,
+                        emptyMessage: 'براہ کرم رقبہ درج کریں',
+                        max: 100000,
+                      ),
                 ),
               ],
             ),
@@ -311,13 +310,22 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
               child: const Text(Strings.cancel),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  Provider.of<FarmProvider>(context, listen: false).addFarm(
-                    nameController.text,
-                    Quantity.parsePositive(areaController.text),
-                  );
-                  Navigator.pop(ctx);
+                  try {
+                    await Provider.of<FarmProvider>(
+                      context,
+                      listen: false,
+                    ).addFarm(
+                      nameController.text,
+                      Quantity.parsePositive(areaController.text),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      showFriendlyError(ctx, e, FailureKind.database);
+                    }
+                  }
                 }
               },
               child: const Text(Strings.save),
@@ -352,8 +360,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                     border: OutlineInputBorder(),
                   ),
                   validator:
-                      (value) =>
-                          value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                      (value) => FieldValidators.text(
+                        value,
+                        emptyMessage: 'براہ کرم نام درج کریں',
+                      ),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -363,15 +373,12 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                     labelText: 'کل رقبہ (ایکڑ)',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) {
-                    if (value!.isEmpty) return 'براہ کرم رقبہ درج کریں';
-                    try {
-                      Quantity.parsePositive(value);
-                    } on QuantityParseException catch (e) {
-                      return e.message;
-                    }
-                    return null;
-                  },
+                  validator:
+                      (value) => FieldValidators.quantity(
+                        value,
+                        emptyMessage: 'براہ کرم رقبہ درج کریں',
+                        max: 100000,
+                      ),
                 ),
               ],
             ),
@@ -382,14 +389,23 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
               child: const Text(Strings.cancel),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (formKey.currentState!.validate()) {
-                  Provider.of<FarmProvider>(context, listen: false).updateFarm(
-                    farm.id!,
-                    nameController.text,
-                    Quantity.parsePositive(areaController.text),
-                  );
-                  Navigator.pop(ctx);
+                  try {
+                    await Provider.of<FarmProvider>(
+                      context,
+                      listen: false,
+                    ).updateFarm(
+                      farm.id!,
+                      nameController.text,
+                      Quantity.parsePositive(areaController.text),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      showFriendlyError(ctx, e, FailureKind.database);
+                    }
+                  }
                 }
               },
               child: const Text(Strings.save),
@@ -427,8 +443,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator:
-                            (value) =>
-                                value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                            (value) => FieldValidators.text(
+                              value,
+                              emptyMessage: 'براہ کرم نام درج کریں',
+                            ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -438,15 +456,12 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                           labelText: 'سائز (ایکڑ)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value!.isEmpty) return 'براہ کرم سائز درج کریں';
-                          try {
-                            Quantity.parsePositive(value);
-                          } on QuantityParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) => FieldValidators.quantity(
+                              value,
+                              emptyMessage: 'براہ کرم سائز درج کریں',
+                              max: 100000,
+                            ),
                       ),
                       const SizedBox(height: 16),
                       CheckboxListTile(
@@ -531,8 +546,10 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator:
-                            (value) =>
-                                value!.isEmpty ? 'براہ کرم نام درج کریں' : null,
+                            (value) => FieldValidators.text(
+                              value,
+                              emptyMessage: 'براہ کرم نام درج کریں',
+                            ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -542,15 +559,12 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
                           labelText: 'سائز (ایکڑ)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value!.isEmpty) return 'براہ کرم سائز درج کریں';
-                          try {
-                            Quantity.parsePositive(value);
-                          } on QuantityParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) => FieldValidators.quantity(
+                              value,
+                              emptyMessage: 'براہ کرم سائز درج کریں',
+                              max: 100000,
+                            ),
                       ),
                       const SizedBox(height: 16),
                       CheckboxListTile(
@@ -631,17 +645,23 @@ class _MyFarmsScreenState extends State<MyFarmsScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () {
+              onPressed: () async {
                 final provider = Provider.of<FarmProvider>(
                   context,
                   listen: false,
                 );
-                if (isFarm) {
-                  provider.deleteFarm(id);
-                } else {
-                  provider.deleteField(id, parentId!);
+                try {
+                  if (isFarm) {
+                    await provider.deleteFarm(id);
+                  } else {
+                    await provider.deleteField(id, parentId!);
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  if (ctx.mounted) {
+                    showFriendlyError(ctx, e, FailureKind.database);
+                  }
                 }
-                Navigator.pop(ctx);
               },
               child: const Text(
                 Strings.delete,

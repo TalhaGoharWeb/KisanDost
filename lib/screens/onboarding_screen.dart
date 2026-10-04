@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/demo_data_service.dart';
 import '../services/onboarding_service.dart';
 import 'dashboard_screen.dart';
+import '../utils/error_messages.dart';
 
 /// First-run onboarding: 3 simple Urdu pages with large targets.
 /// Page 3 offers the choice — start fresh ("شروع کریں") or explore with
@@ -60,9 +61,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('کوشش ناکام ہوئی: $e')));
+        showFriendlyError(context, e, FailureKind.unknown);
       }
     }
   }

@@ -8,6 +8,7 @@ import '../providers/task_provider.dart';
 import '../services/recycle_bin_service.dart';
 import '../widgets/digit_text.dart';
 import '../widgets/empty_state_widget.dart';
+import '../utils/error_messages.dart';
 
 /// The recycle bin: every soft-deleted row in one place, grouped by type.
 ///
@@ -46,8 +47,10 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+      showFriendlyError(context, e, FailureKind.database);
       setState(() {
-        _error = 'ڈیٹا لوڈ کرنے میں مسئلہ ہوا۔ دوبارہ کوشش کریں۔';
+        // Empty-list fallback: the bin just shows as empty on load failure.
+        _items = [];
         _loading = false;
       });
     }

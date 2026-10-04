@@ -10,6 +10,8 @@ import '../services/money.dart';
 import '../services/quantity.dart';
 import '../widgets/empty_state_widget.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
+import '../utils/error_messages.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -387,6 +389,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     String selectedUnit = 'بوری';
     final priceController = TextEditingController();
     final weightController = TextEditingController();
+    // Double-tap guard: recordPurchase is awaited — a second tap would
+    // create a duplicate purchase and double the stock.
+    bool isSaving = false;
 
     showDialog(
       context: context,
@@ -456,17 +461,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 labelText: 'مقدار (تعداد)',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return Strings.quantityRequired;
-                                }
-                                final qty = Quantity.tryParse(value);
-                                if (qty == null) return 'صرف نمبر';
-                                if (qty <= 0) {
-                                  return 'مقدار صفر سے زیادہ ہونی چاہیے';
-                                }
-                                return null;
-                              },
+                              validator:
+                                  (value) => FieldValidators.quantity(value),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -524,17 +520,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           labelText: 'فی اکائی قیمت (روپے)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'قیمت درج کریں';
-                          }
-                          try {
-                            Money.parse(value);
-                          } on MoneyParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) => FieldValidators.money(
+                              value,
+                              emptyMessage: 'قیمت درج کریں',
+                            ),
                       ),
                     ],
                   ),
@@ -547,52 +537,61 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final navigator = Navigator.of(ctx);
-                      final double? weight =
-                          weightController.text.isEmpty
-                              ? null
-                              : Quantity.parsePositive(weightController.text);
-                      final int costPerUnitPaisa;
-                      try {
-                        costPerUnitPaisa =
-                            Money.parse(priceController.text).paisa;
-                      } on MoneyParseException catch (e) {
+                    if (isSaving) return;
+                    setState(() => isSaving = true);
+                    try {
+                      if (formKey.currentState!.validate()) {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final navigator = Navigator.of(ctx);
+                        final double? weight =
+                            weightController.text.isEmpty
+                                ? null
+                                : Quantity.parsePositive(weightController.text);
+                        final int costPerUnitPaisa;
+                        try {
+                          costPerUnitPaisa =
+                              Money.parse(priceController.text).paisa;
+                        } on MoneyParseException catch (e) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(e.message),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+                        try {
+                          await inventoryProvider.recordPurchase(
+                            category: selectedCategory,
+                            name: nameController.text,
+                            unit: selectedUnit,
+                            quantity: Quantity.parsePositive(
+                              qtyController.text,
+                            ),
+                            costPerUnitPaisa: costPerUnitPaisa,
+                            weightPerUnitKg: weight,
+                          );
+                        } on InventoryException catch (e) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(e.message),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+                        navigator.pop();
                         messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(e.message),
-                            backgroundColor: Colors.red,
+                          const SnackBar(
+                            content: Text(
+                              'اسٹاک گودام میں کامیابی سے شامل ہو گیا!',
+                            ),
                           ),
                         );
-                        return;
                       }
-                      try {
-                        await inventoryProvider.recordPurchase(
-                          category: selectedCategory,
-                          name: nameController.text,
-                          unit: selectedUnit,
-                          quantity: Quantity.parsePositive(qtyController.text),
-                          costPerUnitPaisa: costPerUnitPaisa,
-                          weightPerUnitKg: weight,
-                        );
-                      } on InventoryException catch (e) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(e.message),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-                      navigator.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'اسٹاک گودام میں کامیابی سے شامل ہو گیا!',
-                          ),
-                        ),
-                      );
+                    } finally {
+                      // Dialog is popped on success — only reset while mounted.
+                      if (ctx.mounted) setState(() => isSaving = false);
                     }
                   },
                   child: const Text(Strings.save),
@@ -622,23 +621,29 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 onPressed: () async {
-                  Navigator.pop(ctx);
                   try {
                     await Provider.of<InventoryProvider>(
                       context,
                       listen: false,
                     ).deleteInventoryItem(item.id!);
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('اسٹاک کامیابی سے حذف ہو گیا!'),
-                      ),
-                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('اسٹاک کامیابی سے حذف ہو گیا!'),
+                        ),
+                      );
+                    }
                   } on InventoryException catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(e.message)));
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(
+                        ctx,
+                      ).showSnackBar(SnackBar(content: Text(e.message)));
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      showFriendlyError(ctx, e, FailureKind.database);
+                    }
                   }
                 },
                 child: const Text(
@@ -669,6 +674,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ) => FutureBuilder<List<InventoryTransaction>>(
                   future: inventoryProvider.getTransactions(item.id!),
                   builder: (ctx, snapshot) {
+                    if (snapshot.hasError) {
+                      // Don't silently swallow load errors as an empty list.
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: Text(
+                            'ریکارڈ کھولنے میں مشکل پیش آئی۔ ایپ بند کر کے دوبارہ کھولیں۔',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    }
                     final txs = snapshot.data ?? const <InventoryTransaction>[];
                     return Padding(
                       padding: const EdgeInsets.all(16),
@@ -763,6 +780,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final weightController = TextEditingController(
       text: item.weightPerUnitKg?.toString() ?? '',
     );
+    // Double-tap guard: updateItemDetails is awaited — a second tap would
+    // run the adjustment twice.
+    bool isSaving = false;
 
     showDialog(
       context: context,
@@ -819,17 +839,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 labelText: 'مقدار (تعداد)',
                                 border: OutlineInputBorder(),
                               ),
-                              validator: (value) {
-                                if (value!.isEmpty) {
-                                  return Strings.quantityRequired;
-                                }
-                                try {
-                                  Quantity.parse(value);
-                                } on QuantityParseException catch (e) {
-                                  return e.message;
-                                }
-                                return null;
-                              },
+                              validator:
+                                  (value) => FieldValidators.quantity(
+                                    value,
+                                    positive: false,
+                                  ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -885,17 +899,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           labelText: 'فی اکائی قیمت (روپے)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'قیمت درج کریں';
-                          }
-                          try {
-                            Money.parse(value);
-                          } on MoneyParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) => FieldValidators.money(
+                              value,
+                              emptyMessage: 'قیمت درج کریں',
+                            ),
                       ),
                     ],
                   ),
@@ -908,66 +916,73 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final navigator = Navigator.of(ctx);
-                      final double newQty = Quantity.parsePositive(
-                        qtyController.text,
-                      );
-                      final double delta = newQty - item.quantity;
-                      final double? weight =
-                          weightController.text.isEmpty
-                              ? null
-                              : Quantity.parsePositive(weightController.text);
-                      final int costPerUnitPaisa;
-                      try {
-                        costPerUnitPaisa =
-                            Money.parse(priceController.text).paisa;
-                      } on MoneyParseException catch (e) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(e.message),
-                            backgroundColor: Colors.red,
-                          ),
+                    if (isSaving) return;
+                    setState(() => isSaving = true);
+                    try {
+                      if (formKey.currentState!.validate()) {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final navigator = Navigator.of(ctx);
+                        final double newQty = Quantity.parsePositive(
+                          qtyController.text,
                         );
-                        return;
-                      }
-                      try {
-                        await inventoryProvider.updateItemDetails(
-                          id: item.id!,
-                          category: selectedCategory,
-                          name: nameController.text,
-                          unit: selectedUnit,
-                          costPerUnitPaisa: costPerUnitPaisa,
-                          weightPerUnitKg: weight,
-                        );
-                        // Quantity never overwrites silently: the difference
-                        // is a ledger adjustment with a reason.
-                        if (delta != 0) {
-                          await inventoryProvider.recordAdjustment(
-                            itemId: item.id!,
-                            quantityDelta: delta,
-                            reason:
-                                'اسٹاک کی دستی تصحیح (${item.quantity.toStringAsFixed(1)} سے ${newQty.toStringAsFixed(1)} $selectedUnit)',
+                        final double delta = newQty - item.quantity;
+                        final double? weight =
+                            weightController.text.isEmpty
+                                ? null
+                                : Quantity.parsePositive(weightController.text);
+                        final int costPerUnitPaisa;
+                        try {
+                          costPerUnitPaisa =
+                              Money.parse(priceController.text).paisa;
+                        } on MoneyParseException catch (e) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(e.message),
+                              backgroundColor: Colors.red,
+                            ),
                           );
+                          return;
                         }
-                      } on InventoryException catch (e) {
+                        try {
+                          await inventoryProvider.updateItemDetails(
+                            id: item.id!,
+                            category: selectedCategory,
+                            name: nameController.text,
+                            unit: selectedUnit,
+                            costPerUnitPaisa: costPerUnitPaisa,
+                            weightPerUnitKg: weight,
+                          );
+                          // Quantity never overwrites silently: the difference
+                          // is a ledger adjustment with a reason.
+                          if (delta != 0) {
+                            await inventoryProvider.recordAdjustment(
+                              itemId: item.id!,
+                              quantityDelta: delta,
+                              reason:
+                                  'اسٹاک کی دستی تصحیح (${item.quantity.toStringAsFixed(1)} سے ${newQty.toStringAsFixed(1)} $selectedUnit)',
+                            );
+                          }
+                        } on InventoryException catch (e) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(e.message),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+                        navigator.pop();
                         messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(e.message),
-                            backgroundColor: Colors.red,
+                          const SnackBar(
+                            content: Text(
+                              'اسٹاک میں تبدیلی کامیابی سے محفوظ ہو گئی!',
+                            ),
                           ),
                         );
-                        return;
                       }
-                      navigator.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'اسٹاک میں تبدیلی کامیابی سے محفوظ ہو گئی!',
-                          ),
-                        ),
-                      );
+                    } finally {
+                      // Dialog is popped on success — only reset while mounted.
+                      if (ctx.mounted) setState(() => isSaving = false);
                     }
                   },
                   child: const Text(Strings.save),

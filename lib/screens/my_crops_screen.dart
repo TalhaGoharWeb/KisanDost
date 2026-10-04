@@ -8,6 +8,8 @@ import '../providers/harvest_provider.dart';
 import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
+import '../utils/error_messages.dart';
 
 class MyCropsScreen extends StatefulWidget {
   const MyCropsScreen({super.key});
@@ -808,10 +810,10 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                             ),
                           ),
                           validator:
-                              (value) =>
-                                  value!.isEmpty
-                                      ? 'براہ کرم قسم کا نام درج کریں'
-                                      : null,
+                              (value) => FieldValidators.text(
+                                value,
+                                emptyMessage: 'براہ کرم قسم کا نام درج کریں',
+                              ),
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -858,20 +860,26 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       String variety =
                           selectedVariety == 'Custom' || varieties.isEmpty
                               ? varietyTextController.text
                               : selectedVariety!;
 
-                      cropProvider.addCropSeason(
-                        fieldIds: selectedFieldIds.toList(),
-                        cropName: selectedCropKey,
-                        variety: variety,
-                        startDate: selectedDate.toIso8601String(),
-                      );
-                      Navigator.pop(ctx);
+                      try {
+                        await cropProvider.addCropSeason(
+                          fieldIds: selectedFieldIds.toList(),
+                          cropName: selectedCropKey,
+                          variety: variety,
+                          startDate: selectedDate.toIso8601String(),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          showFriendlyError(ctx, e, FailureKind.database);
+                        }
+                      }
                     }
                   },
                   child: const Text(
@@ -1158,10 +1166,10 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                             ),
                           ),
                           validator:
-                              (value) =>
-                                  value!.isEmpty
-                                      ? 'براہ کرم قسم کا نام درج کریں'
-                                      : null,
+                              (value) => FieldValidators.text(
+                                value,
+                                emptyMessage: 'براہ کرم قسم کا نام درج کریں',
+                              ),
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -1208,7 +1216,7 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       String variety =
                           selectedVariety == 'Custom' ||
@@ -1216,22 +1224,30 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                               ? varietyTextController.text
                               : selectedVariety!;
 
-                      cropProvider.updateCropSeason(
-                        id: season.id!,
-                        fieldIds: selectedFieldIds.toList(),
-                        cropName: selectedCropKey,
-                        variety: variety,
-                        status: season.status,
-                        startDate: selectedDate.toIso8601String(),
-                      );
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'فصل کی تفصیلات کامیابی سے تبدیل ہو گئیں!',
-                          ),
-                        ),
-                      );
+                      try {
+                        await cropProvider.updateCropSeason(
+                          id: season.id!,
+                          fieldIds: selectedFieldIds.toList(),
+                          cropName: selectedCropKey,
+                          variety: variety,
+                          status: season.status,
+                          startDate: selectedDate.toIso8601String(),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'فصل کی تفصیلات کامیابی سے تبدیل ہو گئیں!',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          showFriendlyError(ctx, e, FailureKind.database);
+                        }
+                      }
                     }
                   },
                   child: const Text(

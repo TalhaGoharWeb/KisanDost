@@ -7,6 +7,7 @@ import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 import 'party_detail_screen.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
 
 class PartiesScreen extends StatefulWidget {
   const PartiesScreen({super.key});
@@ -231,104 +232,152 @@ class _PartiesScreenState extends State<PartiesScreen> {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final phoneCtrl = TextEditingController(text: existing?.phone ?? '');
     final notesCtrl = TextEditingController(text: existing?.notes ?? '');
+    String? nameError;
+    String? phoneError;
     showDialog(
       context: context,
       builder:
-          (ctx) => AlertDialog(
-            title: Text(existing == null ? 'نئی پارٹی' : 'پارٹی میں ترمیم'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'نام *',
-                      hintText: 'مثلاً علی دکان دار',
-                      border: OutlineInputBorder(),
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, setDialogState) => AlertDialog(
+                  title: Text(
+                    existing == null ? 'نئی پارٹی' : 'پارٹی میں ترمیم',
+                  ),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: nameCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'نام *',
+                            hintText: 'مثلاً علی دکان دار',
+                            border: const OutlineInputBorder(),
+                            errorText: nameError,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: phoneCtrl,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: 'فون نمبر (اختیاری)',
+                            hintText: 'مثلاً 03001234567',
+                            border: const OutlineInputBorder(),
+                            errorText: phoneError,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: notesCtrl,
+                          maxLines: 2,
+                          decoration: const InputDecoration(
+                            labelText: Strings.noteOptional,
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'فون نمبر (اختیاری)',
-                      hintText: 'مثلاً 03001234567',
-                      border: OutlineInputBorder(),
+                  actions: [
+                    if (existing != null)
+                      TextButton(
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: ctx,
+                            builder:
+                                (dctx) => AlertDialog(
+                                  title: const Text('پارٹی حذف کریں؟'),
+                                  content: const Text(
+                                    'کیا آپ واقعی اس پارٹی کا کھاتہ حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں لیا جا سکتا۔',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed:
+                                          () => Navigator.pop(dctx, false),
+                                      child: const Text('منسوخ کریں'),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed:
+                                          () => Navigator.pop(dctx, true),
+                                      child: const Text('جی ہاں، حذف کریں'),
+                                    ),
+                                  ],
+                                ),
+                          );
+                          if (confirmed != true || !ctx.mounted) return;
+                          try {
+                            await provider.deleteParty(existing.id!);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          } on PartyException catch (e) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(e.message)),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text(
+                          Strings.delete,
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('منسوخ کریں'),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: notesCtrl,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: Strings.noteOptional,
-                      border: OutlineInputBorder(),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final nameMsg = FieldValidators.text(
+                          nameCtrl.text,
+                          emptyMessage: 'پارٹی کا نام درج کریں',
+                        );
+                        final phoneMsg = FieldValidators.phoneOptional(
+                          phoneCtrl.text,
+                        );
+                        setDialogState(() {
+                          nameError = nameMsg;
+                          phoneError = phoneMsg;
+                        });
+                        if (nameMsg != null || phoneMsg != null) return;
+                        try {
+                          if (existing == null) {
+                            await provider.addParty(
+                              Party(
+                                name: nameCtrl.text,
+                                phone: phoneCtrl.text,
+                                notes: notesCtrl.text,
+                                createdAt: DateTime.now().toIso8601String(),
+                              ),
+                            );
+                          } else {
+                            await provider.updateParty(
+                              Party(
+                                id: existing.id,
+                                name: nameCtrl.text,
+                                phone: phoneCtrl.text,
+                                notes: notesCtrl.text,
+                                createdAt: existing.createdAt,
+                              ),
+                            );
+                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        } on PartyException catch (e) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(
+                              ctx,
+                            ).showSnackBar(SnackBar(content: Text(e.message)));
+                          }
+                        }
+                      },
+                      child: const Text(Strings.save),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              if (existing != null)
-                TextButton(
-                  onPressed: () async {
-                    try {
-                      await provider.deleteParty(existing.id!);
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    } on PartyException catch (e) {
-                      if (ctx.mounted) {
-                        ScaffoldMessenger.of(
-                          ctx,
-                        ).showSnackBar(SnackBar(content: Text(e.message)));
-                      }
-                    }
-                  },
-                  child: const Text(
-                    Strings.delete,
-                    style: TextStyle(color: Colors.red),
-                  ),
+                  ],
                 ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('منسوخ کریں'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  try {
-                    if (existing == null) {
-                      await provider.addParty(
-                        Party(
-                          name: nameCtrl.text,
-                          phone: phoneCtrl.text,
-                          notes: notesCtrl.text,
-                          createdAt: DateTime.now().toIso8601String(),
-                        ),
-                      );
-                    } else {
-                      await provider.updateParty(
-                        Party(
-                          id: existing.id,
-                          name: nameCtrl.text,
-                          phone: phoneCtrl.text,
-                          notes: notesCtrl.text,
-                          createdAt: existing.createdAt,
-                        ),
-                      );
-                    }
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  } on PartyException catch (e) {
-                    if (ctx.mounted) {
-                      ScaffoldMessenger.of(
-                        ctx,
-                      ).showSnackBar(SnackBar(content: Text(e.message)));
-                    }
-                  }
-                },
-                child: const Text(Strings.save),
-              ),
-            ],
           ),
     );
   }

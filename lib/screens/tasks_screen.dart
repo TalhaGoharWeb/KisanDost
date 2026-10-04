@@ -6,6 +6,7 @@ import '../providers/task_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import 'task_form_screen.dart';
 import '../l10n/strings.dart';
+import '../utils/error_messages.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -420,7 +421,7 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           leading: InkWell(
             onTap: () {
-              taskProvider.toggleTaskCompletion(task.id, task.isCompleted);
+              taskProvider.toggleTaskCompletion(task.id);
             },
             child: Container(
               decoration: BoxDecoration(
@@ -667,9 +668,15 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {
-                  provider.deleteTask(id);
-                  Navigator.pop(ctx);
+                onPressed: () async {
+                  try {
+                    await provider.deleteTask(id);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      showFriendlyError(ctx, e, FailureKind.database);
+                    }
+                  }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 child: const Text(

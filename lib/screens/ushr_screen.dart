@@ -10,6 +10,8 @@ import '../models/models.dart';
 import '../services/money.dart';
 import '../services/quantity.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
+import '../utils/error_messages.dart';
 
 class UshrScreen extends StatefulWidget {
   const UshrScreen({super.key});
@@ -23,7 +25,13 @@ class _UshrScreenState extends State<UshrScreen> {
   /// [MoneyParseException] (Urdu message, safe for a SnackBar).
   int _parsePaisaOrThrow(String text) {
     if (text.trim().isEmpty) return 0;
-    return Money.parse(text).paisa;
+    try {
+      return Money.parse(text).paisa;
+    } on FormatException {
+      // ~20+ digit input overflows int.parse inside Money.parse: report it
+      // as a friendly MoneyParseException instead of a raw crash.
+      throw MoneyParseException('رقم بہت بڑی ہے — درست رقم درج کریں');
+    }
   }
 
   /// Lenient parse for live previews: blank or garbage shows as 0 paisa.
@@ -32,19 +40,17 @@ class _UshrScreenState extends State<UshrScreen> {
       return _parsePaisaOrThrow(text);
     } on MoneyParseException {
       return 0;
+    } on FormatException {
+      // Absurdly large input overflows int.parse inside Money.parse.
+      return 0;
     }
   }
 
   /// Money-aware validator: accepts Urdu digits, commas and روپے suffix.
-  String? _moneyValidator(String? value, String emptyMessage) {
-    if (value == null || value.isEmpty) return emptyMessage;
-    try {
-      Money.parse(value);
-    } on MoneyParseException {
-      return 'صرف نمبر درج کریں';
-    }
-    return null;
-  }
+  /// Also guards the 64-bit overflow hole in Money.parse (raw
+  /// FormatException on ~20+ digit input) with a farmer-friendly message.
+  String? _moneyValidator(String? value, String emptyMessage) =>
+      FieldValidators.money(value, emptyMessage: emptyMessage);
 
   @override
   Widget build(BuildContext context) {
@@ -533,6 +539,9 @@ class _UshrScreenState extends State<UshrScreen> {
     }
 
     final formKey = GlobalKey<FormState>();
+    // Double-tap guard: the save writes an ushr record (+ an 'Ushr Expense'
+    // mirror when paid) — a second tap would create a full duplicate set.
+    bool isSaving = false;
 
     // Input Controllers
     final qtyController = TextEditingController(
@@ -737,17 +746,8 @@ class _UshrScreenState extends State<UshrScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (v) => setState(() {}),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return Strings.quantityRequired;
-                                }
-                                try {
-                                  Quantity.parsePositive(value);
-                                } on QuantityParseException catch (e) {
-                                  return e.message;
-                                }
-                                return null;
-                              },
+                              validator:
+                                  (value) => FieldValidators.quantity(value),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1048,8 +1048,11 @@ class _UshrScreenState extends State<UshrScreen> {
                     backgroundColor: Colors.green.shade800,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
+                  onPressed: () async {
+                    if (isSaving) return;
+                    setState(() => isSaving = true);
+                    try {
+                      if (formKey.currentState!.validate()) {
                       final int cashPaidSubmitPaisa;
                       final int rateSubmitPaisa;
                       try {
@@ -1069,7 +1072,7 @@ class _UshrScreenState extends State<UshrScreen> {
                         return;
                       }
                       if (existingRecord == null) {
-                        ushrProvider.addUshrRecord(
+                        await ushrProvider.addUshrRecord(
                           cropSeasonId: selectedCropSeasonId!,
                           harvestId: selectedHarvestId,
                           harvestQty: Quantity.parsePositive(
@@ -1091,7 +1094,7 @@ class _UshrScreenState extends State<UshrScreen> {
                           ratePerUnitPaisa: rateSubmitPaisa,
                         );
                       } else {
-                        ushrProvider.updateUshrRecord(
+                        await ushrProvider.updateUshrRecord(
                           id: existingRecord.id!,
                           cropSeasonId: selectedCropSeasonId!,
                           harvestId:
@@ -1115,16 +1118,21 @@ class _UshrScreenState extends State<UshrScreen> {
                           ratePerUnitPaisa: rateSubmitPaisa,
                         );
                       }
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            existingRecord == null
-                                ? 'عشر کامیابی سے شامل ہو گیا!'
-                                : 'عشر کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              existingRecord == null
+                                  ? 'عشر کامیابی سے شامل ہو گیا!'
+                                  : 'عشر کا ریکارڈ کامیابی سے تبدیل ہو گیا!',
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+                      }
+                    } finally {
+                      if (ctx.mounted) setState(() => isSaving = false);
                     }
                   },
                   child: const Text(Strings.save),
@@ -1153,17 +1161,27 @@ class _UshrScreenState extends State<UshrScreen> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () {
-                  Provider.of<UshrProvider>(
-                    context,
-                    listen: false,
-                  ).deleteUshrRecord(id);
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('عشر کا ریکارڈ کامیابی سے حذف ہو گیا!'),
-                    ),
-                  );
+                onPressed: () async {
+                  try {
+                    await Provider.of<UshrProvider>(
+                      context,
+                      listen: false,
+                    ).deleteUshrRecord(id);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'عشر کا ریکارڈ کامیابی سے حذف ہو گیا!',
+                          ),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      showFriendlyError(ctx, e, FailureKind.database);
+                    }
+                  }
                 },
                 child: const Text(
                   Strings.delete,

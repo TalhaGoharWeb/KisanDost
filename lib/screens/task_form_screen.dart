@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/task_provider.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
 
 class TaskFormScreen extends StatefulWidget {
   final TaskItem? task;
@@ -21,6 +22,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   TimeOfDay? _selectedTime;
   String _recurrence = 'none'; // 'none', 'daily', 'weekly'
   late List<int> _selectedReminders;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -111,6 +113,16 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   }
 
   void _saveTask() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    try {
+      await _saveTaskBody();
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _saveTaskBody() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedDate == null || _selectedTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,10 +212,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                 ),
                 style: const TextStyle(fontSize: 18),
                 validator:
-                    (val) =>
-                        val == null || val.isEmpty
-                            ? 'براہ کرم نام درج کریں'
-                            : null,
+                    (val) => FieldValidators.text(
+                      val,
+                      emptyMessage: 'براہ کرم نام درج کریں',
+                    ),
                 onSaved: (val) => _title = val!,
               ),
               const SizedBox(height: 16),
@@ -284,7 +296,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
               const SizedBox(height: 40),
               ElevatedButton(
-                onPressed: _saveTask,
+                onPressed: _isSaving ? null : _saveTask,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

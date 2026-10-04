@@ -11,6 +11,7 @@ import '../models/models.dart';
 import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
@@ -211,6 +212,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final amountController = TextEditingController();
     final descController = TextEditingController();
     DateTime selectedDate = DateTime.now();
+    // Double-tap guard: the save writes an expense (+ an activity when
+    // crop-linked) — a second tap would create a full duplicate set.
+    bool isSaving = false;
 
     showDialog(
       context: context,
@@ -361,15 +365,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           labelText: 'خرچے کی رقم (روپے)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value!.isEmpty) return 'رقم درج کریں';
-                          try {
-                            Money.parse(value);
-                          } on MoneyParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) =>
+                                FieldValidators.money(value),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -410,7 +408,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (formKey.currentState!.validate()) {
+                    if (isSaving) return;
+                    setState(() => isSaving = true);
+                    try {
+                      if (formKey.currentState!.validate()) {
                       int amountPaisa;
                       try {
                         amountPaisa = Money.parse(amountController.text).paisa;
@@ -463,6 +464,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           ),
                         );
                       }
+                    }
+                    } finally {
+                      // The dialog is popped on success — only reset the
+                      // guard while it is still in the tree.
+                      if (ctx.mounted) setState(() => isSaving = false);
                     }
                   },
                   child: const Text(Strings.save),

@@ -13,6 +13,7 @@ import '../services/quantity.dart';
 import '../services/unit_converter.dart';
 import '../services/unit_display.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
 
 class ActivityFormScreen extends StatefulWidget {
   final String activityTitle;
@@ -57,6 +58,19 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
 
   // Other activity specific
   final _genericCostController = TextEditingController();
+
+  /// Guards the save button against double-taps: the save flow writes
+  /// expense + activity + inventory rows, and a second tap would create
+  /// a full duplicate set.
+  bool _isSaving = false;
+
+  /// True when editing an existing activity (not when duplicating it into
+  /// a new one). In edit mode the "buy new and apply directly" shortcut is
+  /// hidden: an edit must reverse the old deduction and re-apply against
+  /// warehouse stock — running a fresh purchase inside an edit would leave
+  /// the original purchase un-reversed (phantom stock).
+  bool get _isEditMode =>
+      widget.existingActivity != null && !widget.duplicateMode;
 
   @override
   void initState() {
@@ -273,10 +287,11 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             border: OutlineInputBorder(),
                           ),
                           validator:
-                              (value) =>
-                                  value!.isEmpty
-                                      ? 'براہ کرم گھنٹے درج کریں'
-                                      : null,
+                              (value) => FieldValidators.quantity(
+                                value,
+                                emptyMessage: 'براہ کرم گھنٹے درج کریں',
+                                max: 100000,
+                              ),
                         ),
                         const SizedBox(height: 16),
                         if (_waterSource != 'نہر') ...[
@@ -288,8 +303,10 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                               border: OutlineInputBorder(),
                             ),
                             validator:
-                                (value) =>
-                                    value!.isEmpty ? 'خرچہ درج کریں' : null,
+                                (value) => FieldValidators.money(
+                                  value,
+                                  emptyMessage: 'خرچہ درج کریں',
+                                ),
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -387,7 +404,10 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                       ]
                       // 2. Inventory Items (Fertilizer, Spray, Medicine, Diesel)
                       else if (_inventoryCategory != null) ...[
-                        if (matchingInventoryItems.isNotEmpty) ...[
+                        // The direct-purchase shortcut is for NEW activities
+                        // only — never for edits (see _isEditMode).
+                        if (!_isEditMode &&
+                            matchingInventoryItems.isNotEmpty) ...[
                           CheckboxListTile(
                             title: const Text('نیا خرید کر ڈائریکٹ ڈالیں؟'),
                             value: _directPurchase,
@@ -451,15 +471,11 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                               labelText: 'قیمت خرید (روپے)',
                               border: OutlineInputBorder(),
                             ),
-                            validator: (value) {
-                              if (value!.isEmpty) return 'قیمت درج کریں';
-                              try {
-                                Money.parse(value);
-                              } on MoneyParseException catch (e) {
-                                return e.message;
-                              }
-                              return null;
-                            },
+                            validator:
+                                (value) => FieldValidators.money(
+                                  value,
+                                  emptyMessage: 'قیمت درج کریں',
+                                ),
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -483,6 +499,9 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                     qty = Quantity.parsePositive(value);
                                   } on QuantityParseException catch (e) {
                                     return e.message;
+                                  }
+                                  if (qty > FieldValidators.maxQuantity) {
+                                    return 'مقدار بہت بڑی ہے — درست مقدار درج کریں';
                                   }
                                   if (!_directPurchase &&
                                       _selectedInventoryItem != null) {
@@ -545,10 +564,11 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             border: OutlineInputBorder(),
                           ),
                           validator:
-                              (value) =>
-                                  value!.isEmpty
-                                      ? 'مزدوروں کی تعداد درج کریں'
-                                      : null,
+                              (value) => FieldValidators.wholeCount(
+                                value,
+                                emptyMessage: 'مزدوروں کی تعداد درج کریں',
+                                max: 100000,
+                              ),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -559,8 +579,10 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             border: OutlineInputBorder(),
                           ),
                           validator:
-                              (value) =>
-                                  value!.isEmpty ? 'اجرت درج کریں' : null,
+                              (value) => FieldValidators.money(
+                                value,
+                                emptyMessage: 'اجرت درج کریں',
+                              ),
                         ),
                         const SizedBox(height: 16),
                       ]
@@ -573,10 +595,10 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             border: OutlineInputBorder(),
                           ),
                           validator:
-                              (value) =>
-                                  value!.isEmpty
-                                      ? 'مشینری کا نام درج کریں'
-                                      : null,
+                              (value) => FieldValidators.text(
+                                value,
+                                emptyMessage: 'مشینری کا نام درج کریں',
+                              ),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -587,8 +609,10 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             border: OutlineInputBorder(),
                           ),
                           validator:
-                              (value) =>
-                                  value!.isEmpty ? 'خرچہ درج کریں' : null,
+                              (value) => FieldValidators.money(
+                                value,
+                                emptyMessage: 'خرچہ درج کریں',
+                              ),
                         ),
                         const SizedBox(height: 16),
                       ]
@@ -601,6 +625,11 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                             labelText: 'اگر کوئی خرچہ ہوا تو لکھیں (روپے)',
                             border: OutlineInputBorder(),
                           ),
+                          validator:
+                              (value) => FieldValidators.money(
+                                value,
+                                emptyMessage: 'خرچہ درج کریں',
+                              ),
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -616,7 +645,13 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                       const SizedBox(height: 32),
                       ElevatedButton(
                         onPressed: () async {
-                          if (_formKey.currentState!.validate()) {
+                          // Double-tap guard: the save below writes expense +
+                          // activity + inventory rows — a second tap must not
+                          // create a duplicate set.
+                          if (_isSaving) return;
+                          setState(() => _isSaving = true);
+                          try {
+                            if (_formKey.currentState!.validate()) {
                             final navigator = Navigator.of(context);
                             final messenger = ScaffoldMessenger.of(context);
                             final expenseProvider =
@@ -689,8 +724,9 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                               final double enteredQty =
                                   Quantity.tryParse(_qtyController.text) ?? 0.0;
 
-                              if (_directPurchase ||
-                                  matchingInventoryItems.isEmpty) {
+                              if (!_isEditMode &&
+                                  (_directPurchase ||
+                                      matchingInventoryItems.isEmpty)) {
                                 inventoryName = _itemNameController.text;
                                 inventoryQty = enteredQty;
                                 inventoryUnit = _selectedUnit;
@@ -808,6 +844,16 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                   ),
                                 );
                                 return;
+                              } on FormatException {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'رقم بہت بڑی ہے — درست رقم درج کریں',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
                               }
                               _detailsController.text =
                                   'مزدور تعداد: ${_qtyController.text}. ${_detailsController.text}';
@@ -827,6 +873,16 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                   ),
                                 );
                                 return;
+                              } on FormatException {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'رقم بہت بڑی ہے — درست رقم درج کریں',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
                               }
                               _detailsController.text =
                                   'مشینری: ${_itemNameController.text}. ${_detailsController.text}';
@@ -840,6 +896,16 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                                 messenger.showSnackBar(
                                   SnackBar(
                                     content: Text(e.message),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              } on FormatException {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'رقم بہت بڑی ہے — درست رقم درج کریں',
+                                    ),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -924,6 +990,9 @@ class _ActivityFormScreenState extends State<ActivityFormScreen> {
                               ),
                             );
                             navigator.pop();
+                            }
+                          } finally {
+                            if (mounted) setState(() => _isSaving = false);
                           }
                         },
                         style: ElevatedButton.styleFrom(

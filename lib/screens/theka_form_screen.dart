@@ -5,6 +5,8 @@ import '../providers/farm_provider.dart';
 import '../providers/theka_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
+import '../widgets/field_validators.dart';
+import '../utils/error_messages.dart';
 
 class ThekaFormScreen extends StatefulWidget {
   final Theka? theka; // For editing if applicable
@@ -24,6 +26,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
   final _durationDetailsController = TextEditingController();
   final _totalAmountController = TextEditingController();
   String _selectedPaymentMethod = 'Full'; // 'Full', 'Installment'
+  bool _isSaving = false;
 
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 365));
@@ -83,13 +86,21 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
         SnackBar(content: Text(e.message), backgroundColor: Colors.red),
       );
       return;
+    } on FormatException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('رقم بہت بڑی ہے — درست رقم درج کریں'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
     }
     final int? numInst = int.tryParse(_numInstallmentsController.text);
 
-    if (numInst == null || numInst <= 0) {
+    if (numInst == null || numInst <= 0 || numInst > 120) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('براہ کرم اقساط کی تعداد درست درج کریں۔'),
+          content: Text('براہ کرم اقساط کی تعداد 1 سے 120 تک درج کریں۔'),
           backgroundColor: Colors.red,
         ),
       );
@@ -138,6 +149,16 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
   }
 
   void _saveForm() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    try {
+      await _saveFormBody();
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _saveFormBody() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedFarmId == null) {
@@ -156,6 +177,14 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
     } on MoneyParseException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
+      return;
+    } on FormatException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('رقم بہت بڑی ہے — درست رقم درج کریں'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -227,29 +256,24 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       if (widget.theka == null) {
         await thekaProv.addTheka(newTheka, instModels);
       } else {
-        // If editing, we update the theka row first, then if all are pending, we update installments
-        // In theka_provider we have updateInstallmentSchedule, but here we can keep it simple or do it
-        // Wait, for simplicity let's delete the old one and add new, or do update
-        // Since sqlite cascades delete, we can delete the old one first, then insert new.
-        // Wait! Let's do that in a single database helper call or transact.
-        if (widget.theka != null) {
-          // Verify if any old installments are paid.
-          final oldInsts = thekaProv.getInstallmentsForTheka(widget.theka!.id!);
-          final hasPayments = oldInsts.any((inst) => inst.status != 'Pending');
-          if (hasPayments) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'معاہدے کی کسی قسط کی ادائیگی ہو چکی ہے، لہذا ترمیم نہیں کی جا سکتی۔ پہلے ادائیگی کو کینسل کریں۔',
-                ),
-                backgroundColor: Colors.red,
+        // Verify if any old installments are paid.
+        final oldInsts = thekaProv.getInstallmentsForTheka(widget.theka!.id!);
+        final hasPayments = oldInsts.any((inst) => inst.status != 'Pending');
+        if (hasPayments) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'معاہدے کی کسی قسط کی ادائیگی ہو چکی ہے، لہذا ترمیم نہیں کی جا سکتی۔ پہلے ادائیگی کو کینسل کریں۔',
               ),
-            );
-            return;
-          }
-          await thekaProv.deleteTheka(widget.theka!.id!);
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
         }
-        await thekaProv.addTheka(newTheka, instModels);
+        // Atomic replace: the old theka (+ installments) is deleted and the
+        // new one inserted inside a single transaction, so a failed insert
+        // can never lose the contract.
+        await thekaProv.replaceTheka(widget.theka!.id!, newTheka, instModels);
       }
 
       if (mounted) {
@@ -263,12 +287,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('معاہدہ محفوظ کرنے میں خرابی پیش آئی: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showFriendlyError(context, e, FailureKind.database);
       }
     }
   }
@@ -549,17 +568,11 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.attach_money),
                         ),
-                        validator: (value) {
-                          if (value!.isEmpty) {
-                            return 'براہ کرم ٹھیکہ رقم درج کریں';
-                          }
-                          try {
-                            Money.parse(value);
-                          } on MoneyParseException catch (e) {
-                            return e.message;
-                          }
-                          return null;
-                        },
+                        validator:
+                            (value) => FieldValidators.money(
+                              value,
+                              emptyMessage: 'براہ کرم ٹھیکہ رقم درج کریں',
+                            ),
                         onChanged: (val) {
                           // Trigger UI update to re-evaluate installment sum warning
                           setState(() {});
@@ -698,6 +711,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
                                           setState(() {}); // refresh sum check
                                         } on MoneyParseException {
                                           // Keep the previous valid amount.
+                                        } on FormatException {
+                                          // Absurdly large input: keep the
+                                          // previous valid amount.
                                         }
                                       },
                                     ),
@@ -781,7 +797,7 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
               ],
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _saveForm,
+                onPressed: _isSaving ? null : _saveForm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.brown.shade800,
                   foregroundColor: Colors.white,
@@ -807,6 +823,9 @@ class _ThekaFormScreenState extends State<ThekaFormScreen> {
     try {
       totalAmtPaisa = Money.parse(_totalAmountController.text).paisa;
     } on MoneyParseException {
+      totalAmtPaisa = 0;
+    } on FormatException {
+      // Absurdly large input: treat as unparseable in the summary.
       totalAmtPaisa = 0;
     }
     final int instSum = _getInstallmentsSum();

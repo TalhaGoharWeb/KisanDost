@@ -30,6 +30,7 @@ import '../services/money.dart';
 import '../services/pdf_report_service.dart';
 import '../services/pnl_summary.dart';
 import '../widgets/report_widgets.dart';
+import '../utils/error_messages.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -106,14 +107,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _stamp() => DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
 
   Future<void> _saveAndShare(String filename, List<int> bytes) async {
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory('${docs.path}/exports');
-    if (!await dir.exists()) await dir.create(recursive: true);
-    final file = File('${dir.path}/$filename');
-    await file.writeAsBytes(bytes, flush: true);
-    await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)], text: 'کسان دوست رپورٹ'),
-    );
+    try {
+      final docs = await getApplicationDocumentsDirectory();
+      final dir = Directory('${docs.path}/exports');
+      if (!await dir.exists()) await dir.create(recursive: true);
+      final file = File('${dir.path}/$filename');
+      await file.writeAsBytes(bytes, flush: true);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], text: 'کسان دوست رپورٹ'),
+      );
+    } catch (e) {
+      // Disk-full or share-sheet failure must not crash the report flow.
+      if (mounted) showFriendlyError(context, e, FailureKind.sharing);
+    }
   }
 
   /// Runs [task] with a blocking Urdu progress dialog; always dismisses it.
@@ -137,7 +143,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     try {
       await task();
     } catch (e) {
-      _snack('خرابی: $e', Colors.red);
+      showFriendlyError(context, e, FailureKind.unknown);
     } finally {
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
       if (mounted) setState(() => _busy = false);

@@ -8,6 +8,7 @@ import '../services/money.dart';
 import '../widgets/batai_status_chip.dart';
 import 'batai_screen.dart';
 import '../l10n/strings.dart';
+import '../widgets/field_validators.dart';
 
 /// One batai agreement: its terms, its settlements, and the actions
 /// (settle a harvest, change status, edit, delete).
@@ -456,6 +457,10 @@ class _SettleDialogState extends State<_SettleDialog> {
   int? _saleId;
   ({int ownerPaisa, int cultivatorPaisa})? _preview;
 
+  /// Double-tap guard: settleAgreement writes a settlement row — a second
+  /// tap would record the settlement twice.
+  bool _isSaving = false;
+
   @override
   void initState() {
     super.initState();
@@ -502,8 +507,14 @@ class _SettleDialogState extends State<_SettleDialog> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
     try {
-      final total = Money.parse(_totalCtrl.text).paisa;
+      final parsed = FieldValidators.tryMoney(_totalCtrl.text);
+      if (parsed == null) {
+        throw MoneyParseException('درست رقم درج کریں');
+      }
+      final total = parsed.paisa;
       await context.read<BataiProvider>().settleAgreement(
         agreementId: widget.agreement.id!,
         totalPaisa: total,
@@ -519,14 +530,22 @@ class _SettleDialogState extends State<_SettleDialog> {
           context,
         ).showSnackBar(SnackBar(content: Text(e.message)));
       }
-    } on Object catch (e) {
-      // Money.parse throws MoneyParseException with an Urdu message.
+    } on MoneyParseException catch (e) {
+      // Friendly Urdu message, safe for a SnackBar.
       if (mounted) {
-        final msg = e.toString().replaceFirst('MoneyParseException: ', '');
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(msg)));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
+    } on Object {
+      // Never leak technical errors to the farmer.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('کچھ غلط ہو گیا — دوبارہ کوشش کریں')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 

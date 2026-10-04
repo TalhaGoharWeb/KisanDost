@@ -323,10 +323,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             InkWell(
               onTap:
-                  () => taskProvider.toggleTaskCompletion(
-                    task.id,
-                    task.isCompleted,
-                  ),
+                  () => taskProvider.toggleTaskCompletion(task.id),
               borderRadius: BorderRadius.circular(24),
               child: Container(
                 width: 40,

@@ -15,6 +15,7 @@ import '../providers/inventory_provider.dart';
 import '../providers/activity_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/expense_provider.dart';
+import '../utils/error_messages.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -198,6 +199,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // 2. Wipe SQLite database tables
       await DatabaseHelper.instance.clearAllTables();
 
+      // 2b. Reset the demo-mode flag: if demo was active during the wipe,
+      // the banner would otherwise linger over an empty database.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(DemoDataService.activeKey, false);
+
       // 3. Reload state of all providers
       farmProvider.fetchFarms();
       cropProvider.fetchCropSeasons();
@@ -221,12 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       navigator.pop(); // go back to dashboard
     } catch (e) {
       navigator.pop(); // close loader dialog
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('خرابی: $e', style: const TextStyle(fontSize: 16)),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showFriendlyError(context, e, FailureKind.database);
     }
   }
 
@@ -301,9 +302,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('ڈیمو شروع نہ ہو سکا: $e')));
+      showFriendlyError(context, e, FailureKind.database);
     }
   }
 
