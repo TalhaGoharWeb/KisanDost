@@ -179,6 +179,13 @@ class ActivityProvider extends ChangeNotifier {
 
   /// Returns previously deducted stock to the warehouse inside [ex].
   /// The restore is an 'adjustment' ledger entry, never a silent add-back.
+  ///
+  /// Reversal is ledger-exact: the usage row records the precise deducted
+  /// quantity in the item's unit at deduction time. Recomputing from the
+  /// activity snapshot would use the item's CURRENT weightPerUnitKg, which
+  /// the farmer may have changed since (e.g. 50 → 60 kg/bag) — reversing
+  /// with a stale weight silently creates or destroys stock.
+  /// (Red-team audit 2026-10-04.)
   Future<void> _restoreInventoryTx(
     DatabaseExecutor ex, {
     required InventoryProvider inventoryProvider,
@@ -198,15 +205,45 @@ class ActivityProvider extends ChangeNotifier {
       inventoryProvider,
       activity,
     );
-    double qtyInItemUnit = activity.inventoryQuantity!;
-    if (activity.inventoryUnit != item.unit) {
-      qtyInItemUnit = UnitConverter.convert(
-        activity.inventoryQuantity!,
-        activity.inventoryUnit!,
-        item.unit,
-        weightPerUnitKg: item.weightPerUnitKg,
+
+    double qtyInItemUnit;
+    final ledgerRows = await ex.query(
+      'inventory_transactions',
+      columns: ['quantity', 'unit'],
+      where: "activity_id = ? AND type = 'usage'",
+      whereArgs: [activity.id],
+    );
+    if (ledgerRows.isNotEmpty) {
+      // Exact amount deducted, in the unit recorded at deduction time.
+      final deducted = ledgerRows.fold<double>(
+        0,
+        (sum, r) => sum + ((r['quantity'] as num?)?.toDouble() ?? 0),
       );
+      qtyInItemUnit = -deducted; // ledger stores usage as negative
+      final ledgerUnit = ledgerRows.first['unit'] as String?;
+      if (ledgerUnit != null && ledgerUnit != item.unit) {
+        // The item's unit was changed after the deduction: convert the
+        // exact ledger amount (best effort with the current weight).
+        qtyInItemUnit = UnitConverter.convert(
+          qtyInItemUnit,
+          ledgerUnit,
+          item.unit,
+          weightPerUnitKg: item.weightPerUnitKg,
+        );
+      }
+    } else {
+      // Pre-ledger rows (or manual DB edits): fall back to the snapshot.
+      qtyInItemUnit = activity.inventoryQuantity!;
+      if (activity.inventoryUnit != item.unit) {
+        qtyInItemUnit = UnitConverter.convert(
+          activity.inventoryQuantity!,
+          activity.inventoryUnit!,
+          item.unit,
+          weightPerUnitKg: item.weightPerUnitKg,
+        );
+      }
     }
+    if (!qtyInItemUnit.isFinite || qtyInItemUnit <= 0) return;
     await inventoryProvider.recordAdjustment(
       itemId: item.id!,
       quantityDelta: qtyInItemUnit,
