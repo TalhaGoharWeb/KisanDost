@@ -22,15 +22,21 @@ import 'services/backup_service.dart';
 import 'services/demo_data_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService().init();
-  // خودکار روزانہ بیک اپ: ایپ کھلنے پر دن میں ایک بار — کبھی لانچ نہیں روکتا، کبھی کریش نہیں کرتا۔
-  unawaited(
-    BackupService().maybeAutoBackup().catchError((e) {
-      debugPrint('Auto-backup failed: $e');
-    }),
-  );
-  runApp(const KisanDostApp());
+  // Defense in depth: no unhandled async error may ever red-screen the app.
+  // (Crash-safety audit 2026-10-04.)
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await NotificationService().init();
+    // خودکار روزانہ بیک اپ: ایپ کھلنے پر دن میں ایک بار — کبھی لانچ نہیں روکتا، کبھی کریش نہیں کرتا۔
+    unawaited(
+      BackupService().maybeAutoBackup().catchError((e) {
+        debugPrint('Auto-backup failed: $e');
+      }),
+    );
+    runApp(const KisanDostApp());
+  }, (error, stack) {
+    debugPrint('KisanDost unhandled async error: $error');
+  });
 }
 
 class KisanDostApp extends StatelessWidget {
