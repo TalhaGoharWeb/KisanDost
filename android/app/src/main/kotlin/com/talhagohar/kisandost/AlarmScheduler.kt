@@ -164,6 +164,16 @@ object AlarmScheduler {
     }
 
     fun rescheduleAllAlarms(context: Context) {
+        // Honor the farmer's reminders toggle: rescheduling (boot receiver and
+        // app-launch paths) must never re-arm alarms the farmer explicitly
+        // disabled in settings. shared_preferences_android stores keys
+        // verbatim in the "FlutterSharedPreferences" file.
+        // (Alarm audit 2026-10-04)
+        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("reminders_enabled", true)) {
+            Log.d(TAG, "Reminders disabled by farmer; skipping alarm reschedule.")
+            return
+        }
         val dbHelper = DatabaseHelper(context)
         val pendingTasks = dbHelper.getIncompleteTasks()
         for (task in pendingTasks) {

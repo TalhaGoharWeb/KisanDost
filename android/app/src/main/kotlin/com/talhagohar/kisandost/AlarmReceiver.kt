@@ -61,20 +61,25 @@ class AlarmReceiver : BroadcastReceiver() {
                     val dbHelper = DatabaseHelper(context)
                     val task = dbHelper.getTask(taskId)
                     if (task != null) {
+                        // Honor the farmer's configured snooze duration (settings);
+                        // default 10 minutes, never less than 1.
+                        // (Alarm audit 2026-10-04)
+                        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                        val snoozeMinutes = prefs.getInt("snooze_duration", 10).coerceAtLeast(1)
                         val snoozeTime = ZonedDateTime.now(ZoneId.of("Asia/Karachi"))
-                            .plusMinutes(10)
-                        
+                            .plusMinutes(snoozeMinutes.toLong())
+
                         dbHelper.snoozeTask(taskId, snoozeTime.toLocalDateTime().toString())
-                        
+
                         val updatedTask = dbHelper.getTask(taskId)
                         if (updatedTask != null) {
                             AlarmScheduler.scheduleAlarmsForTask(context, updatedTask)
                         }
                     }
-                    
+
                     val serviceIntent = Intent(context, AlarmService::class.java)
                     context.stopService(serviceIntent)
-                    Log.d(TAG, "Task $taskId snoozed for 10 minutes from notification action.")
+                    Log.d(TAG, "Task $taskId snoozed from notification action.")
                 }
             }
         } catch (e: Exception) {

@@ -49,6 +49,11 @@ class AlarmService : Service() {
         createNotificationChannel()
 
         // 4. Create intents for actions
+        // The farmer's configured snooze duration (settings), default 10 min.
+        // (Alarm audit 2026-10-04)
+        val snoozeMinutes = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            .getInt("snooze_duration", 10).coerceAtLeast(1)
+
         val completeIntent = Intent(this, AlarmReceiver::class.java).apply {
             action = AlarmReceiver.ACTION_COMPLETE
             putExtra("taskId", taskId)
@@ -97,7 +102,7 @@ class AlarmService : Service() {
             .setAutoCancel(false)
             .setFullScreenIntent(fullscreenPendingIntent, true)
             .addAction(android.R.drawable.ic_menu_save, "مکمل ہو گیا", completePendingIntent)
-            .addAction(android.R.drawable.ic_menu_send, "سوز کریں (10 منٹ)", snoozePendingIntent)
+            .addAction(android.R.drawable.ic_menu_send, "سوز کریں ($snoozeMinutes منٹ)", snoozePendingIntent)
 
         val notification = builder.build()
         notification.flags = notification.flags or Notification.FLAG_INSISTENT
@@ -114,6 +119,13 @@ class AlarmService : Service() {
 
     private fun playAlarmSound() {
         try {
+            // A second alarm can fire while the service is already running;
+            // stop any existing player first so sounds never overlap and the
+            // old player is never leaked (battery drain).
+            // (Alarm audit 2026-10-04)
+            try { mediaPlayer?.stop() } catch (_: Exception) {}
+            try { mediaPlayer?.release() } catch (_: Exception) {}
+            mediaPlayer = null
             mediaPlayer = MediaPlayer().apply {
                 val soundUri = Uri.parse("android.resource://$packageName/raw/farming_alarm")
                 setDataSource(this@AlarmService, soundUri)

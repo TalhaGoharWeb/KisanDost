@@ -89,7 +89,7 @@ class DatabaseHelper(private val context: Context) {
                 put("is_completed", 1)
                 putNull("snoozed_until")
             }
-            db.update("tasks", values, "id = ?", arrayOf(taskId.toString()))
+            db.update("tasks", values, "id = ? AND deleted_at IS NULL", arrayOf(taskId.toString()))
             Log.d(TAG, "Task $taskId marked completed in database.")
         } catch (e: Exception) {
             Log.e(TAG, "Error completing task $taskId: ${e.message}", e)
@@ -104,7 +104,7 @@ class DatabaseHelper(private val context: Context) {
             val values = ContentValues().apply {
                 put("snoozed_until", snoozeTimeIso)
             }
-            db.update("tasks", values, "id = ?", arrayOf(taskId.toString()))
+            db.update("tasks", values, "id = ? AND deleted_at IS NULL", arrayOf(taskId.toString()))
             Log.d(TAG, "Task $taskId snoozed until $snoozeTimeIso in database.")
         } catch (e: Exception) {
             Log.e(TAG, "Error snoozing task $taskId: ${e.message}", e)

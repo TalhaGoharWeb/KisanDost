@@ -320,6 +320,23 @@ class TaskProvider with ChangeNotifier {
       details: 'کام بحال کیا گیا',
     );
     await fetchTasks();
+
+    // The task's alarms were cancelled when it was trashed; re-arm them now
+    // that it is restored. scheduleTaskNotifications is a no-op for
+    // completed tasks or past one-shot reminders, and it cancels before
+    // re-scheduling, so this can never create duplicates.
+    // (Alarm audit 2026-10-04)
+    try {
+      TaskItem? restored;
+      for (final t in _tasks) {
+        if (t.id == id) restored = t;
+      }
+      if (restored != null) {
+        await NotificationService().scheduleTaskNotifications(restored);
+      }
+    } catch (e) {
+      debugPrint('Failed to reschedule alarms for restored task: $e');
+    }
   }
 
   /// Permanent delete — offered ONLY from the recycle bin, with the caller's
