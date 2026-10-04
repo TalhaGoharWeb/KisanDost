@@ -14,7 +14,12 @@ class DatabaseHelper(private val context: Context) {
     private fun getDatabase(): SQLiteDatabase? {
         return try {
             val dbPath = context.getDatabasePath(DB_NAME)
-            SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            val db = SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            // Match the Dart side (sqflite onConfigure): FK enforcement is
+            // per-connection in SQLite, so the native connection must enable
+            // it explicitly. (DB hardening 2026-10-04)
+            db.execSQL("PRAGMA foreign_keys = ON")
+            db
         } catch (e: Exception) {
             Log.e(TAG, "Failed to open SQLite database: ${e.message}", e)
             null
@@ -28,7 +33,9 @@ class DatabaseHelper(private val context: Context) {
             val cursor = db.query(
                 "tasks",
                 null,
-                "id = ?",
+                // Respect soft-delete: a trashed task must be invisible to the
+                // alarm subsystem, matching the Dart side. (DB hardening 2026-10-04)
+                "id = ? AND deleted_at IS NULL",
                 arrayOf(taskId.toString()),
                 null,
                 null,
@@ -54,7 +61,9 @@ class DatabaseHelper(private val context: Context) {
             val cursor = db.query(
                 "tasks",
                 null,
-                "is_completed = ?",
+                // Respect soft-delete here too: without this, a trashed task's
+                // alarms were rescheduled on every boot. (DB hardening 2026-10-04)
+                "is_completed = ? AND deleted_at IS NULL",
                 arrayOf("0"),
                 null,
                 null,

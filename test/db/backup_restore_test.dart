@@ -224,6 +224,23 @@ void main() {
       expect(list.any((b) => b.label == 'pre-restore'), isTrue);
     });
 
+    test('atomic replace leaves no temp file; live DB passes integrity',
+        () async {
+      await populateSampleData();
+      final info = await backups.createBackup();
+      final liveDbPath = await DatabaseHelper.instance.databaseFilePath;
+
+      await restore.restoreReplace(info.path);
+
+      // The copy+rename temp file must not survive a successful restore.
+      expect(File('$liveDbPath.restore_tmp').existsSync(), isFalse);
+      // The live file is a complete database, not a truncated copy.
+      final db = await DatabaseHelper.instance.database;
+      final integrity = await db.rawQuery('PRAGMA integrity_check');
+      expect(integrity.first.values.first.toString(), 'ok');
+      expect(await count(db, 'farms'), 1);
+    });
+
     test('migrates a v11-era backup forward to v13 on restore', () async {
       await populateSampleData();
 

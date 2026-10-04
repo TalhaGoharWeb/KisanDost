@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kisan Dost is a fully offline app: it makes no network requests.
+     This config explicitly forbids cleartext traffic as defense in depth
+     (alongside android:usesCleartextTraffic="false" in the manifest), so a
+     future dependency can never silently downgrade to HTTP.
+     (Android hardening 2026-10-04) -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

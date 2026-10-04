@@ -133,7 +133,20 @@ class RestoreService {
         final f = File('$livePath$suffix');
         if (await f.exists()) await f.delete();
       }
-      await File(backupPath).copy(livePath);
+      // Atomic replace: copy to a temp file first, then rename over the live
+      // path. A crash or full disk halfway through the copy can no longer
+      // leave a truncated live database behind — rename is atomic on both
+      // ext4/f2fs, so the live file is either the old DB or the new one,
+      // never a half-written mix. (DB hardening 2026-10-04)
+      final tmpPath = '$livePath.restore_tmp';
+      try {
+        await File(backupPath).copy(tmpPath);
+        await File(tmpPath).rename(livePath);
+      } catch (_) {
+        final tmp = File(tmpPath);
+        if (await tmp.exists()) await tmp.delete();
+        rethrow;
+      }
     } finally {
       // Re-open: _onUpgrade migrates older backups forward.
       await helper.database;
@@ -204,7 +217,12 @@ class RestoreService {
       return const TableMergeCount(imported: 0, skipped: 0);
     }
 
-    final cols = common.map((c) => '"$c"').join(', ');
+    // Quote identifiers defensively: column names come from PRAGMA
+    // table_info on the backup file, so a crafted backup could smuggle a
+    // double-quote into a name and break out of the quoted identifier.
+    // (DB hardening 2026-10-04)
+    String ident(String c) => '"${c.replaceAll('"', '""')}"';
+    final cols = common.map(ident).join(', ');
     final bkCount =
         Sqflite.firstIntValue(
           await txn.rawQuery('SELECT COUNT(*) FROM bk."$table"'),
