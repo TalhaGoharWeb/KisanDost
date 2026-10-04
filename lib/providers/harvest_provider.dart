@@ -4,6 +4,7 @@ import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../services/audit_service.dart';
 import '../services/money.dart';
+import '../services/quantity.dart';
 
 class HarvestWithDetails {
   final Harvest harvest;
@@ -204,6 +205,7 @@ class HarvestProvider extends ChangeNotifier {
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
+    Quantity.requireFinite(quantity);
     final int totalExpensePaisa =
         transportationExpensePaisa +
         labourExpensePaisa +
@@ -292,6 +294,7 @@ class HarvestProvider extends ChangeNotifier {
     String paymentStatus = 'Pending',
     String? notes,
   }) async {
+    Quantity.requireFinite(quantity);
     final int totalExpensePaisa =
         transportationExpensePaisa +
         labourExpensePaisa +
@@ -448,6 +451,7 @@ class HarvestProvider extends ChangeNotifier {
     required String date,
     String? buyerName,
   }) async {
+    Quantity.requireFinite(quantity);
     await _txn((txn) async {
       final List<Map<String, dynamic>> hMaps = await txn.query(
         'harvests',
@@ -624,6 +628,7 @@ class HarvestProvider extends ChangeNotifier {
     required String date,
     String? buyerName,
   }) async {
+    Quantity.requireFinite(quantity);
     await _txn((txn) async {
       // Same rule as recordSale: the total is recomputed, never accepted
       // from the caller.

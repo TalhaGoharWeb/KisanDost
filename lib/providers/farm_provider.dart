@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/quantity.dart';
 
 class FarmProvider extends ChangeNotifier {
   /// Test hook: when set, all DB access goes through this executor instead
@@ -93,6 +94,7 @@ class FarmProvider extends ChangeNotifier {
     int tubeWellAvailable = 0,
     String? location,
   }) async {
+    Quantity.requireFinite(sizeAcres);
     final db = await _db();
     final newField = Field(
       farmId: farmId,
@@ -132,6 +134,7 @@ class FarmProvider extends ChangeNotifier {
     int tubeWellAvailable = 0,
     String? location,
   }) async {
+    Quantity.requireFinite(sizeAcres);
     final db = await _db();
     await db.update(
       'fields',

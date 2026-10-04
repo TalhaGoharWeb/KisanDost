@@ -4,6 +4,7 @@ import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../services/audit_service.dart';
 import '../services/money.dart';
+import '../services/quantity.dart';
 
 class UshrWithDetails {
   final UshrRecord ushrRecord;
@@ -131,6 +132,9 @@ class UshrProvider extends ChangeNotifier {
     required int cashPaidPaisa,
     required int ratePerUnitPaisa,
   }) async {
+    Quantity.requireFinite(harvestQty);
+    Quantity.requireFinite(ushrPercentage);
+    Quantity.requireFinite(qtyPaid);
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 
@@ -191,6 +195,9 @@ class UshrProvider extends ChangeNotifier {
     required int cashPaidPaisa,
     required int ratePerUnitPaisa,
   }) async {
+    Quantity.requireFinite(harvestQty);
+    Quantity.requireFinite(ushrPercentage);
+    Quantity.requireFinite(qtyPaid);
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 

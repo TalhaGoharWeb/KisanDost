@@ -159,6 +159,16 @@ class UnitConverter {
     String toUnit, {
     double? weightPerUnitKg,
   }) {
+    // Non-finite inputs (NaN/Infinity) would silently poison every
+    // downstream stock and money calculation — `NaN <= 0` is false, so
+    // range checks can't catch them. Reject loudly at the chokepoint.
+    // (Red-team audit 2026-10-04.)
+    if (!quantity.isFinite) {
+      throw const UnitConversionException('مقدار درست نہیں ہے');
+    }
+    if (weightPerUnitKg != null && !weightPerUnitKg.isFinite) {
+      throw const UnitConversionException('فی پیکٹ وزن درست نہیں ہے');
+    }
     final String from = canonical(fromUnit);
     final String to = canonical(toUnit);
     if (from == to) return quantity;

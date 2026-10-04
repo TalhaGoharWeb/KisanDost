@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
 import '../services/audit_service.dart';
+import '../services/quantity.dart';
 import '../services/unit_converter.dart';
 import 'inventory_provider.dart';
 
@@ -231,6 +232,10 @@ class ActivityProvider extends ChangeNotifier {
     bool isCompleted = false,
     InventoryProvider? inventoryProvider,
   }) async {
+    // Non-finite quantities (NaN/Infinity) bypass `> 0` checks (`NaN > 0`
+    // is false) and would poison the ledger. Reject at the boundary.
+    // (Red-team audit 2026-10-04.)
+    if (inventoryQuantity != null) Quantity.requireFinite(inventoryQuantity);
     // Expense + activity row + inventory deduction happen in ONE transaction:
     // if the deduction is rejected (overuse / missing item), nothing is saved.
     await _txn((txn) async {
@@ -311,6 +316,7 @@ class ActivityProvider extends ChangeNotifier {
     bool? isCompleted,
     InventoryProvider? inventoryProvider,
   }) async {
+    if (inventoryQuantity != null) Quantity.requireFinite(inventoryQuantity);
     await _txn((txn) async {
       final List<Map<String, dynamic>> maps = await txn.query(
         'activities',

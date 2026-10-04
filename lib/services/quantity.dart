@@ -59,6 +59,19 @@ class Quantity {
     }
   }
 
+  /// Provider-level guard: rejects NaN and infinite doubles with an Urdu
+  /// error. Required because `NaN <= 0` is **false** in Dart, so plain
+  /// range checks (`quantity <= 0`) cannot catch non-finite values — they
+  /// would be stored as NaN/Inf in SQLite and corrupt every downstream
+  /// calculation. Every provider must call this on doubles that reach
+  /// the database. (Red-team audit 2026-10-04.)
+  static double requireFinite(double value) {
+    if (!value.isFinite) {
+      throw const QuantityParseException('مقدار درست نہیں ہے — دوبارہ درج کریں');
+    }
+    return value;
+  }
+
   /// Same cleaning rules as [Money.parse]: Urdu/Persian digits become
   /// Western digits; commas and whitespace are dropped; letters and extra
   /// dots fail the numeric check in [parse].

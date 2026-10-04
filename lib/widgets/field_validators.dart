@@ -115,6 +115,13 @@ class FieldValidators {
     if (q == null || q != q.roundToDouble()) {
       return 'صرف پورا عدد درج کریں (مثلاً 5)';
     }
+    // Hard ceiling before toInt(): absurd magnitudes saturate to int64max in
+    // Dart instead of throwing, which would silently corrupt downstream
+    // arithmetic (e.g. wage x count). Reject first, always.
+    // (Red-team audit 2026-10-04.)
+    if (q > 9e18) {
+      return 'تعداد بہت زیادہ ہے — درست تعداد درج کریں';
+    }
     final n = q.toInt();
     if (n < min) return 'تعداد $min سے کم نہیں ہو سکتی';
     if (max != null && n > max) {

@@ -90,7 +90,7 @@ class InventoryProvider extends ChangeNotifier {
     String? notes,
     DatabaseExecutor? executor,
   }) async {
-    if (quantity <= 0) {
+    if (!quantity.isFinite || quantity <= 0) {
       throw const InventoryException(
         'خریداری کی مقدار صفر سے زیادہ ہونی چاہیے',
       );
@@ -98,7 +98,8 @@ class InventoryProvider extends ChangeNotifier {
     if (costPerUnitPaisa < 0) {
       throw const InventoryException('فی اکائی قیمت منفی نہیں ہو سکتی');
     }
-    if (weightPerUnitKg != null && weightPerUnitKg <= 0) {
+    if (weightPerUnitKg != null &&
+        (!weightPerUnitKg.isFinite || weightPerUnitKg <= 0)) {
       throw const InventoryException('فی پیکٹ وزن صفر سے زیادہ ہونا چاہیے');
     }
 
@@ -227,7 +228,7 @@ class InventoryProvider extends ChangeNotifier {
     String? notes,
     DatabaseExecutor? executor,
   }) async {
-    if (quantity <= 0) {
+    if (!quantity.isFinite || quantity <= 0) {
       throw const InventoryException(
         'استعمال کی مقدار صفر سے زیادہ ہونی چاہیے',
       );
@@ -344,7 +345,7 @@ class InventoryProvider extends ChangeNotifier {
     if (reason.trim().isEmpty) {
       throw const InventoryException('تصحیح کی وجہ درج کرنا ضروری ہے');
     }
-    if (quantityDelta == 0) {
+    if (!quantityDelta.isFinite || quantityDelta == 0) {
       throw const InventoryException('تصحیح کی مقدار صفر نہیں ہو سکتی');
     }
     Future<void> run(DatabaseExecutor ex) async {
@@ -415,7 +416,8 @@ class InventoryProvider extends ChangeNotifier {
     if (costPerUnitPaisa < 0) {
       throw const InventoryException('فی اکائی قیمت منفی نہیں ہو سکتی');
     }
-    if (weightPerUnitKg != null && weightPerUnitKg <= 0) {
+    if (weightPerUnitKg != null &&
+        (!weightPerUnitKg.isFinite || weightPerUnitKg <= 0)) {
       throw const InventoryException('فی پیکٹ وزن صفر سے زیادہ ہونا چاہیے');
     }
     // Copy to a local so flow analysis can promote the null check.
