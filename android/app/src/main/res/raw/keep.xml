@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kisan Dost — resource shrinker keep rules.
+     res/raw/farming_alarm.mp3 is referenced ONLY via string URIs
+     ("android.resource://<pkg>/raw/farming_alarm") in AlarmService.kt,
+     which the resource shrinker cannot trace. Without this rule,
+     isShrinkResources removed the alarm sound from the release APK
+     (verified missing in the 1.0.0+1 build) and alarms fired silently.
+     (Release audit 2026-10-04) -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/farming_alarm" />

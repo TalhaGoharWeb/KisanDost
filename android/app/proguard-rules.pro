@@ -12,3 +12,12 @@
 #   exact-alarm / boot-receiver wiring can never be stripped by an
 #   over-aggressive shrink in a future AGP/R8 version.
 -keep class com.talhagohar.kisandost.** { *; }
+
+# Release tidiness: strip verbose/debug log calls from release builds.
+# Log.d/Log.v carry only task IDs and status text (no PII), but they serve
+# no purpose in production logcat. Log.i/w/e are kept for diagnostics.
+# (Release audit 2026-10-04)
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+}
