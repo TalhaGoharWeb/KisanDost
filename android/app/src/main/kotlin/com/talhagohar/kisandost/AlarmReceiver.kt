@@ -65,7 +65,10 @@ class AlarmReceiver : BroadcastReceiver() {
                         // default 10 minutes, never less than 1.
                         // (Alarm audit 2026-10-04)
                         val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                        val snoozeMinutes = prefs.getInt("snooze_duration", 10).coerceAtLeast(1)
+                        // Flutter's shared_preferences stores ints as Long; getInt()
+                        // would always return the default. (Alarm fix 2026-10-04.)
+                        val snoozeMinutes =
+                            prefs.getLong("snooze_duration", 10).coerceAtLeast(1)
                         val snoozeTime = ZonedDateTime.now(ZoneId.of("Asia/Karachi"))
                             .plusMinutes(snoozeMinutes.toLong())
 

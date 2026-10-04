@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/task_provider.dart';
 import '../l10n/strings.dart';
 import '../widgets/field_validators.dart';
+import '../services/notification_service.dart';
 
 class TaskFormScreen extends StatefulWidget {
   final TaskItem? task;
@@ -188,7 +189,38 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             duration: const Duration(seconds: 3),
           ),
         );
-        Navigator.pop(context);
+        // On Android 14+, the lock-screen alarm needs an explicit user grant.
+        // Prompt once so the farmer isn't surprised by a silent lock screen.
+        // (Alarm fix 2026-10-04.)
+        final canFullScreen =
+            await NotificationService().canUseFullScreenIntent();
+        if (mounted && !canFullScreen) {
+          final goToSettings = await showDialog<bool>(
+            context: context,
+            builder:
+                (ctx) => AlertDialog(
+                  title: const Text('لاک اسکرین الارم'),
+                  content: const Text(
+                    'لاک اسکرین پر الارم بجانے کے لیے ایک اجازت درکار ہے۔ '
+                    'ابھی اجازت دیں؟',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('بعد میں'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('اجازت دیں'),
+                    ),
+                  ],
+                ),
+          );
+          if (goToSettings == true) {
+            await NotificationService().requestFullScreenIntentPermission();
+          }
+        }
+        if (mounted) Navigator.pop(context);
       }
     }
   }

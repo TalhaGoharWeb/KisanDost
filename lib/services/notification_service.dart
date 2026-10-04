@@ -491,6 +491,30 @@ class NotificationService {
     }
   }
 
+  /// Returns true when the app may launch the full-screen alarm activity
+  /// over the lock screen (Android 14+ requires an explicit user grant).
+  Future<bool> canUseFullScreenIntent() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      return await _nativeChannel.invokeMethod('canUseFullScreenIntent') ??
+          false;
+    } catch (e) {
+      debugPrint('Error checking full-screen intent permission: $e');
+      return false;
+    }
+  }
+
+  /// Opens the system settings page where the user grants the full-screen
+  /// intent permission (Android 14+).
+  Future<void> requestFullScreenIntentPermission() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _nativeChannel.invokeMethod('requestFullScreenIntentPermission');
+    } catch (e) {
+      debugPrint('Error requesting full-screen intent permission: $e');
+    }
+  }
+
   Future<void> requestExactAlarmPermission() async {
     if (Platform.isAndroid) {
       try {

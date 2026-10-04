@@ -51,8 +51,10 @@ class AlarmService : Service() {
         // 4. Create intents for actions
         // The farmer's configured snooze duration (settings), default 10 min.
         // (Alarm audit 2026-10-04)
+        // Flutter's shared_preferences stores ints as Long; getInt()
+        // would always return the default. (Alarm fix 2026-10-04.)
         val snoozeMinutes = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            .getInt("snooze_duration", 10).coerceAtLeast(1)
+            .getLong("snooze_duration", 10).coerceAtLeast(1).toInt()
 
         val completeIntent = Intent(this, AlarmReceiver::class.java).apply {
             action = AlarmReceiver.ACTION_COMPLETE
