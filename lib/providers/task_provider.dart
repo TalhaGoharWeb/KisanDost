@@ -36,7 +36,8 @@ class TaskItem {
       description: map['description'],
       snoozedUntil:
           map['snoozed_until'] != null
-              ? DateTime.parse(map['snoozed_until'])
+              // tryParse: a corrupt timestamp must not nuke the whole list.
+              ? DateTime.tryParse(map['snoozed_until'] as String)
               : null,
       dateTime: DateTime.parse(map['date_time']),
       isCompleted: map['is_completed'] == 1,
