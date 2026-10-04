@@ -16,6 +16,8 @@ import 'package:kisan_dost/providers/inventory_provider.dart';
 import 'package:kisan_dost/providers/party_provider.dart';
 import 'package:kisan_dost/providers/task_provider.dart';
 import 'package:kisan_dost/providers/theka_provider.dart';
+import 'package:kisan_dost/providers/activity_provider.dart';
+import 'package:kisan_dost/providers/ushr_provider.dart';
 import 'package:kisan_dost/services/demo_data_service.dart';
 
 /// Phase 14: [DemoDataService] against the REAL production schema
@@ -46,6 +48,8 @@ void main() {
   late InventoryProvider inventory;
   late ThekaProvider thekas;
   late BataiProvider batai;
+  late ActivityProvider activities;
+  late UshrProvider ushr;
   late DemoDataService demo;
 
   Future<int> count(String table) async {
@@ -76,6 +80,8 @@ void main() {
     inventory = InventoryProvider(testExecutor: db);
     thekas = ThekaProvider(testExecutor: db);
     batai = BataiProvider(testExecutor: db);
+    activities = ActivityProvider(testExecutor: db);
+    ushr = UshrProvider(testExecutor: db);
     demo = DemoDataService(testExecutor: db);
     await demo.load();
   });
@@ -94,6 +100,8 @@ void main() {
     inventory: inventory,
     thekas: thekas,
     batai: batai,
+    activities: activities,
+    ushr: ushr,
   );
 
   test(
@@ -113,19 +121,21 @@ void main() {
 
       // Row counts across every demo table.
       expect(await count('farms'), 2);
-      expect(await count('fields'), 2);
-      expect(await count('crop_seasons'), 2);
-      expect(await count('expenses'), 9); // 8 demo + 1 farmer
+      expect(await count('fields'), 5);
+      expect(await count('crop_seasons'), 4);
+      expect(await count('expenses'), 24); // 23 demo + 1 farmer
       expect(await count('harvests'), 2);
-      expect(await count('sales'), 1);
-      expect(await count('tasks'), 3);
-      expect(await count('inventory'), 4);
-      expect(await count('inventory_transactions'), 4);
-      expect(await count('parties'), 1);
-      expect(await count('party_ledger_entries'), 2);
+      expect(await count('sales'), 3);
+      expect(await count('tasks'), 6);
+      expect(await count('inventory'), 5);
+      expect(await count('inventory_transactions'), 6); // 5 buys + 1 use
+      expect(await count('parties'), 3);
+      expect(await count('party_ledger_entries'), 5);
       expect(await count('thekas'), 1);
-      expect(await count('theka_installments'), 2);
+      expect(await count('theka_installments'), 3);
       expect(await count('batai_agreements'), 1);
+      expect(await count('activities'), 14);
+      expect(await count('ushr_records'), 2);
 
       // Tracking + active flag persisted.
       expect(demo.isActive, isTrue);

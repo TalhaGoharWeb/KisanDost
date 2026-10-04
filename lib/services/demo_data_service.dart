@@ -18,6 +18,8 @@ import '../providers/inventory_provider.dart';
 import '../providers/party_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/theka_provider.dart';
+import '../providers/activity_provider.dart';
+import '../providers/ushr_provider.dart';
 import 'audit_service.dart';
 
 /// Demo mode: inserts a coherent sample dataset through the REAL providers
@@ -56,6 +58,8 @@ class DemoDataService extends ChangeNotifier {
     'theka_installments',
     'batai_agreements',
     'batai_settlements',
+    'activities',
+    'ushr_records',
   ];
 
   /// Cleanup order: children before parents. (crop_season_fields,
@@ -72,6 +76,8 @@ class DemoDataService extends ChangeNotifier {
     'tasks',
     'inventory',
     'batai_agreements',
+    'activities',
+    'ushr_records',
     'crop_seasons',
     'fields',
     'thekas',
@@ -136,6 +142,8 @@ class DemoDataService extends ChangeNotifier {
       inventory: context.read<InventoryProvider>(),
       thekas: context.read<ThekaProvider>(),
       batai: context.read<BataiProvider>(),
+      activities: context.read<ActivityProvider>(),
+      ushr: context.read<UshrProvider>(),
     );
   }
 
@@ -149,6 +157,8 @@ class DemoDataService extends ChangeNotifier {
     required InventoryProvider inventory,
     required ThekaProvider thekas,
     required BataiProvider batai,
+    required ActivityProvider activities,
+    required UshrProvider ushr,
   }) async {
     if (_active || _entering) return;
     _entering = true;
@@ -167,40 +177,92 @@ class DemoDataService extends ChangeNotifier {
         return '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
       }
 
-      // 1. Farm + fields.
-      await farms.addFarm('ڈیمو فارم', 12.5);
-      final farmId = (await _newIds('farms', before['farms']!)).single;
-      await farms.addField(farmId: farmId, name: 'ڈیمو کھیت ۱', sizeAcres: 6);
-      await farms.addField(farmId: farmId, name: 'ڈیمو کھیت ۲', sizeAcres: 6.5);
-      final fieldIds = await _newIds('fields', before['fields']!);
+      // 1. Two farms with fields — a realistic smallholder setup.
+      await farms.addFarm('چک 45 فارم', 25);
+      await farms.addFarm('نہر والا کھیت (ٹھیکہ)', 8);
+      final farmIds = await _newIds('farms', before['farms']!);
+      final homeFarm = farmIds[0];
+      final thekaFarm = farmIds[1];
 
-      // 2. Crop seasons.
+      await farms.addField(farmId: homeFarm, name: 'مشرقی کھیت', sizeAcres: 10);
+      await farms.addField(farmId: homeFarm, name: 'مغربی کھیت', sizeAcres: 8);
+      await farms.addField(farmId: homeFarm, name: 'باغ والا کھیت', sizeAcres: 7);
+      await farms.addField(
+        farmId: thekaFarm,
+        name: 'نہر والا کھیت ۱',
+        sizeAcres: 4.5,
+      );
+      await farms.addField(
+        farmId: thekaFarm,
+        name: 'نہر والا کھیت ۲',
+        sizeAcres: 3.5,
+      );
+      final fieldIds = await _newIds('fields', before['fields']!);
+      final eastField = fieldIds[0];
+      final westField = fieldIds[1];
+      final orchardField = fieldIds[2];
+      final canalField1 = fieldIds[3];
+      final canalField2 = fieldIds[4];
+
+      // 2. Four crop seasons across both farms.
       await crops.addCropSeason(
-        fieldIds: fieldIds,
+        fieldIds: [eastField, westField],
         cropName: 'گندم',
         variety: 'فیصل آباد 2008',
         startDate: d(-120),
       );
       await crops.addCropSeason(
-        fieldIds: [fieldIds.last],
+        fieldIds: [orchardField],
         cropName: 'کپاس',
         variety: 'FH-492',
         startDate: d(-60),
       );
+      await crops.addCropSeason(
+        fieldIds: [canalField1],
+        cropName: 'باسمتی چاول',
+        variety: 'باسمتی 515',
+        startDate: d(-95),
+      );
+      await crops.addCropSeason(
+        fieldIds: [canalField2],
+        cropName: 'مکئی',
+        variety: 'YH-1898',
+        startDate: d(-30),
+      );
       final seasonIds = await _newIds('crop_seasons', before['crop_seasons']!);
-      final wheat = seasonIds.first;
-      final cotton = seasonIds.last;
+      final wheat = seasonIds[0];
+      final cotton = seasonIds[1];
+      final rice = seasonIds[2];
+      final maize = seasonIds[3];
 
-      // 3. Expenses (amounts in paisa).
+      // 3. Realistic expenses across categories and time (paisa).
       final expenseRows = [
-        ('Fertilizer', 1500000, 'کھاد — ڈیمو', wheat, -100),
-        ('Seeds', 800000, 'بیج — ڈیمو', wheat, -115),
-        ('Water', 300000, 'ٹوئیل کا پانی — ڈیمو', wheat, -90),
-        ('Labour', 500000, 'مزدوری — ڈیمو', wheat, -80),
-        ('Sprays', 450000, 'سپرے — ڈیمو', cotton, -40),
-        ('Diesel', 600000, 'ڈیزل — ڈیمو', cotton, -35),
-        ('Fertilizer', 1200000, 'کھاد — ڈیمو', cotton, -30),
-        ('Labour', 400000, 'مزدوری — ڈیمو', cotton, -20),
+        // Wheat season.
+        ('Plowing', 2500000, 'ہل چلائی — مشرقی و مغربی کھیت', wheat, -118),
+        ('Seeds', 1800000, 'گندم بیج 2 بوری', wheat, -115),
+        ('Fertilizer', 2250000, 'ڈی اے پی 1 بوری', wheat, -110),
+        ('Fertilizer', 1350000, 'یوریا 3 بوری', wheat, -85),
+        ('Water', 800000, 'ٹوئیل پانی — 4 گھنٹے', wheat, -80),
+        ('Labour', 1200000, 'گوڈی مزدوری', wheat, -70),
+        ('Sprays', 950000, 'جڑی بوٹی سپرے', wheat, -65),
+        ('Harvesting', 3000000, 'کمبائن کٹائی', wheat, -12),
+        // Cotton season.
+        ('Plowing', 1200000, 'ہل چلائی — باغ والا کھیت', cotton, -58),
+        ('Seeds', 900000, 'کپاس بیج FH-492', cotton, -55),
+        ('Fertilizer', 1500000, 'یوریا 2 بوری', cotton, -40),
+        ('Sprays', 1100000, 'سفید مکھی سپرے', cotton, -25),
+        ('Water', 600000, 'نہری پانی وارہ بندی', cotton, -20),
+        ('Labour', 800000, 'چنائی مزدوری پیشگی', cotton, -10),
+        // Rice season.
+        ('Plowing', 1000000, 'ہل چلائی — نہر والا کھیت', rice, -93),
+        ('Seeds', 700000, 'باسمتی پنیری', rice, -88),
+        ('Labour', 1500000, 'دھان لگوائی مزدوری', rice, -80),
+        ('Fertilizer', 1100000, 'یوریا 2 بوری', rice, -60),
+        ('Harvesting', 1800000, 'دھان کٹائی', rice, -8),
+        // Maize season.
+        ('Seeds', 850000, 'مکئی بیج YH-1898', maize, -28),
+        ('Fertilizer', 900000, 'ڈی اے پی آدھی بوری', maize, -25),
+        ('Water', 400000, 'ٹوئیل پانی', maize, -15),
       ];
       for (final e in expenseRows) {
         await expenses.addExpense(
@@ -212,48 +274,147 @@ class DemoDataService extends ChangeNotifier {
         );
       }
 
-      // 4. Harvests + one sale.
+      // 4. Harvests and sales.
       await harvests.addHarvest(
         cropSeasonId: wheat,
-        quantity: 1600,
+        quantity: 4200,
         unit: 'kg',
         date: d(-10),
-        ratePerUnitPaisa: 11000,
+        ratePerUnitPaisa: 11500,
       );
-      final harvestId = (await _newIds('harvests', before['harvests']!)).single;
+      final wheatHarvest =
+          (await _newIds('harvests', before['harvests']!)).single;
       await harvests.recordSale(
-        harvestId: harvestId,
-        quantity: 1600,
-        pricePerUnitPaisa: 11000,
+        harvestId: wheatHarvest,
+        quantity: 3000,
+        pricePerUnitPaisa: 11500,
         date: d(-9),
-        buyerName: 'ڈیمو آڑھتی',
+        buyerName: 'چوہدری آڑھتی',
+      );
+      await harvests.recordSale(
+        harvestId: wheatHarvest,
+        quantity: 1200,
+        pricePerUnitPaisa: 11800,
+        date: d(-5),
+        buyerName: 'چوہدری آڑھتی',
       );
       await harvests.addHarvest(
-        cropSeasonId: cotton,
-        quantity: 1000,
+        cropSeasonId: rice,
+        quantity: 2800,
         unit: 'kg',
-        date: d(-5),
+        date: d(-6),
+        ratePerUnitPaisa: 14000,
+      );
+      final riceHarvest =
+          (await _newIds('harvests', before['harvests']!)).last;
+      await harvests.recordSale(
+        harvestId: riceHarvest,
+        quantity: 2000,
+        pricePerUnitPaisa: 14000,
+        date: d(-4),
+        buyerName: 'چوہدری آڑھتی',
       );
 
-      // 5. Tasks.
+      // 5. Ushr records (5% for irrigated crops).
+      await ushr.addUshrRecord(
+        cropSeasonId: wheat,
+        harvestId: wheatHarvest,
+        harvestQty: 4200,
+        marketValuePaisa: 4200 * 11500,
+        ushrMethod: 'cash',
+        ushrPercentage: 5,
+        ushrAmountPaisa: (4200 * 11500 * 0.05).round(),
+        status: 'paid',
+        datePaid: d(-7),
+        notes: 'گندم عشر — نقد ادا',
+        payMethod: 'cash',
+        qtyPaid: 0,
+        cashPaidPaisa: (4200 * 11500 * 0.05).round(),
+        ratePerUnitPaisa: 11500,
+      );
+      await ushr.addUshrRecord(
+        cropSeasonId: rice,
+        harvestId: riceHarvest,
+        harvestQty: 2800,
+        marketValuePaisa: 2800 * 14000,
+        ushrMethod: 'crop',
+        ushrPercentage: 5,
+        ushrAmountPaisa: (2800 * 14000 * 0.05).round(),
+        status: 'pending',
+        notes: 'باسمتی عشر — جنس میں دینا ہے',
+        payMethod: 'crop',
+        qtyPaid: 140,
+        cashPaidPaisa: 0,
+        ratePerUnitPaisa: 14000,
+      );
+
+      // 6. Farm activities log — the season diary.
+      final activityRows = [
+        (wheat, 'ہل چلائی', -118, 'مشرقی و مغربی کھیت میں دوہرا ہل'),
+        (wheat, 'بوائی', -115, 'گندم بیج فیصل آباد 2008 — 2 بوری'),
+        (wheat, 'کھاد', -110, 'ڈی اے پی 1 بوری فی ایکڑ'),
+        (wheat, 'پانی', -80, 'ٹوئیل سے چوتھا پانی'),
+        (wheat, 'سپرے', -65, 'جڑی بوٹی مار سپرے'),
+        (wheat, 'کٹائی', -12, 'کمبائن سے کٹائی مکمل — 4200 کلو'),
+        (cotton, 'ہل چلائی', -58, 'باغ والے کھیت میں ہل'),
+        (cotton, 'بوائی', -55, 'کپاس FH-492 بوائی'),
+        (cotton, 'گوڈی', -30, 'پہلی گوڈی مزدوروں سے'),
+        (cotton, 'سپرے', -25, 'سفید مکھی کے خلاف سپرے'),
+        (rice, 'پنیری', -88, 'باسمتی 515 پنیری تیار'),
+        (rice, 'منتقلی', -80, 'دھان کی لگوائی — 8 مزدور'),
+        (rice, 'کٹائی', -8, 'دھان کٹائی — 2800 کلو'),
+        (maize, 'بوائی', -28, 'مکئی YH-1898 بوائی'),
+      ];
+      for (final a in activityRows) {
+        await activities.addActivity(
+          cropSeasonId: a.$1,
+          activityType: a.$2,
+          date: d(a.$3),
+          details: a.$4,
+          isCompleted: true,
+        );
+      }
+
+      // 7. Tasks — upcoming, overdue, completed, recurring.
       await tasks.addTask(
-        'پانی لگائیں',
-        'ڈیمو کام',
-        now.add(const Duration(days: 1)),
+        'کپاس کو پانی لگائیں',
+        'باغ والے کھیت میں پانچواں پانی',
+        now.add(const Duration(days: 1, hours: 6)),
+        reminders: '0,60',
       );
       await tasks.addTask(
-        'کھاد ڈالیں',
-        'ڈیمو کام',
+        'سپرے والی دوا خریدیں',
+        'سفید مکھی کے لیے 2 بوتل',
+        now.add(const Duration(days: 2)),
+      );
+      await tasks.addTask(
+        'مکئی کی گوڈی',
+        'نہر والے کھیت ۲ میں گوڈی کروانی ہے',
         now.add(const Duration(days: 3)),
+        recurrence: 'weekly',
       );
       await tasks.addTask(
-        'سپرے کریں',
-        'ڈیمو کام',
-        now.subtract(const Duration(days: 1)),
+        'ٹوئیل کا بل ادا کریں',
+        'بجلی کا بل — 8500 روپے',
+        now.subtract(const Duration(days: 2)),
       );
+      await tasks.addTask(
+        'آڑھتی سے حساب لیں',
+        'گندم کی دوسری قسط کا حساب',
+        now.add(const Duration(hours: 5)),
+        reminders: '0',
+      );
+      await tasks.addTask(
+        'یوریا کھاد ڈالیں',
+        'کپاس میں یوریا',
+        now.subtract(const Duration(days: 5)),
+      );
+      final doneTaskId =
+          (await _newIds('tasks', before['tasks']!)).last;
+      await tasks.toggleTaskCompletion(doneTaskId);
 
-      // 6. Inventory purchases (cost in paisa per unit).
-      await inventory.recordPurchase(
+      // 8. Inventory — purchases plus usage.
+      final ureaId = await inventory.recordPurchase(
         category: 'کھاد',
         name: 'یوریا',
         unit: 'بوری',
@@ -279,38 +440,79 @@ class DemoDataService extends ChangeNotifier {
       );
       await inventory.recordPurchase(
         category: 'سپرے',
-        name: 'سپرے دوا',
+        name: 'سفید مکھی سپرے',
         unit: 'بوتل',
         quantity: 6,
         costPerUnitPaisa: 150000,
       );
+      await inventory.recordPurchase(
+        category: 'ڈیزل',
+        name: 'ڈیزل',
+        unit: 'لیٹر',
+        quantity: 100,
+        costPerUnitPaisa: 26000,
+      );
+      // Usage: 3 urea bags on wheat, 2 on cotton.
+      await inventory.recordUsage(
+        itemId: ureaId,
+        quantity: 5,
+        date: d(-85),
+        notes: 'گندم و کپاس میں استعمال',
+      );
 
-      // 7. Party + ledger entries.
-      final partyId = await parties.addParty(
-        Party(name: 'ڈیمو آڑھتی', createdAt: now.toIso8601String()),
+      // 9. Three parties with realistic ledger activity.
+      final arrhti = await parties.addParty(
+        Party(name: 'چوہدری آڑھتی', createdAt: now.toIso8601String()),
+      );
+      final dealer = await parties.addParty(
+        Party(name: 'کھاد ڈیلر اکرم', createdAt: now.toIso8601String()),
+      );
+      final contractor = await parties.addParty(
+        Party(name: 'مزدور ٹھیکیدار بشیر', createdAt: now.toIso8601String()),
       );
       await parties.addEntry(
-        partyId: partyId,
+        partyId: arrhti,
+        type: PartyEntryType.udhaarDiya,
+        amountPaisa: 5000000,
+        date: d(-40),
+        note: 'کپاس بیج و کھاد ادھار',
+      );
+      await parties.addEntry(
+        partyId: arrhti,
+        type: PartyEntryType.wusooli,
+        amountPaisa: 34500000,
+        date: d(-9),
+        note: 'گندم پہلی فروخت وصولی',
+      );
+      await parties.addEntry(
+        partyId: dealer,
+        type: PartyEntryType.udhaarLiya,
+        amountPaisa: 8000000,
+        date: d(-50),
+        note: 'ڈی اے پی و یوریا ادھار',
+      );
+      await parties.addEntry(
+        partyId: dealer,
+        type: PartyEntryType.adaigi,
+        amountPaisa: 3000000,
+        date: d(-15),
+        note: 'جزوی ادائیگی',
+      );
+      await parties.addEntry(
+        partyId: contractor,
         type: PartyEntryType.udhaarDiya,
         amountPaisa: 2000000,
-        date: d(-20),
-        note: 'ڈیمو',
-      );
-      await parties.addEntry(
-        partyId: partyId,
-        type: PartyEntryType.wusooli,
-        amountPaisa: 500000,
-        date: d(-5),
-        note: 'ڈیمو',
+        date: d(-25),
+        note: 'مزدوری پیشگی',
       );
 
-      // 8. Theka with two installments.
+      // 10. Theka on the canal farm — 3 installments, first paid.
       await thekas.addTheka(
         Theka(
-          farmId: farmId,
-          totalAmountPaisa: 20000000,
+          farmId: thekaFarm,
+          totalAmountPaisa: 120000000,
           durationType: 'Seasonal',
-          durationDetails: 'ربیع 2026',
+          durationDetails: 'خریف 2026',
           paymentMethod: 'Installment',
           startDate: d(-100),
           createdAt: now.toIso8601String(),
@@ -318,33 +520,38 @@ class DemoDataService extends ChangeNotifier {
         [
           ThekaInstallment(
             thekaId: 0,
-            amountPaisa: 10000000,
+            amountPaisa: 40000000,
+            dueDate: d(-60),
+            status: 'Paid',
+          ),
+          ThekaInstallment(
+            thekaId: 0,
+            amountPaisa: 40000000,
             dueDate: d(30),
             status: 'Pending',
           ),
           ThekaInstallment(
             thekaId: 0,
-            amountPaisa: 10000000,
+            amountPaisa: 40000000,
             dueDate: d(90),
             status: 'Pending',
           ),
         ],
       );
 
-      // 9. Batai agreement with the demo party.
+      // 11. Batai agreement — 50/50 on wheat with the arrhti.
       await batai.createAgreement(
         farmerRole: FarmerRole.landowner,
-        otherPartyId: partyId,
-        farmId: farmId,
-        fieldId: fieldIds.first,
+        otherPartyId: arrhti,
+        farmId: homeFarm,
+        fieldId: eastField,
         cropSeasonId: wheat,
         ownerSharePercent: 50,
         cultivatorSharePercent: 50,
-        expenseNote: 'ڈیمو: کھاد مالک کی، مزدوری مزارع کی',
+        expenseNote: 'کھاد و بیج مالک کے، مزدوری مزارع کی',
         startDate: d(-120),
-        notes: 'ڈیمو معاہدہ',
+        notes: 'گندم بٹائی معاہدہ',
       );
-
       // Collect every tracked id.
       final ids = <String, List<int>>{};
       for (final t in trackedTables) {
