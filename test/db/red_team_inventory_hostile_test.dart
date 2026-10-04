@@ -6,7 +6,6 @@
 /// — never stored as NaN/Inf in the quantity cache or ledger.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisan_dost/database/db_helper.dart';
-import 'package:kisan_dost/models/models.dart';
 import 'package:kisan_dost/providers/inventory_provider.dart';
 import 'package:kisan_dost/services/unit_converter.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
