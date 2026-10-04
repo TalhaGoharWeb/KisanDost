@@ -27,6 +27,14 @@ class BackupException implements Exception {
   String toString() => 'BackupException: $message';
 }
 
+/// Streams [path] through SHA-256 without loading the whole file into
+/// memory (backup DBs can grow large on long-used devices).
+/// (Data-layer audit 2026-10-04: replaced readAsBytes hashing.)
+Future<String> _sha256OfFile(String path) async {
+  final digest = await sha256.bind(File(path).openRead()).first;
+  return digest.toString();
+}
+
 /// Metadata about one backup file on disk.
 class BackupInfo {
   final String name;
@@ -140,8 +148,7 @@ class BackupService {
     try {
       await File(livePath).copy(destPath);
 
-      final bytes = await File(destPath).readAsBytes();
-      final sha = sha256.convert(bytes).toString();
+      final sha = await _sha256OfFile(destPath);
       final sidecarPath = '$destPath.json';
       await File(sidecarPath).writeAsString(
         jsonEncode({
@@ -299,7 +306,7 @@ class BackupService {
               jsonDecode(await sidecar.readAsString()) as Map<String, dynamic>;
           final expected = data['sha256'] as String?;
           if (expected != null && expected.isNotEmpty) {
-            final actual = sha256.convert(await file.readAsBytes()).toString();
+            final actual = await _sha256OfFile(file.path);
             if (actual != expected) {
               throw const BackupException(
                 'بیک اپ فائل میں تبدیلی پائی گئی ہے — یہ محفوظ نہیں ہے',
@@ -401,7 +408,7 @@ class BackupService {
     if (await pickedSidecar.exists()) {
       await pickedSidecar.copy(sidecarPath);
     } else {
-      final sha = sha256.convert(await File(destPath).readAsBytes()).toString();
+      final sha = await _sha256OfFile(destPath);
       await File(sidecarPath).writeAsString(
         jsonEncode({
           'appVersion': kAppVersion,
