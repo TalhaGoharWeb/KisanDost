@@ -7,6 +7,7 @@ import '../providers/expense_provider.dart';
 import '../providers/crop_provider.dart';
 import '../providers/activity_provider.dart';
 import '../providers/farm_provider.dart';
+import '../providers/inventory_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
@@ -21,6 +22,50 @@ class ExpensesScreen extends StatefulWidget {
 }
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
+  /// Maps an expense category to the inventory category it draws stock from.
+  /// Null means the category has no inventory linkage (e.g. Labour).
+  static const Map<String, String> _expenseToInventoryCategory = {
+    'Fertilizer': 'Fertilizer',
+    'Seeds': 'Seed',
+    'Sprays': 'Spray',
+    'Diesel': 'Diesel',
+    'Crop Medicine': 'Medicine',
+  };
+
+  /// Recomputes the expense amount from the used inventory quantity:
+  /// usedQty (in item units, or kg converted via weightPerUnitKg) ×
+  /// costPerUnitPaisa. Writes the rupee value into the amount field so the
+  /// farmer sees the true cost and can still override it by hand.
+  static void _recalcAmountFromInventory(
+    Inventory? item,
+    TextEditingController qtyController,
+    String qtyUnit,
+    TextEditingController amountController,
+  ) {
+    if (item == null) return;
+    final qty = double.tryParse(qtyController.text.trim());
+    if (qty == null || qty <= 0) return;
+    double qtyInItemUnits = qty;
+    if (qtyUnit == 'kg' &&
+        item.weightPerUnitKg != null &&
+        item.weightPerUnitKg! > 0) {
+      qtyInItemUnits = qty / item.weightPerUnitKg!;
+    }
+    final costPaisa = (qtyInItemUnits * item.costPerUnitPaisa).round();
+    final rupees = costPaisa / 100.0;
+    amountController.text =
+        rupees == rupees.roundToDouble()
+            ? rupees.toInt().toString()
+            : rupees.toStringAsFixed(2);
+  }
+
+  static String _formatPaisa(int paisa) {
+    final rupees = paisa / 100.0;
+    return rupees == rupees.roundToDouble()
+        ? 'روپے ${rupees.toInt()}'
+        : 'روپے ${rupees.toStringAsFixed(2)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final expenseProvider = Provider.of<ExpenseProvider>(context);
@@ -203,12 +248,22 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       listen: false,
     );
     final farmProvider = Provider.of<FarmProvider>(context, listen: false);
+    final inventoryProvider = Provider.of<InventoryProvider>(
+      context,
+      listen: false,
+    );
     final formKey = GlobalKey<FormState>();
 
     String selectedCategory = 'Miscellaneous';
     int? selectedFarmId;
     int? selectedFieldId;
     int? selectedCropSeasonId;
+    // Inventory linkage: when the expense category maps to a stocked
+    // inventory category, the farmer can pick an item and enter the used
+    // quantity — the amount auto-calculates and stock is deducted on save.
+    int? selectedInventoryItemId;
+    final usedQtyController = TextEditingController();
+    String usedQtyUnit = 'item'; // 'item' or 'kg'
     final amountController = TextEditingController();
     final descController = TextEditingController();
     DateTime selectedDate = DateTime.now();
@@ -263,10 +318,161 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         onChanged: (val) {
                           setState(() {
                             selectedCategory = val!;
+                            // Reset inventory selection when category changes.
+                            selectedInventoryItemId = null;
+                            usedQtyController.clear();
                           });
                         },
                       ),
                       const SizedBox(height: 16),
+                      // Inventory linkage: if this expense category draws from
+                      // stock, let the farmer pick an item and enter the used
+                      // quantity. The amount auto-calculates from the item's
+                      // recorded cost; stock is deducted on save.
+                      Builder(
+                        builder: (context) {
+                          final invCat =
+                              _expenseToInventoryCategory[selectedCategory];
+                          if (invCat == null) {
+                            return const SizedBox.shrink();
+                          }
+                          final items =
+                              inventoryProvider.inventoryList
+                                  .where(
+                                    (it) =>
+                                        it.category == invCat && it.quantity > 0,
+                                  )
+                                  .toList();
+                          if (items.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          Inventory? selectedItem;
+                          for (final it in items) {
+                            if (it.id == selectedInventoryItemId) {
+                              selectedItem = it;
+                              break;
+                            }
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              DropdownButtonFormField<int?>(
+                                value: selectedInventoryItemId,
+                                decoration: const InputDecoration(
+                                  labelText:
+                                      'اسٹاک سے شے منتخب کریں (آپشنل)',
+                                  border: OutlineInputBorder(),
+                                ),
+                                items: [
+                                  const DropdownMenuItem<int?>(
+                                    value: null,
+                                    child: Text('اسٹاک استعمال نہیں کرنا'),
+                                  ),
+                                  ...items.map((it) {
+                                    return DropdownMenuItem<int?>(
+                                      value: it.id,
+                                      child: Text(
+                                        '${it.name} — دستیاب: ${it.quantity} ${it.unit}',
+                                      ),
+                                    );
+                                  }),
+                                ],
+                                onChanged: (val) {
+                                  setState(() {
+                                    selectedInventoryItemId = val;
+                                    usedQtyController.clear();
+                                    usedQtyUnit = 'item';
+                                  });
+                                },
+                              ),
+                              if (selectedItem != null) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: TextFormField(
+                                        controller: usedQtyController,
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        decoration: InputDecoration(
+                                          labelText:
+                                              'استعمال شدہ مقدار (${usedQtyUnit == 'kg' ? 'کلو' : selectedItem.unit})',
+                                          border: const OutlineInputBorder(),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return null;
+                                          }
+                                          final q = double.tryParse(
+                                            value.trim(),
+                                          );
+                                          if (q == null || q <= 0) {
+                                            return 'صحیح مقدار لکھیں';
+                                          }
+                                          return null;
+                                        },
+                                        onChanged: (_) {
+                                          _recalcAmountFromInventory(
+                                            selectedItem,
+                                            usedQtyController,
+                                            usedQtyUnit,
+                                            amountController,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    if (selectedItem.weightPerUnitKg != null)
+                                      Expanded(
+                                        child: DropdownButtonFormField<String>(
+                                          value: usedQtyUnit,
+                                          decoration: const InputDecoration(
+                                            labelText: 'اکائی',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 'item',
+                                              child: Text('پیکٹ/بوری'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'kg',
+                                              child: Text('کلو گرام'),
+                                            ),
+                                          ],
+                                          onChanged: (val) {
+                                            setState(() {
+                                              usedQtyUnit = val ?? 'item';
+                                              _recalcAmountFromInventory(
+                                                selectedItem,
+                                                usedQtyController,
+                                                usedQtyUnit,
+                                                amountController,
+                                              );
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'فی ${selectedItem.unit} قیمت: ${_formatPaisa(selectedItem.costPerUnitPaisa)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        },
+                      ),
                       // 1. Farm picker (optional)
                       DropdownButtonFormField<int?>(
                         value: selectedFarmId,
@@ -429,9 +635,54 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       final String categoryUrdu =
                           expenseProvider.expenseCategories[selectedCategory] ??
                           selectedCategory;
+                      // Resolve the linked inventory item, if any, and validate
+                      // stock BEFORE writing anything.
+                      Inventory? usedItem;
+                      double usedQtyInItemUnits = 0;
+                      if (selectedInventoryItemId != null) {
+                        for (final it in inventoryProvider.inventoryList) {
+                          if (it.id == selectedInventoryItemId) {
+                            usedItem = it;
+                            break;
+                          }
+                        }
+                        final rawQty = double.tryParse(
+                          usedQtyController.text.trim(),
+                        );
+                        if (usedItem != null &&
+                            rawQty != null &&
+                            rawQty > 0) {
+                          usedQtyInItemUnits = rawQty;
+                          if (usedQtyUnit == 'kg' &&
+                              usedItem.weightPerUnitKg != null &&
+                              usedItem.weightPerUnitKg! > 0) {
+                            usedQtyInItemUnits =
+                                rawQty / usedItem.weightPerUnitKg!;
+                          }
+                          if (usedQtyInItemUnits > usedItem.quantity) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'اسٹاک ناکافی ہے — دستیاب: ${usedItem.quantity} ${usedItem.unit}',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+                        } else {
+                          // Item picked but no usable quantity: treat as no
+                          // linkage rather than blocking the expense.
+                          usedItem = null;
+                        }
+                      }
                       final String finalDesc =
                           descController.text.isNotEmpty
                               ? descController.text
+                              : usedItem != null
+                              ? '${usedItem.name} ${usedQtyController.text.trim()} ${usedQtyUnit == 'kg' ? 'کلو' : usedItem.unit} — $categoryUrdu'
                               : 'خرچہ برائے $categoryUrdu';
 
                       // 1. Add general expense entry to SQL table
@@ -444,6 +695,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         fieldId: selectedFieldId,
                         cropSeasonId: selectedCropSeasonId,
                       );
+
+                      // 1b. Deduct the used quantity from inventory stock.
+                      if (usedItem != null && usedQtyInItemUnits > 0) {
+                        await inventoryProvider.recordUsage(
+                          itemId: usedItem.id!,
+                          quantity: usedQtyInItemUnits,
+                          date: selectedDate.toIso8601String(),
+                          notes: 'خرچہ #$expenseId: $finalDesc',
+                        );
+                      }
 
                       // 2. If linked to a crop, automatically create a matching activity
                       if (selectedCropSeasonId != null) {
