@@ -347,6 +347,9 @@ void main() {
             unit: 'من',
             date: '2026-05-01',
             transportationExpensePaisa: 30000,
+            // A recorded sale: under the realized-income rule (owner
+            // decision #1) only Paid/Partial sales count as income.
+            paymentStatus: 'Paid',
           ),
           cropName: 'Wheat',
           fieldName: 'f',

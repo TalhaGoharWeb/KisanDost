@@ -9,6 +9,7 @@ import '../providers/activity_provider.dart';
 import '../providers/theka_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/ushr_provider.dart';
+import '../providers/batai_provider.dart';
 import '../models/models.dart';
 import '../services/money.dart';
 import '../services/pnl_summary.dart';
@@ -32,9 +33,16 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     final thekaProvider = Provider.of<ThekaProvider>(context);
     final farmProvider = Provider.of<FarmProvider>(context);
     final ushrProvider = Provider.of<UshrProvider>(context);
+    final bataiProvider = Provider.of<BataiProvider>(context);
 
     // 1+2. Overall + crop-wise P&L — computed by the shared service so the
     // on-screen report and the exported PDF can never disagree.
+    // Owner decisions #1/#2: realized income excludes Pending (unsold)
+    // sales — those surface as a separate "remaining produce" figure — and
+    // includes the farmer's actual batai share instead of the full sale
+    // total on sharecropped harvests.
+    final bataiAgreements =
+        bataiProvider.agreements.map((s) => s.agreement).toList();
     final pnl = computeFarmPnl(
       harvests: harvestProvider.harvests,
       totalExpensesPaisa: expenseProvider.totalExpensesPaisa,
@@ -45,10 +53,17 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
       activities: activityProvider.activities,
       expenses: expenseProvider.expenses,
       ushrRecords: ushrProvider.ushrRecords,
+      bataiSettlements: bataiProvider.allSettlements,
+      bataiAgreements: bataiAgreements,
     );
-    final totalSales = pnl.totalSalesPaisa;
+    // Per-harvest realized figures for the crop-detail cards below
+    // (labels a Pending sale as تخمینہ, shows the farmer's batai share).
+    final harvestFigures = computeHarvestPnlFigures(
+      harvests: harvestProvider.harvests,
+      bataiSettlements: bataiProvider.allSettlements,
+      bataiAgreements: bataiAgreements,
+    ).byHarvest;
     final totalExpenses = pnl.totalExpensesPaisa;
-    final netProfit = pnl.netPaisa;
 
     final List<CropPL> cropPLList =
         pnl.crops
@@ -56,6 +71,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
               (r) => CropPL(
                 details: r.details,
                 income: r.incomePaisa,
+                bataiIncome: r.bataiIncomePaisa,
+                unsoldProduce: r.unsoldProducePaisa,
                 expenses: r.expensesPaisa,
                 net: r.netPaisa,
                 harvests: r.harvests,
@@ -168,9 +185,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             // Tab 1: Crop-wise accounts
             _buildCropWiseTab(
               context,
-              netProfit,
-              totalSales,
-              totalExpenses,
+              pnl,
+              harvestFigures,
               filteredCropPLList,
               mostProfitable,
               highestYielding,
@@ -180,9 +196,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             // Tab 2: Expense Analysis
             _buildExpenseAnalysisTab(
               context,
-              netProfit,
-              totalSales,
-              totalExpenses,
+              pnl,
               sortedCategories,
               indirectExpenses,
               expenseProvider,
@@ -203,12 +217,10 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
   }
 
   // overall summary card
-  Widget _buildSummaryCard(
-    BuildContext context,
-    int netProfit,
-    int totalSales,
-    int totalExpenses,
-  ) {
+  Widget _buildSummaryCard(BuildContext context, FarmPnl pnl) {
+    final netProfit = pnl.netPaisa;
+    final totalSales = pnl.totalSalesPaisa;
+    final totalExpenses = pnl.totalExpensesPaisa;
     final isProfit = netProfit >= 0;
     final primaryGrad =
         isProfit ? const Color(0xFF1B5E20) : const Color(0xFFB71C1C);
@@ -309,7 +321,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                         ),
                         SizedBox(width: 4),
                         Text(
-                          'کل فروخت (آمدنی)',
+                          'کل آمدنی (وصول شدہ)',
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 13,
@@ -369,16 +381,53 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
               ),
             ],
           ),
+          // Owner decisions #1/#2: the realized-income breakdown — genuine
+          // sales vs the farmer's batai share — plus the unsold (Pending)
+          // produce, which is tracked separately and is NOT income.
+          const Divider(color: Colors.white24, height: 24),
+          _buildIncomeBreakdownRow('فروخت سے آمدنی', pnl.salesIncomePaisa),
+          const SizedBox(height: 6),
+          _buildIncomeBreakdownRow('بٹائی سے میرا حصہ', pnl.bataiIncomePaisa),
+          const SizedBox(height: 6),
+          _buildIncomeBreakdownRow(
+            'غیر فروخت شدہ پیداوار',
+            pnl.unsoldProducePaisa,
+            note: '(آمدنی میں شامل نہیں)',
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildIncomeBreakdownRow(String label, int paisa, {String? note}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          note == null ? label : '$label $note',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 13,
+            fontFamily: 'Jameel Noori Nastaleeq',
+          ),
+        ),
+        DigitText(
+          Money(paisa).format(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Jameel Noori Nastaleeq',
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCropWiseTab(
     BuildContext context,
-    int netProfit,
-    int totalSales,
-    int totalExpenses,
+    FarmPnl pnl,
+    Map<HarvestWithDetails, HarvestPnlFigures> harvestFigures,
     List<CropPL> filteredList,
     CropPL? mostProfitable,
     CropPL? highestYielding,
@@ -388,7 +437,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
-        _buildSummaryCard(context, netProfit, totalSales, totalExpenses),
+        _buildSummaryCard(context, pnl),
 
         // Insights
         _buildInsightsPanel(
@@ -457,7 +506,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
           )
         else
           ...filteredList.map(
-            (pl) => _buildCropPLCard(context, pl, cropProvider),
+            (pl) => _buildCropPLCard(context, pl, harvestFigures, cropProvider),
           ),
 
         const SizedBox(height: 40),
@@ -623,6 +672,7 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
   Widget _buildCropPLCard(
     BuildContext context,
     CropPL pl,
+    Map<HarvestWithDetails, HarvestPnlFigures> harvestFigures,
     CropProvider cropProvider,
   ) {
     final season = pl.details.cropSeason;
@@ -685,7 +735,10 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             ),
           ],
         ),
-        children: [const Divider(), _buildCropDetails(context, pl)],
+        children: [
+          const Divider(),
+          _buildCropDetails(context, pl, harvestFigures),
+        ],
       ),
     );
   }
@@ -743,7 +796,11 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
     );
   }
 
-  Widget _buildCropDetails(BuildContext context, CropPL pl) {
+  Widget _buildCropDetails(
+    BuildContext context,
+    CropPL pl,
+    Map<HarvestWithDetails, HarvestPnlFigures> harvestFigures,
+  ) {
     final hasHarvests = pl.harvests.isNotEmpty;
     final hasActivities = pl.activities.isNotEmpty;
 
@@ -784,6 +841,24 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
             ...pl.harvests.map((hwd) {
               final h = hwd.harvest;
               final s = hwd.sale;
+              // Owner decisions #1/#2: label the sale figure honestly — a
+              // Pending sale is only an estimate (تخمینہ), and on a
+              // batai-settled harvest the full sale is the joint proceeds,
+              // not the farmer's income (his actual share is shown below).
+              final bataiShare =
+                  harvestFigures[hwd]?.bataiIncomePaisa ?? 0;
+              final String saleLabel;
+              final Color saleColor;
+              if (bataiShare > 0) {
+                saleLabel = 'کل فروخت:';
+                saleColor = Colors.black87;
+              } else if (h.paymentStatus == 'Pending') {
+                saleLabel = 'تخمینہ:';
+                saleColor = Colors.orange.shade800;
+              } else {
+                saleLabel = 'آمدنی:';
+                saleColor = Colors.green;
+              }
               return Card(
                 color: Colors.green.shade50.withValues(alpha: 0.5),
                 margin: const EdgeInsets.only(bottom: 8),
@@ -828,15 +903,28 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                               ),
                             ),
                             Text(
-                              'آمدنی: ${Money(s.totalAmountPaisa).format()}',
-                              style: const TextStyle(
-                                color: Colors.green,
+                              '$saleLabel ${Money(s.totalAmountPaisa).format()}',
+                              style: TextStyle(
+                                color: saleColor,
                                 fontWeight: FontWeight.bold,
                                 fontFamily: 'Jameel Noori Nastaleeq',
                               ),
                             ),
                           ],
                         ),
+                        if (bataiShare > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              'بٹائی سے میرا حصہ: ${Money(bataiShare).format()}',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                fontFamily: 'Jameel Noori Nastaleeq',
+                              ),
+                            ),
+                          ),
                         if (s.buyerName != null && s.buyerName!.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 4.0),
@@ -867,6 +955,36 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
                 ),
               );
             }),
+          // Owner decision #2: the farmer's actual batai share for this
+          // crop, when any settlement was attributed to it.
+          if (pl.bataiIncome > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                'بٹائی سے میرا حصہ: ${Money(pl.bataiIncome).format()}',
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  fontFamily: 'Jameel Noori Nastaleeq',
+                ),
+              ),
+            ),
+          // Owner decision #1: unsold (Pending) produce tracked separately —
+          // it is NOT part of the income above.
+          if (pl.unsoldProduce > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                'غیر فروخت شدہ پیداوار (آمدنی میں شامل نہیں): '
+                '${Money(pl.unsoldProduce).format()}',
+                style: TextStyle(
+                  color: Colors.orange.shade800,
+                  fontSize: 13,
+                  fontFamily: 'Jameel Noori Nastaleeq',
+                ),
+              ),
+            ),
 
           const SizedBox(height: 16),
           // Activities Expenses details
@@ -955,19 +1073,18 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 
   Widget _buildExpenseAnalysisTab(
     BuildContext context,
-    int netProfit,
-    int totalSales,
-    int totalExpenses,
+    FarmPnl pnl,
     List<MapEntry<String, int>> sortedCategories,
     int indirectExpenses,
     ExpenseProvider expenseProvider,
   ) {
     final theme = Theme.of(context);
+    final totalExpenses = pnl.totalExpensesPaisa;
 
     return ListView(
       physics: const BouncingScrollPhysics(),
       children: [
-        _buildSummaryCard(context, netProfit, totalSales, totalExpenses),
+        _buildSummaryCard(context, pnl),
 
         Padding(
           padding: const EdgeInsets.all(16.0),
@@ -2098,6 +2215,8 @@ class _ProfitLossScreenState extends State<ProfitLossScreen> {
 class CropPL {
   final CropSeasonWithDetails details;
   final int income;
+  final int bataiIncome;
+  final int unsoldProduce;
   final int expenses;
   final int net;
   final List<HarvestWithDetails> harvests;
@@ -2106,6 +2225,8 @@ class CropPL {
   CropPL({
     required this.details,
     required this.income,
+    this.bataiIncome = 0,
+    this.unsoldProduce = 0,
     required this.expenses,
     required this.net,
     required this.harvests,

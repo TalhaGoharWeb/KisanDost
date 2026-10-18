@@ -40,6 +40,13 @@ class BataiProvider extends ChangeNotifier {
 
   List<BataiAgreementSummary> get agreements => _agreements;
 
+  List<BataiSettlement> _allSettlements = [];
+
+  /// Every settlement across all agreements, newest first. The P&L screen
+  /// reads this synchronously for the batai-income integration — mirrors
+  /// HarvestProvider's flat `_sales` list. Refreshed by [fetchAgreements].
+  List<BataiSettlement> get allSettlements => _allSettlements;
+
   bool _isLoading = false;
 
   /// True while the agreement list is loading, so list screens can tell
@@ -66,6 +73,7 @@ class BataiProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _agreements = await getAgreementSummaries();
+      _allSettlements = await getAllSettlements();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -418,6 +426,17 @@ class BataiProvider extends ChangeNotifier {
       'batai_settlements',
       where: 'agreement_id = ?',
       whereArgs: [agreementId],
+      orderBy: 'settle_date DESC, id DESC',
+    );
+    return maps.map(BataiSettlement.fromMap).toList();
+  }
+
+  /// Every settlement across all agreements, newest first (backs
+  /// [allSettlements]).
+  Future<List<BataiSettlement>> getAllSettlements() async {
+    final db = await _db();
+    final maps = await db.query(
+      'batai_settlements',
       orderBy: 'settle_date DESC, id DESC',
     );
     return maps.map(BataiSettlement.fromMap).toList();

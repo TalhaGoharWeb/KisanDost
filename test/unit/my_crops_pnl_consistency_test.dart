@@ -56,7 +56,8 @@ void main() {
   );
 
   // Harvest with harvest-bucket expenses (transport 200.00) + a sale of
-  // 4,000.00.
+  // 4,000.00. The sale is a genuine (Paid) sale: under the realized-income
+  // rule (owner decision #1) only Paid/Partial sales count as income.
   HarvestWithDetails harvestWithSale() => HarvestWithDetails(
     harvest: Harvest(
       id: 1,
@@ -65,6 +66,7 @@ void main() {
       unit: 'kg',
       date: '2026-04-01',
       transportationExpensePaisa: 20000,
+      paymentStatus: 'Paid',
     ),
     cropName: 'گندم',
     fieldName: 'کھیت 1',

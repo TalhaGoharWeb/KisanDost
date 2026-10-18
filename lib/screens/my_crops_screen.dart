@@ -7,6 +7,7 @@ import '../providers/farm_provider.dart';
 import '../providers/activity_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../providers/ushr_provider.dart';
+import '../providers/batai_provider.dart';
 import '../services/money.dart';
 import '../services/pnl_summary.dart';
 import '../widgets/empty_state_widget.dart';
@@ -104,6 +105,7 @@ class _MyCropsScreenState extends State<MyCropsScreen>
     final harvestProvider = Provider.of<HarvestProvider>(context);
     final expenseProvider = Provider.of<ExpenseProvider>(context);
     final ushrProvider = Provider.of<UshrProvider>(context);
+    final bataiProvider = Provider.of<BataiProvider>(context);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -166,6 +168,9 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                   // per-season P&L as profit_loss_screen.dart (activity +
                   // direct expenses + harvest-bucket expenses + ushr due),
                   // so the two «منافع» figures can never disagree.
+                  // Owner decisions #1/#2 flow through automatically:
+                  // Pending (unsold) sales are not income, and the farmer's
+                  // actual batai share replaces the full sale total.
                   final seasonPnl = computeFarmPnl(
                     harvests: harvestProvider.harvests,
                     totalExpensesPaisa: expenseProvider.totalExpensesPaisa,
@@ -173,6 +178,11 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                     activities: activityProvider.activities,
                     expenses: expenseProvider.expenses,
                     ushrRecords: ushrProvider.ushrRecords,
+                    bataiSettlements: bataiProvider.allSettlements,
+                    bataiAgreements:
+                        bataiProvider.agreements
+                            .map((s) => s.agreement)
+                            .toList(),
                   ).crops.single;
                   final totalExpensePaisa = seasonPnl.expensesPaisa;
                   final totalIncomePaisa = seasonPnl.incomePaisa;
