@@ -9,9 +9,26 @@ import '../widgets/empty_state_widget.dart';
 import '../models/models.dart';
 import '../services/money.dart';
 import '../services/quantity.dart';
+import '../services/unit_converter.dart';
 import '../l10n/strings.dart';
 import '../widgets/field_validators.dart';
 import '../utils/error_messages.dart';
+
+/// S4 (2026-10-18): text for the «کل کٹائی مقدار (من/Maund)» field when
+/// autofilling from a harvest — the harvest's quantity converted to من
+/// (whole numbers without decimals: "2", not "2.0"), or '' when the
+/// harvest's unit cannot be converted (custom or package unit). Never a
+/// wrong number: a 200-kg harvest must not become "200 من".
+String ushrAutofillMaundsText(double quantity, String unit) {
+  double maunds;
+  try {
+    maunds = UnitConverter.convert(quantity, unit, 'maund');
+  } on UnitConversionException {
+    return '';
+  }
+  final text = maunds.toString();
+  return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
+}
 
 class UshrScreen extends StatefulWidget {
   const UshrScreen({super.key});
@@ -684,8 +701,16 @@ class _UshrScreenState extends State<UshrScreen> {
                                 );
                                 selectedCropSeasonId =
                                     selectedH.harvest.cropSeasonId;
-                                qtyController.text =
-                                    selectedH.harvest.quantity.toString();
+                                // S4: the quantity field is in من — convert
+                                // the harvest's quantity into من. If the
+                                // harvest's unit cannot be converted
+                                // (custom or package unit), leave the field
+                                // EMPTY rather than copying a wrong number
+                                // (a 200-kg harvest must not become "200 من").
+                                qtyController.text = ushrAutofillMaundsText(
+                                  selectedH.harvest.quantity,
+                                  selectedH.harvest.unit,
+                                );
                                 marketRateController.text =
                                     Money(
                                       selectedH.harvest.ratePerUnitPaisa,

@@ -13,12 +13,14 @@ import 'package:kisan_dost/providers/crop_provider.dart';
 import 'package:kisan_dost/providers/expense_provider.dart';
 import 'package:kisan_dost/providers/farm_provider.dart';
 import 'package:kisan_dost/providers/harvest_provider.dart';
+import 'package:kisan_dost/providers/inventory_provider.dart';
 import 'package:kisan_dost/providers/party_provider.dart';
 import 'package:kisan_dost/screens/audit_log_screen.dart';
 import 'package:kisan_dost/screens/batai_detail_screen.dart';
 import 'package:kisan_dost/screens/expenses_screen.dart';
 import 'package:kisan_dost/screens/party_detail_screen.dart';
 import 'package:kisan_dost/services/audit_service.dart';
+import 'package:kisan_dost/services/unit_converter.dart';
 
 // ---------- Fakes ----------
 
@@ -139,6 +141,47 @@ class FakeFarmProvider extends FarmProvider {
 
 class FakeActivityProvider extends ActivityProvider {}
 
+// Seeded with one Fertilizer item so the expense dialog's stock linkage
+// renders; recordUsage is a no-op success here.
+class FakeInventoryProvider extends InventoryProvider {
+  @override
+  List<Inventory> get inventoryList => [
+    Inventory(
+      id: 7,
+      category: 'Fertilizer',
+      name: 'یوریا',
+      unit: 'بوری',
+      quantity: 10,
+      costPerUnitPaisa: 450000,
+    ),
+  ];
+
+  @override
+  Future<void> fetchInventory() async {}
+}
+
+/// Simulates the SEC1 race: stock passes the dialog's pre-check, then
+/// recordUsage throws AFTER the expense row is committed.
+class ThrowingInventoryProvider extends FakeInventoryProvider {
+  int recordUsageCalls = 0;
+
+  @override
+  Future<void> recordUsage({
+    required int itemId,
+    required double quantity,
+    String? fromUnit,
+    int? activityId,
+    String? date,
+    String? notes,
+    DatabaseExecutor? executor,
+  }) async {
+    recordUsageCalls++;
+    throw const InventoryException(
+      'اسٹاک کی موجودہ مقدار درست نہیں؛ پہلے تصحیح کریں',
+    );
+  }
+}
+
 // ---------- Harnesses ----------
 
 BataiAgreementSummary fiftyFiftySummary() => BataiAgreementSummary(
@@ -258,6 +301,11 @@ void main() {
               ChangeNotifierProvider<FarmProvider>.value(
                 value: FakeFarmProvider(),
               ),
+              // F4 (commit eb363dc): ExpensesScreen._showAddExpenseDialog
+              // reads InventoryProvider — the test tree must provide it.
+              ChangeNotifierProvider<InventoryProvider>.value(
+                value: FakeInventoryProvider(),
+              ),
             ],
             child: const MaterialApp(home: ExpensesScreen()),
           ),
@@ -292,6 +340,98 @@ void main() {
         await tester.pumpAndSettle();
         expect(expenses.recordedAmountPaisa, 12300);
         expect(expenses.addExpenseCalls, 1);
+      },
+    );
+  });
+
+  group('expense save — SEC1 partial-write error handling', () {
+    testWidgets(
+      'recordUsage throwing after the expense commit shows an Urdu error, '
+      'keeps the dialog open, and saves exactly once (no duplicate)',
+      (tester) async {
+        final expenses = FakeExpenseProvider();
+        final inventory = ThrowingInventoryProvider();
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<ExpenseProvider>.value(value: expenses),
+              ChangeNotifierProvider<CropProvider>.value(
+                value: FakeCropProvider(),
+              ),
+              ChangeNotifierProvider<ActivityProvider>.value(
+                value: FakeActivityProvider(),
+              ),
+              ChangeNotifierProvider<FarmProvider>.value(
+                value: FakeFarmProvider(),
+              ),
+              ChangeNotifierProvider<InventoryProvider>.value(
+                value: inventory,
+              ),
+            ],
+            child: const MaterialApp(home: ExpensesScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('نیا خرچہ درج کریں'));
+        await tester.pumpAndSettle();
+
+        final dialog = find.byType(AlertDialog);
+        expect(dialog, findsOneWidget);
+
+        // Link the expense to stock: Fertilizer category, then the یوریا
+        // item, then a used quantity — this makes the save path call
+        // recordUsage after addExpense commits. The dropdowns' onChanged
+        // callbacks are invoked directly: opening the framework's popup
+        // menu in a test is flaky (the menu auto-scrolls to the selected
+        // item), and menu mechanics are not what this test covers.
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find
+                  .descendant(
+                    of: dialog,
+                    matching: find.byType(DropdownButtonFormField<String>),
+                  )
+                  .first,
+            )
+            .onChanged!('Fertilizer');
+        await tester.pumpAndSettle();
+        expect(find.text('اسٹاک استعمال نہیں کرنا'), findsOneWidget);
+
+        tester
+            .widget<DropdownButtonFormField<int?>>(
+              find
+                  .descendant(
+                    of: dialog,
+                    matching: find.byType(DropdownButtonFormField<int?>),
+                  )
+                  .first,
+            )
+            .onChanged!(7);
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'استعمال شدہ مقدار (بوری)'),
+          '2',
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('محفوظ کریں'));
+        await tester.pump();
+
+        // SEC1: the expense row was committed, then recordUsage threw —
+        // the dialog shows an honest Urdu error (the InventoryException's
+        // own message plus the check-the-list warning) instead of an
+        // unhandled async error with no feedback...
+        expect(
+          find.textContaining('دوبارہ محفوظ کرنے سے پہلے خرچے کی فہرست دیکھ لیں'),
+          findsOneWidget,
+        );
+        // ...the dialog stays open (save button still there)...
+        expect(find.text('محفوظ کریں'), findsOneWidget);
+        // ...and the expense was saved exactly once — no silent duplicate.
+        expect(expenses.addExpenseCalls, 1);
+        expect(inventory.recordUsageCalls, 1);
       },
     );
   });

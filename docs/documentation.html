@@ -18,11 +18,11 @@
 <li><a href="en.html#shots">Screenshots</a></li>
 <li><a href="documentation.html">Documentation</a></li>
 <li><a href="en.html#faq">FAQ</a></li>
-<li><a href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">Download</a></li>
+<li><a href="https://drive.google.com/uc?id=1-fmmJZfvrJw-skmo5OJ-gBHITJm_ouy5&export=download">Download</a></li>
 </ul>
 <div class="nav-cta">
 <a class="lang-toggle" href="dastavezat.html">اردو</a>
-<a class="btn btn-primary" href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">Download APK</a>
+<a class="btn btn-primary" href="https://drive.google.com/uc?id=1-fmmJZfvrJw-skmo5OJ-gBHITJm_ouy5&export=download">Download APK</a>
 <button class="burger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks">☰</button>
 </div></div></nav>
 <div class="wrap">
@@ -241,7 +241,7 @@
 <h2 id="sec-9">9. Technical overview</h2>
 <p>This chapter is the developer reference. It stays accurate and plain, but it uses the terms a developer will look for. Readers who only use the app can safely skip it — nothing in the earlier chapters depends on it.</p>
 <h3 id="sec-9-1">Platform and storage</h3>
-<ul><li>Application: Flutter (Dart), single codebase, Android target; package com.talhagohar.kisandost; app version 1.0.6+7.</li><li>Database: SQLite, file kisan_dost.db, schema version 15, with 19 tables. Foreign keys are enforced.</li><li>Timezone: Asia/Karachi is set explicitly wherever times are computed and alarms are scheduled.</li><li>No network layer: the Android manifest declares no INTERNET permission; the app contains no accounts, ads or analytics components.</li></ul>
+<ul><li>Application: Flutter (Dart), single codebase, Android target; package com.talhagohar.kisandost; app version 1.0.7+8.</li><li>Database: SQLite, file kisan_dost.db, schema version 15, with 19 tables. Foreign keys are enforced.</li><li>Timezone: Asia/Karachi is set explicitly wherever times are computed and alarms are scheduled.</li><li>No network layer: the Android manifest declares no INTERNET permission; the app contains no accounts, ads or analytics components.</li></ul>
 <h3 id="sec-9-2">The 19 tables</h3>
 <p>farms, fields, crop_seasons, crop_season_fields, expenses, inventory, inventory_transactions, activities, harvests, ushr_records, sales, tasks, thekas, theka_installments, parties, party_ledger_entries, batai_agreements, batai_settlements, audit_log.</p>
 <h3 id="sec-9-3">Key relationships</h3>
@@ -257,12 +257,12 @@
 <h3 id="sec-9-8">Backup format</h3>
 <p>A backup is a byte copy of kisan_dost.db plus a JSON sidecar of the same name carrying appVersion, schemaVersion, createdAt, sha256 (the file's SHA-256 checksum) and label. Files are named kisandost_backup_&lt;yyyyMMdd_HHmmss&gt;_v&lt;schemaVersion&gt;.db. Restore verifies structure and, when a sidecar is present, the checksum before importing. Restore modes: Replace (wipe, then import) and Merge (import new rows only). Automatic daily backups keep the newest 10.</p>
 <h2 id="sec-10">10. Version history</h2>
-<p>Kisan Dost — version 1.0.6+7, package com.talhagohar.kisandost</p>
+<p>Kisan Dost — version 1.0.7+8, package com.talhagohar.kisandost</p>
 <div class="table-wrap"><table>
 <tr><th>Item</th><th>Detail</th></tr>
 <tr><td>App name</td><td>Kisan Dost</td></tr>
 <tr><td>Tagline</td><td>Your Digital Farming Diary</td></tr>
-<tr><td>Version covered</td><td>1.0.6+7</td></tr>
+<tr><td>Version covered</td><td>1.0.7+8</td></tr>
 <tr><td>Package name</td><td>com.talhagohar.kisandost</td></tr>
 <tr><td>Platform</td><td>Android phones</td></tr>
 <tr><td>Price</td><td>Completely free</td></tr>
@@ -278,13 +278,14 @@
 <tr><td>1.0.4</td><td>Lock-screen alarm fix — the alarm service now reliably reaches the full-screen alarm on a sleeping, locked device. Confirmed by the user: “Alarm is working now.”</td></tr>
 <tr><td>1.0.5</td><td>Rich demo data — the demo mode sample farm was expanded to cover every screen of the app.</td></tr>
 <tr><td>1.0.6</td><td>Expense-to-inventory link — on the expense form you can pick a warehouse stock item; the cost fills in automatically from quantity and price, and the stock is deducted when the expense is saved.</td></tr>
+<tr><td>1.0.7</td><td>Reliability and correctness — demo-mode data-loss risk eliminated, ushr/batai/ledger fixes, encrypted backups, lock-screen privacy.</td></tr>
 </table></div>
 </article>
 </div></main></div>
 <footer><div class="wrap">
 <div class="foot-grid">
 <div><h4>Kisan Dost</h4><p style="font-size:.95rem">Your Digital Farming Diary — free, fully offline, in simple Urdu.</p></div>
-<div><h4>Links</h4><a href="en.html">Home</a><a href="https://github.com/TalhaGoharWeb/KisanDost">GitHub repository</a><a href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">Download APK (v1.0.6)</a></div>
+<div><h4>Links</h4><a href="en.html">Home</a><a href="https://github.com/TalhaGoharWeb/KisanDost">GitHub repository</a><a href="https://drive.google.com/uc?id=1-fmmJZfvrJw-skmo5OJ-gBHITJm_ouy5&export=download">Download APK (v1.0.7)</a></div>
 <div><h4>Documents</h4><a href="documentation.html">Complete documentation (English)</a><a href="dastavezat.html">مکمل دستاویز (اردو)</a></div>
 </div>
 <div class="foot-bottom"><span>Developer: Muhammad Talha Farid Farooqi</span><span>Fully offline • No internet • Free</span></div>
