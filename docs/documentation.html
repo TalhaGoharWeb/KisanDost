@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kisan Dost — Complete Documentation</title>
+<meta name="description" content="Complete documentation for Kisan Dost — the free, offline-first digital farming diary for Pakistani farmers.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap nav-inner">
+<a class="brand" href="en.html"><img src="assets/logo.png" alt="Kisan Dost logo">Kisan Dost</a>
+<ul class="nav-links">
+<li><a href="en.html#features">Features</a></li>
+<li><a href="en.html#how">How to use</a></li>
+<li><a href="documentation.html">Documentation</a></li>
+<li><a href="en.html#faq">FAQ</a></li>
+<li><a href="kisan-dost-1.0.6.apk">Download</a></li>
+</ul>
+<div class="nav-cta">
+<a class="lang-toggle" href="dastavezat.html">اردو</a>
+<a class="btn btn-primary" href="kisan-dost-1.0.6.apk">Download APK</a>
+<button class="burger" aria-label="Menu">☰</button>
+</div></div></nav>
+<div class="wrap">
+<div class="doc-hero">
+<h1>Kisan Dost — Complete Documentation</h1>
+<p>Your Digital Farming Diary: land, crops, expenses, harvest, sales, warehouse, theka, ushr, party ledger, batai and alarms — all in one free, fully offline app.</p>
+<a class="btn btn-gold" href="kisan-dost-documentation-english.docx" download>⬇ Download as Word (.docx)</a>
+<a class="btn btn-outline" style="color:#fff;border-color:#fff;margin-inline-start:.6rem" href="en.html">← Back to home</a>
+</div>
+<div class="doc-layout">
+<aside class="toc"><h3>Contents</h3><ol><li class=""><a href="#sec-1">1. Overview</a></li><li class="sub"><a href="#sec-1-1">Who it is for</a></li><li class="sub"><a href="#sec-1-2">What problems it solves</a></li><li class=""><a href="#sec-2">2. Getting started</a></li><li class="sub"><a href="#sec-2-1">The first time you open the app</a></li><li class="sub"><a href="#sec-2-2">Path one: Start — a fresh, empty diary</a></li><li class="sub"><a href="#sec-2-3">Path two: View demo — try the app with sample data</a></li><li class=""><a href="#sec-3">3. All features</a></li><li class="sub"><a href="#sec-3-1">3.1 Home dashboard</a></li><li class="sub"><a href="#sec-3-2">3.2 Today's Work — the daily diary</a></li><li class="sub"><a href="#sec-3-3">3.3 The activity form</a></li><li class="sub"><a href="#sec-3-4">3.4 My Lands</a></li><li class="sub"><a href="#sec-3-5">3.5 My Crops</a></li><li class="sub"><a href="#sec-3-6">3.6 Expenses</a></li><li class="sub"><a href="#sec-3-7">3.7 Harvest and Sales</a></li><li class="sub"><a href="#sec-3-8">3.8 Warehouse (inventory)</a></li><li class="sub"><a href="#sec-3-9">3.9 Profit &amp; Loss</a></li><li class="sub"><a href="#sec-3-10">3.10 Task Planning</a></li><li class="sub"><a href="#sec-3-11">3.11 Theka — land lease management</a></li><li class="sub"><a href="#sec-3-12">3.12 Ushr</a></li><li class="sub"><a href="#sec-3-13">3.13 Party Ledger — udhaar</a></li><li class="sub"><a href="#sec-3-14">3.14 Batai — sharecropping</a></li><li class="sub"><a href="#sec-3-15">3.15 Reports &amp; Export</a></li><li class="sub"><a href="#sec-3-16">3.16 Settings</a></li><li class="sub"><a href="#sec-3-17">3.17 Backup &amp; Restore</a></li><li class="sub"><a href="#sec-3-18">3.18 Recycle Bin</a></li><li class="sub"><a href="#sec-3-19">3.19 Audit Log</a></li><li class="sub"><a href="#sec-3-20">3.20 About</a></li><li class=""><a href="#sec-4">4. Alarms and reminders</a></li><li class="sub"><a href="#sec-4-1">How a task alarm works</a></li><li class="sub"><a href="#sec-4-2">The permissions alarms need — in plain words</a></li><li class="sub"><a href="#sec-4-3">Checking your alarms: Test Alarm</a></li><li class=""><a href="#sec-5">5. Backup and restore</a></li><li class="sub"><a href="#sec-5-1">What a backup is</a></li><li class="sub"><a href="#sec-5-2">When to back up</a></li><li class="sub"><a href="#sec-5-3">Automatic daily backup</a></li><li class="sub"><a href="#sec-5-4">The two restore modes</a></li><li class="sub"><a href="#sec-5-5">Importing a backup file and moving to a new phone</a></li><li class=""><a href="#sec-6">6. Reports and export</a></li><li class="sub"><a href="#sec-6-1">What is a CSV file?</a></li><li class="sub"><a href="#sec-6-2">The five CSV exports</a></li><li class="sub"><a href="#sec-6-3">The two PDF reports</a></li><li class="sub"><a href="#sec-6-4">How to generate and share</a></li><li class=""><a href="#sec-7">7. Privacy and security</a></li><li class=""><a href="#sec-8">8. FAQ and troubleshooting</a></li><li class=""><a href="#sec-9">9. Technical overview</a></li><li class="sub"><a href="#sec-9-1">Platform and storage</a></li><li class="sub"><a href="#sec-9-2">The 19 tables</a></li><li class="sub"><a href="#sec-9-3">Key relationships</a></li><li class="sub"><a href="#sec-9-4">Money and quantities — exactness rules</a></li><li class="sub"><a href="#sec-9-5">Deletion, audit and integrity</a></li><li class="sub"><a href="#sec-9-6">Native Android alarm stack</a></li><li class="sub"><a href="#sec-9-7">PDF generation</a></li><li class="sub"><a href="#sec-9-8">Backup format</a></li><li class=""><a href="#sec-10">10. Version history</a></li></ol></aside>
+<article class="doc-body"><h2 id="sec-1">1. Overview</h2>
+<p>Kisan Dost — “Kisan Dost” means “Farmer's Friend” — is a free Android app that keeps your complete farming record in one place. Its promise is simple: Your Digital Farming Diary. Instead of scattered notebooks, loose slips and memory, everything about your farm lives together on your phone, and it stays there: the app works fully offline and never needs an internet connection.</p>
+<p>With Kisan Dost you can keep, in one place:</p>
+<ul><li>Farms and fields — your lands (زمینیں), what each field measures, and how each field gets its water.</li><li>Crop seasons — which crop is growing where, in which variety, sown on which date, and over how much area.</li><li>A daily activity diary — every day's work recorded as it happens: watering, fertilizer, spray, labour, diesel, machinery and more.</li><li>Expenses — every rupee spent, with a category, a date, and — when you wish — the farm, field or crop it belongs to.</li><li>Harvests and sales — how much crop came in, the per-acre yield, what was sold, at what rate, to whom, and whether the money has been received.</li><li>Profit &amp; loss — for each crop and for the whole farm: what was spent, what was earned, and what is truly left.</li><li>Warehouse inventory — the stock in your store room (گودام): fertilizer, seed, sprays, medicine and diesel, with a full history of what came in and what was used.</li><li>Theka (ٹھیکہ) — land taken or given on lease, with the total amount, installments, and payments.</li><li>Ushr (عشر) — the Islamic agricultural levy on your harvest, calculated for you, with a record of what is due, paid and remaining.</li><li>Party ledger / udhaar (ادھار) — money you have lent, borrowed, received or paid, person by person, with receipts.</li><li>Batai (بٹائی) — sharecropping agreements and fair settlement of the shared amount between owner and cultivator.</li><li>Task alarms — reminders for farm work that ring on time, even over the lock screen, with snooze.</li></ul>
+<h3 id="sec-1-1">Who it is for</h3>
+<p>Kisan Dost is made for Pakistani farmers — small landholders and larger growers alike — who want a clear, honest record of their farming without paperwork and without depending on anyone else to keep the books. It is equally useful for a son, daughter or farm manager who keeps the record on the farmer's behalf. The interface is Urdu-first: Urdu is currently the only supported language in the app, because the app is designed first of all for the farmer who is most comfortable in Urdu.</p>
+<h3 id="sec-1-2">What problems it solves</h3>
+<ul><li>“How much did this crop really cost me?” — expenses and diary entries are linked to the crop, so the season report answers this exactly, not by guesswork.</li><li>“Did that work get done, and when?” — the daily diary and task alarms keep work visible and on time.</li><li>“How much stock is left?” — the warehouse deducts stock automatically when you use it, so the count on the screen is the count in the store.</li><li>“Who owes me, and whom do I owe?” — the party ledger keeps every udhaar entry in order, and nothing in it can be quietly changed.</li><li>“What is my ushr?” — the ushr record calculates the due amount in maund, kilograms and rupees from your harvest.</li><li>“What if I lose my phone or my records?” — backups let you copy everything to a safe place and restore it on a new phone.</li></ul>
+<p>Note: Everything in the app is free, and everything works without internet. There are no accounts to create, no login, and no monthly charges.</p>
+<h2 id="sec-2">2. Getting started</h2>
+<h3 id="sec-2-1">The first time you open the app</h3>
+<p>1. Splash screen (about 3 seconds). The app opens with its name and logo for roughly three seconds. On the very first run, the app asks for two permissions during this start: permission to show notifications, and permission to set exact alarms. Allow both — your task reminders depend on them. Chapter 4 explains each permission in plain words.</p>
+<p>2. The welcome tour (3 pages). A short three-page tour introduces the app. Move through it with the next button, or tap Skip to go straight in.</p>
+<p>3. Choose how to begin. The last page offers two paths, explained below: “Start” and “View demo”.</p>
+<h3 id="sec-2-2">Path one: Start — a fresh, empty diary</h3>
+<p>Tap “Start” (شروع کریں) and the app opens on the Home dashboard with an empty diary, ready for your own farms and crops. Nothing is pre-filled. Your first steps are usually: add a farm and its fields (My Lands), then start a crop season (My Crops), then record work and expenses as the season goes on. Each step is explained in Chapter 3.</p>
+<h3 id="sec-2-3">Path two: View demo — try the app with sample data</h3>
+<p>Tap “View demo” and the app fills itself with a complete, realistic sample farm so you can explore every screen safely before entering your own records. The sample dataset contains:</p>
+<ul><li>2 farms and 5 fields</li><li>4 crop seasons</li><li>Expenses, harvests and sales</li><li>Ushr records</li><li>Daily activities and tasks</li><li>Warehouse inventory items</li><li>Parties (people in the ledger)</li><li>A theka (lease) with installments</li><li>A 50/50 batai (sharecropping) agreement</li></ul>
+<p>Demo data is added alongside your real data — it does not replace anything. While demo mode is on, a demo banner reminds you that you are looking at sample data.</p>
+<h4>Ending demo mode</h4>
+<p>When you have finished exploring, open Settings and tap “End demo”. Only the demo rows are removed. Your own farms, crops, expenses and every other real record stay exactly as they were — ending the demo never touches your data.</p>
+<p>Please note: If you already have real data in the app and then choose “View demo”, the app warns you first: the sample rows will be added next to your real rows. You can continue or cancel. Even then, “End demo” in Settings removes only the demo rows.</p>
+<h2 id="sec-3">3. All features</h2>
+<p>This is the heart of the book. Each screen of the app has its own part below, in the order you will most often use them. On the Home dashboard, the “All features” grid is the map of the whole app, so this chapter follows that map.</p>
+<h3 id="sec-3-1">3.1 Home dashboard</h3>
+<p>The dashboard is the first screen after the splash. It answers, at a glance: what is due today, how the money stands, and how the crops stand.</p>
+<ul><li>Greeting, date and farm line. At the top you are greeted, shown today's date in Urdu, and a line naming your farm.</li><li>Today's tasks. Your five most pressing tasks for today. Tap a task to mark it complete. A task that is past its time carries a red overdue badge, so nothing slips quietly.</li><li>Money situation. Five figures that matter today: today's expenses, this month's expenses, this month's income, upcoming theka installments, and your receivables and payables (money others owe you, and money you owe).</li><li>Crop situation. Up to four of your active crops, with their standing, plus your latest sale.</li><li>Quick actions. Three shortcuts for the jobs you do most: Record expense, New task, and View crops.</li><li>All features grid. Buttons to every part of the app: My Lands, My Crops, Today's Work, Expenses, Harvest, Warehouse, Profit &amp; Loss, Task Planning, Theka Management, Ushr Management, Party Ledger, Batai, and Report.</li><li>App-bar menu (top corner). About, Settings, and Share app — use Share app to send the app to another farmer.</li></ul>
+<h3 id="sec-3-2">3.2 Today's Work — the daily diary</h3>
+<p>Today's Work is your digital diary. At the top are 12 activity cards — one tap records the day's work:</p>
+<p>Tap any card and the smart activity form opens (next part), already set to that kind of work. Below the cards, the diary lists your recorded activities in time order, newest work in its proper place. Every diary entry has its own menu with four choices: edit, duplicate (copy the entry — handy for repeated work), mark complete or incomplete, and delete.</p>
+<h3 id="sec-3-3">3.3 The activity form</h3>
+<div class="table-wrap"><table>
+<tr><th>Activity</th><th>Activity</th><th>Activity</th><th>Activity</th></tr>
+<tr><td>Irrigation</td><td>Fertilizer</td><td>Spray</td><td>Medicine</td></tr>
+<tr><td>Land preparation</td><td>Nursery</td><td>Harvest</td><td>Labour</td></tr>
+<tr><td>Diesel</td><td>Machinery</td><td>Transport</td><td>Other</td></tr>
+</table></div>
+<p>The activity form records one piece of work properly, with its true cost. It is “smart” because it shows only the sections that belong to the kind of work you picked.</p>
+<ul><li>Crop and date. Pick which crop season this work belongs to, confirm the date, and add notes if you wish.</li><li>Irrigation section. For watering: choose the source — canal, tubewell or bore; record the hours; record the diesel or electricity cost. If your tubewell runs on metered units, enter the meter readings and the app works out the usage itself.</li><li>Inventory section. For fertilizer, spray and similar work: either pick the item from your warehouse — the stock is deducted automatically when you save — or choose “buy new and apply directly” when you bought it today and used it straight away.</li><li>Labour. Number of labourers and their wages.</li><li>Machinery. The machine's name and its rent.</li></ul>
+<p>Good to know: the form accepts Urdu digits as well as English digits, in money and quantity fields everywhere in the app. If something is missing or does not make sense, the form tells you in friendly, plain words — never with a technical error message. If you tap save twice by mistake, a double-tap guard stops the entry being recorded twice. And because an activity must belong to a crop, the form gently blocks you if you have no active crop yet — start the crop season first (My Crops), then record its work.</p>
+<h3 id="sec-3-4">3.4 My Lands</h3>
+<p>My Lands is where your farms and fields live. Each farm appears as a card showing the farm's name and its total area. Tap a farm to expand it and see its fields, each with its name, its size, and two simple flags: whether the field receives canal water, and whether it has tubewell water. From the expanded farm you can add a new field.</p>
+<p>Each farm card also carries a theka strip: if that land is under a lease, the strip shows the lease details; if not, it offers to add a lease. The full theka record is managed in Theka Management (part 3.11).</p>
+<h3 id="sec-3-5">3.5 My Crops</h3>
+<p>My Crops lists your crop seasons under two tabs: Active and Harvested. Each crop appears as an expandable card showing the crop name, its variety, its status, the farm and field it stands on, its area, and its sowing date.</p>
+<p>Expand a card — or open the season — to see the season report:</p>
+<ul><li>Total expense for the season, total yield, total income, and the resulting profit.</li><li>A per-field split, so you can see how the same crop performed on different fields.</li><li>The activity timeline: every diary entry recorded against this crop, in order.</li><li>A “Complete harvest” button, which closes the season when the crop is fully in.</li></ul>
+<h4>Starting a new crop</h4>
+<p>Tap the new crop button and a dialog guides you: select one field or several fields together (a crop season can span multiple fields), pick the crop and its variety from the ready-made lists — common crops and their varieties are already listed — or type a custom variety of your own. Add the sowing date and area, and the season is running. From that moment, activities and expenses can be recorded against it.</p>
+<h3 id="sec-3-6">3.6 Expenses</h3>
+<p>The Expenses screen lists every expense, headed by a red total card so the overall spend is never in doubt. Tap the new expense button to record one:</p>
+<p>1. Category. Choose what the money was for.</p>
+<p>2. Farm, field, crop (optional). Three pickers that narrow as you go: choose a farm, then one of its fields, then a crop on it. These are optional — a general farm expense needs none of them. If you link the expense to a crop, the app also creates the matching diary activity automatically, so the crop's timeline stays complete without double typing.</p>
+<p>3. Amount, description and date. How much, what for, and when.</p>
+<h4>Paying from warehouse stock — the expense-to-inventory link</h4>
+<p>When the category is Fertilizer, Seeds, Sprays, Diesel or Crop Medicine, an extra, optional stock-item picker appears, listing only items that are actually in stock. Pick the item you used and enter the quantity — kilograms are supported, because the app knows each item's per-package weight. The amount then fills in by itself as quantity × cost per unit, and it stays editable by hand if the real price differed. When you save, that stock is deducted from the warehouse, with a note in the item's history explaining the deduction. If there is not enough stock for the quantity you entered, saving is blocked with an “insufficient stock” message — the app will not let the warehouse go below zero quietly.</p>
+<p>Example: A 20 kg bag costing Rs 2,000. You use 10 kg. Pick the bag, enter 10 kg, and the expense fills in Rs 1,000 by itself — half the bag, half the price.</p>
+<h3 id="sec-3-7">3.7 Harvest and Sales</h3>
+<p>Harvest and Sales has two tabs — Harvest and Sales — under a summary strip showing total income, total expenses and the net figure.</p>
+<h4>Harvest tab</h4>
+<p>Each harvest card shows the quantity brought in, the per-acre yield (worked out by the app from quantity and area), the payment status, a small financial grid of the harvest's figures, the rate, and the buyer.</p>
+<p>To add a harvest, the dialog asks for: the crop, the quantity and its unit (for example maund), the rate, the payment status, and the buyer. It also has five harvest-expense buckets for the costs that belong to the harvest itself — so the true cost of bringing the crop in is not lost among general expenses. Add notes if you wish. While you type, a live profit preview updates, so you can see the harvest's profit before you save it.</p>
+<h4>Sales tab</h4>
+<p>The Sales tab lists what you have sold. To record a sale, use the record sale dialog: enter the rate, the buyer and the date; the total is worked out automatically from quantity and rate. Sales feed the crop report, the dashboard's latest sale, and the Profit &amp; Loss chapter figures.</p>
+<h3 id="sec-3-8">3.8 Warehouse (inventory)</h3>
+<p>The Warehouse keeps your stock honest. A card at the top shows the total value of everything in stock. Filter chips let you view All, or only Fertilizer, Seed, Spray, Medicine, Diesel or Other. Every item carries a clear stock badge: in stock, low, or out.</p>
+<h4>Adding stock</h4>
+<p>The add stock dialog asks for the category, the item's name, the quantity, the unit, the per-package weight (for example, a 20 kg bag — this is what lets you later spend stock by the kilogram), and the price per unit.</p>
+<h4>History and corrections</h4>
+<p>Open any item to see its full transaction history: every purchase, every usage and every adjustment, in order. If you edit an item's quantity, the change is not made silently — it is recorded in that history as a ledger adjustment with the reason, so the books always explain themselves. Stock is checked and deducted in one single step: if you try to use more than you have, the use is blocked outright. The count is never quietly “adjusted down” to hide a shortage.</p>
+<h3 id="sec-3-9">3.9 Profit &amp; Loss</h3>
+<p>Profit &amp; Loss is where the season's truth is told. It has four tabs:</p>
+<ul><li>Per-crop P&amp;L. A net profit/loss card for the whole picture, your most profitable crop, and your highest yield, followed by expandable detail for each crop — its sales and its expense breakdown, side by side.</li><li>Expense analysis. How your money was spent, category by category, shown as bars so the biggest costs stand out at a glance. Expenses that belong to no crop — the farm's general, indirect costs — are shown honestly in their own row, never hidden inside a crop.</li><li>Theka report. Lease totals, how many agreements are in each status, and tables by land, by season and by year.</li><li>Ushr report. Ushr totals, the split between ushr paid in cash and ushr paid in crop, and tables by land, by crop and by year.</li></ul>
+<h3 id="sec-3-10">3.10 Task Planning</h3>
+<p>Task Planning keeps farm work on time. A stats header counts your tasks: total, done and remaining. The list is arranged in four sections — overdue, today, upcoming and completed — so the most urgent work is always at the top. Every task shows a countdown to its time and a badge showing its alarm status. The screen refreshes itself every 10 seconds, so countdowns and badges are always current while you watch.</p>
+<h4>Creating or editing a task</h4>
+<p>The task form asks for a name, a description, and a date and time. Choose how it repeats: once, daily or weekly. Then choose its reminders — the alarm can ring at the time itself, 1 hour before, and 1 day before; you may select more than one. New tasks start with the reminder choices you set as defaults in Settings. When you save, a confirmation shows the exact time the alarm will ring, so there is no doubt it is set. If the phone has not yet been given the full-screen alarm permission, the app prompts you for it at this point, because without it the alarm cannot appear over the lock screen. How alarms behave is explained fully in Chapter 4.</p>
+<h3 id="sec-3-11">3.11 Theka — land lease management</h3>
+<p>Theka Management lists your lease agreements with a financial summary and a progress bar on each — how much of the lease is paid, at a glance.</p>
+<h4>A new agreement</h4>
+<p>The form asks for the farm, and optionally the specific field; the duration — annual, seasonal or custom, with the end date worked out automatically for annual and seasonal terms; and the total amount. Choose how it will be paid: as a lump sum, or in installments. For installments, the app generates the schedule for you and checks it before saving — the installments add up correctly to the total.</p>
+<h4>The details screen</h4>
+<p>Open an agreement to see its full terms and its installment schedule. Record a payment against an installment here: an overpayment guard stops you recording more than is due. A payment recorded by mistake can be cancelled. Once payments have been recorded against an agreement, editing its terms is locked — the money record must stay trustworthy, so the figures that payments were made against cannot be changed afterwards.</p>
+<h3 id="sec-3-12">3.12 Ushr</h3>
+<div class="table-wrap"><table>
+<tr><th>Irrigation method</th><th>Ushr rate</th></tr>
+<tr><td>Natural (rain / river, no costly watering)</td><td>10%</td></tr>
+<tr><td>Artificial (tubewell, purchased water and similar effort)</td><td>5%</td></tr>
+<tr><td>Custom</td><td>A rate you enter yourself</td></tr>
+</table></div>
+<p>The Ushr screen opens with a summary: total ushr due, total paid, and what remains. Each record shows how it was calculated, by irrigation method:</p>
+<h4>A new ushr record</h4>
+<p>You can autofill a new record from a past harvest — quantity and crop come across for you — or enter it manually. Enter the quantity and rate; the market value is worked out automatically. Choose how the ushr will be paid: in cash, in crop, or mixed — for a mixed payment, the two parts are filled in automatically as a fair split. A live calculation card shows the ushr due in three ways at once: in maund, in kilograms and in rupees, updating as you type, so you can give the crop itself or its value with confidence.</p>
+<p>Good to know: When an ushr record is marked paid, the app automatically creates a matching ushr expense in your expenses, so your profit figures stay complete without extra typing.</p>
+<h3 id="sec-3-13">3.13 Party Ledger — udhaar</h3>
+<div class="table-wrap"><table>
+<tr><th>Entry type</th><th>Meaning</th></tr>
+<tr><td>Udhaar diya</td><td>You lent money (gave udhaar)</td></tr>
+<tr><td>Udhaar liya</td><td>You borrowed money (took udhaar)</td></tr>
+<tr><td>Wusooli</td><td>You received money back</td></tr>
+<tr><td>Adaigi</td><td>You paid money back</td></tr>
+</table></div>
+<p>The Party Ledger records money between you and other people. The top of the screen summarises receivables (money others owe you) and payables (money you owe).</p>
+<h4>Adding a party</h4>
+<p>Add a party with their name and phone number. The phone number is checked as a Pakistani number, so a mistyped digit is caught at entry, not discovered months later.</p>
+<h4>A party's page</h4>
+<p>Open a party to see a balance banner — the one true figure of where you stand with that person — and the full list of entries beneath it. To add an entry, choose from four types:</p>
+<p>The ledger is append-only: entries are added, never edited or rewritten afterwards. That is deliberate — a ledger you can quietly change is a ledger nobody can trust in a disagreement. If an entry was a mistake, add the correcting entry; both stay visible and the balance stays honest.</p>
+<p>From a party's page you can also produce a PDF receipt of the account, to share or print (see part 3.15).</p>
+<h3 id="sec-3-14">3.14 Batai — sharecropping</h3>
+<p>Batai manages sharecropping agreements. The list can be filtered by status. To create an agreement: state your role — landowner or cultivator; pick the other party from your parties, or add a new party on the spot without leaving the form; and set the shares in percent. The two shares must add up to 100, and the form rebalances automatically as you adjust one side so the total never drifts. There is a place to note how expenses are split, and the agreement's dates.</p>
+<p>Once the first settlement has been made on an agreement, its terms lock — the shares that money was settled under cannot be changed afterwards.</p>
+<h4>Settle account</h4>
+<p>Tap “Settle account” and type the total amount to be divided. A live preview shows each side's share as you type. Because paisa cannot be split into fractions, one small rounding rule applies, and the app shows it before you confirm: any leftover of 0–99 paisa goes to the side with the larger share; if the shares are equal, the leftover goes to the owner. The two shares always add up exactly to the total. A settlement can optionally be linked to a harvest or a sale, so the record shows what the money came from.</p>
+<h3 id="sec-3-15">3.15 Reports &amp; Export</h3>
+<p>The Report screen turns your records into files you can open elsewhere, send to family, or give to an accountant. Chapter 6 explains the formats in full; in brief:</p>
+<ul><li>5 CSV exports — expenses, sales, party ledger, inventory transactions, and batai settlements. CSV files open in Microsoft Excel and similar programs. These exports have Urdu column headers, are written so Excel displays the Urdu correctly, and are protected so that text beginning with a formula character can never act as a formula in a spreadsheet.</li><li>2 PDF reports — a farm Profit &amp; Loss report, and a party receipt. These PDFs are built by capturing the app's own on-screen reports as pictures, which is why the Urdu in the PDF looks exactly as it does on your phone screen — correctly shaped and readable.</li><li>Sharing — every export and report opens the phone's standard share sheet, so you can send it by WhatsApp, email, Bluetooth or any other app you use.</li></ul>
+<h3 id="sec-3-16">3.16 Settings</h3>
+<p>Settings is the control room of the app. Its parts:</p>
+<ul><li>Master reminders switch. One switch for all task reminders. Turn it off and every alarm is cancelled; turn it on and your task alarms are armed again.</li><li>Alarm behaviour. Choose the alarm sound, turn vibration on or off, and set the snooze duration: 5, 10 or 15 minutes (the standard setting is 10 minutes).</li><li>Test Alarm. Tap “Test Alarm” and an alarm fires in 15 seconds, exactly as a real task alarm would — the surest way to confirm alarms work on your phone. See Chapter 4.</li><li>Default reminders for new tasks. Choose which reminder times (at the time, 1 hour before, 1 day before) new tasks start with, so you do not pick them again for every task.</li><li>Permissions. Rows showing the state of the permissions alarms depend on — battery-optimization exemption, full-screen alarm, exact alarm, and other app permissions — each with a way to fix it if it is missing.</li><li>Backup &amp; data. Shortcuts to the Backup screen, the Recycle Bin, and the Audit Log (parts 3.17 to 3.19).</li><li>Demo. Enter demo mode, or — while it is running — “End demo” to remove only the sample data.</li><li>Danger zone. “Delete all data forever.” This wipes everything in the app. Because it cannot be undone, the app asks you to confirm twice. Make a backup first (part 3.17) if there is anything you may want again.</li></ul>
+<h3 id="sec-3-17">3.17 Backup &amp; Restore</h3>
+<div class="table-wrap"><table>
+<tr><th>Restore mode</th><th>What it does</th></tr>
+<tr><td>Replace</td><td>Wipes the data currently in the app and puts the backup in its place. The app asks you to confirm twice. Use this on a new phone, or to return the app to exactly the state of that backup.</td></tr>
+<tr><td>Merge</td><td>Adds the backup's rows to what is already in the app, keeping your current data. Rows you already have are not duplicated. Use this to combine records rather than replace them.</td></tr>
+</table></div>
+<p>The Backup screen protects your record. From here you can create a backup with one tap and see all your backups in a list — each showing its label, its date and time, its size, the database schema version it belongs to, and a badge if it was made automatically.</p>
+<p>Restoring offers two modes — choose carefully, because they behave very differently:</p>
+<p>Each backup can also be shared (send it somewhere safe), deleted, and you can import a .db backup file that someone sends you or that you kept from an old phone. An automatic daily backup can be switched on here; Chapter 5 explains the whole subject, including what a backup file actually is.</p>
+<h3 id="sec-3-18">3.18 Recycle Bin</h3>
+<p>Deleting in Kisan Dost is forgiving. When you delete an expense, sale, harvest, task or party, it does not vanish — it moves to the Recycle Bin. Open the bin, find the item, and restore it with one tap; it returns exactly as it was. If you are certain, you can delete an item permanently from the bin — that step asks for confirmation, and it truly is final.</p>
+<h3 id="sec-3-19">3.19 Audit Log</h3>
+<p>The Audit Log is the app's memory of its own changes: an append-only, read-only history of every record created, updated or deleted, with plain Urdu labels for what happened. You cannot edit it and you cannot clear it — and neither can anyone else using your phone. If ever a figure surprises you, the audit log is where the explanation lives.</p>
+<h3 id="sec-3-20">3.20 About</h3>
+<p>The About screen states what the app is for, lists its features, credits its developer — Muhammad Talha Fareed Farooqui — and repeats the two commitments the app is built on: it is free, and it works offline. Your data is yours, on your phone, at no cost.</p>
+<h2 id="sec-4">4. Alarms and reminders</h2>
+<p>Farm work waits for no one. A spray window, a watering turn or a labour payment missed by a day can cost a season. Kisan Dost's task alarms are therefore built to ring properly — on time, loudly, and over the lock screen — not as a quiet note you might notice later.</p>
+<h3 id="sec-4-1">How a task alarm works</h3>
+<ul><li>More than one reminder per task. A task can ring at the time itself, 1 hour before, and 1 day before — select any combination when you create the task. New tasks start with your default choices from Settings.</li><li>Repeating tasks roll forward. A daily task rings again the next day, and a weekly task the next week, automatically. You set it once.</li><li>Exact timing. Alarms are set with Android's alarm-clock mechanism, the same one the phone's own clock app uses. That means they are exempt from Doze — Android's battery-saving sleep — and ring at the set minute even if the phone has been sitting untouched for hours.</li><li>Full-screen alarm. When an alarm rings, it takes over the screen even if the phone is locked, with three buttons: mark the task complete, dismiss the alarm, or snooze (rest for a few minutes, then ring again).</li><li>Snooze duration. Snooze lasts 5, 10 or 15 minutes — your choice in Settings; the standard setting is 10 minutes.</li><li>Notification actions. The notification that comes with the alarm also carries complete and snooze actions, so you can deal with the task without opening the app.</li><li>After a phone restart. Alarms re-arm themselves automatically when the phone restarts, as long as reminders are switched on in Settings. You never need to “restart” your reminders after switching the phone off and on.</li></ul>
+<h3 id="sec-4-2">The permissions alarms need — in plain words</h3>
+<div class="table-wrap"><table>
+<tr><th>Permission</th><th>Why the app needs it</th></tr>
+<tr><td>Notifications</td><td>So the alarm and its reminder messages can appear at all. Without this, Android hides them.</td></tr>
+<tr><td>Exact alarms</td><td>So the alarm rings at the exact minute you set, rather than “sometime soon after”, which is how Android treats ordinary reminders to save battery.</td></tr>
+<tr><td>Full-screen intent</td><td>So the ringing alarm can appear over the lock screen, where you will see it immediately, instead of hiding behind the lock.</td></tr>
+<tr><td>Battery-optimization exemption</td><td>Many phones aggressively put apps to sleep to save battery, which can delay or swallow alarms. This exemption tells the phone: leave Kisan Dost's alarms alone.</td></tr>
+</table></div>
+<p>The app asks for the notification and exact-alarm permissions on its first start, shows the state of all of them in Settings with a way to fix each one, and prompts for the full-screen permission when you save a task without it.</p>
+<h3 id="sec-4-3">Checking your alarms: Test Alarm</h3>
+<p>In Settings, tap “Test Alarm”. An alarm fires 15 seconds later, with the full-screen display, sound, vibration and snooze exactly as a real task alarm behaves. If the test rings properly, your real alarms will too. If it does not, Chapter 8 walks through the four permissions to check.</p>
+<h2 id="sec-5">5. Backup and restore</h2>
+<h3 id="sec-5-1">What a backup is</h3>
+<p>A backup is a complete copy of your Kisan Dost database — the single file, called kisan_dost.db, in which every farm, field, crop, expense, harvest, ledger entry and setting record of the app lives. Alongside the copy, the app writes a small information file (a “sidecar”) recording the app version, the database schema version, the date and time of the backup, and a SHA-256 checksum — a fingerprint of the file. When you restore, the app checks the file against its fingerprint first, so a damaged or incomplete backup file is caught before it can do harm.</p>
+<p>Backup files are named clearly, like this: kisandost_backup_20261018_093015_v15.db — the name itself carries the date, the time and the schema version (v15).</p>
+<h3 id="sec-5-2">When to back up</h3>
+<ul><li>Before changing phones, and before sending a phone for repair.</li><li>At the end of each crop season, when the season's record is complete.</li><li>Before trying anything drastic, such as “Delete all data”.</li><li>Regularly in between — a backup takes a few seconds. The automatic daily backup (below) removes even this small effort.</li></ul>
+<h3 id="sec-5-3">Automatic daily backup</h3>
+<p>Switch on the automatic daily backup on the Backup screen and the app makes one backup each day by itself. It keeps the newest 10 automatic backups and removes the older ones, so backups never fill the phone. Automatic backups carry an “auto” badge in the backup list.</p>
+<h3 id="sec-5-4">The two restore modes</h3>
+<div class="table-wrap"><table>
+<tr><th>Mode</th><th>Use it when</th></tr>
+<tr><td>Replace — wipes current data (double confirmation)</td><td>You are setting up a new phone, or you want the app to become exactly what it was at the moment of that backup. Anything entered after the backup will be lost.</td></tr>
+<tr><td>Merge — adds new rows, keeps current data</td><td>You want to bring records from a backup into the app without losing what is already here. Rows already present are not duplicated.</td></tr>
+</table></div>
+<h3 id="sec-5-5">Importing a backup file and moving to a new phone</h3>
+<p>1. On the old phone, create a backup on the Backup screen.</p>
+<p>2. Share that backup file to somewhere you can reach it from the new phone — for example, send it to yourself on WhatsApp, or copy it by cable or memory card. Keep both files together: the .db file and its small .json information file of the same name.</p>
+<p>3. On the new phone, install Kisan Dost, open the Backup screen, and import the .db file.</p>
+<p>4. Choose Replace (right for a fresh install) and confirm. Your whole farming record is now on the new phone.</p>
+<p>Keep backups safe: Backups are checked with a checksum but are not encrypted. Anyone who obtains a backup file could open it. Keep backups in a safe place — your own WhatsApp “message yourself” chat, a private folder, or your own computer — and do not post them publicly. See Chapter 7.</p>
+<h2 id="sec-6">6. Reports and export</h2>
+<h3 id="sec-6-1">What is a CSV file?</h3>
+<p>CSV stands for “comma-separated values”. In plain words, it is a simple table file: each line is one record, and the values are separated in a standard way. Its great virtue is that almost every spreadsheet program can open it — Microsoft Excel above all, but also free programs and phone apps. Open a Kisan Dost CSV in Excel and your farm records appear as a proper table you can sort, filter, print, or hand to an accountant.</p>
+<p>Kisan Dost's CSV exports are prepared with care for exactly that use: the column headers are in Urdu, and the files begin with a small technical marker (called a UTF-8 BOM) whose only job is to make Excel display the Urdu correctly instead of as scrambled symbols. As a safety measure, any text that begins with a character a spreadsheet could mistake for a formula is neutralised on export, so your data can be opened safely anywhere.</p>
+<h3 id="sec-6-2">The five CSV exports</h3>
+<div class="table-wrap"><table>
+<tr><th>Export</th><th>What each row is</th></tr>
+<tr><td>Expenses</td><td>One expense per row, with its farm, field and crop shown by name</td></tr>
+<tr><td>Sales</td><td>One sold harvest per row</td></tr>
+<tr><td>Party ledger</td><td>Every ledger entry, followed by one balance row per party</td></tr>
+<tr><td>Inventory transactions</td><td>Every stock movement — purchases, usage, adjustments</td></tr>
+<tr><td>Batai settlements</td><td>Every sharecropping settlement, with the agreement it belongs to</td></tr>
+</table></div>
+<h3 id="sec-6-3">The two PDF reports</h3>
+<ul><li>Farm Profit &amp; Loss report (PDF). Your farm's profit picture as a finished, printable document.</li><li>Party receipt (PDF). A receipt of a party's ledger account — generate it from the party's page or the Report screen when you settle or review an account with someone.</li></ul>
+<p>Why do these PDFs always look right? Most apps rebuild a report as plain text for printing, which is exactly where Urdu letters often break apart or run the wrong way. Kisan Dost instead captures its own on-screen report — the same report you see in the app, drawn by the app — and places that picture into the PDF. The Urdu therefore prints exactly as it appears on your screen: joined, shaped and readable.</p>
+<h3 id="sec-6-4">How to generate and share</h3>
+<p>1. Open Report from the Home dashboard's “All features” grid.</p>
+<p>2. Tap the export or report you want. The app prepares the file; for PDFs you will briefly see a “PDF is being prepared” message.</p>
+<p>3. The phone's share sheet opens. Choose where the file goes — WhatsApp, email, Bluetooth, a printer app, or “Save to Files”.</p>
+<h2 id="sec-7">7. Privacy and security</h2>
+<p>Your farm record is your business — literally. Kisan Dost is built so that it stays your business.</p>
+<ul><li>Fully offline — by construction. The app does not even ask Android for the internet permission. An app without that permission cannot connect to the internet at all, whatever it tries. Your data has no road out of your phone.</li><li>No accounts, no login. There is nothing to sign up for and no password to leak. Open the app and your diary is there.</li><li>No ads, no analytics. Nothing in the app watches how you use it, counts you, or reports on you. There are no advertisements.</li><li>All data stays on the device. Every record lives in the app's own private storage area on your phone, where other apps cannot read it.</li><li>The lock-screen alarm shows no finances. A ringing alarm displays the task, not your money. Someone who picks up your locked phone to silence an alarm cannot open your financial records from it.</li><li>Deletes are recoverable; changes are remembered. Deleted records wait in the Recycle Bin (part 3.18), and every create, change and delete is written to the read-only Audit Log (part 3.19). Nothing is quietly altered.</li></ul>
+<p>An honest note: Backup files are protected by a checksum, which proves the file has not been damaged — but they are not encrypted, which means the data inside is not scrambled. Treat a backup file like a paper ledger: keep it somewhere safe and private. See Chapter 5.</p>
+<h2 id="sec-8">8. FAQ and troubleshooting</h2>
+<div class="doc-qa"><div class="q">My alarm did not ring. What should I check?</div><div class="a">Check the four alarm permissions: notifications, exact alarms, full-screen alarm, and the battery-optimization exemption. Settings shows each permission's state and offers a way to fix it. Then tap “Test Alarm” in Settings: if the test alarm rings in 15 seconds with the full-screen display, alarms are working. Also confirm the master reminders switch in Settings is on — when it is off, all alarms are cancelled by design. Chapter 4 explains each permission.</div></div>
+<div class="doc-qa"><div class="q">How do I change the snooze duration?</div><div class="a">Open Settings and set snooze duration to 5, 10 or 15 minutes. The standard setting is 10 minutes. The new duration applies to alarms from then on.</div></div>
+<div class="doc-qa"><div class="q">I deleted a record by accident. Can I get it back?</div><div class="a">Yes, in most cases. Expenses, sales, harvests, tasks and parties are not deleted immediately — they move to the Recycle Bin. Open Settings → Recycle Bin, find the item, and restore it with one tap. Only items you permanently delete from inside the Recycle Bin are gone for good.</div></div>
+<div class="doc-qa"><div class="q">How do I move my data to a new phone?</div><div class="a">Create a backup on the old phone, share the backup file to the new phone, install Kisan Dost there, and import the file on the Backup screen using Replace. Chapter 5 gives the four steps in full.</div></div>
+<div class="doc-qa"><div class="q">My warehouse stock looks wrong. How do I find the mistake?</div><div class="a">Open the item in the Warehouse and read its transaction history: every purchase, usage and adjustment is recorded, in order, with adjustments carrying their reason. Stock deducted by an activity or an expense appears there too. Compare the history with what physically happened — the point where the two disagree is the mistake, and you can correct the count with an adjustment, which will itself be recorded with a reason.</div></div>
+<div class="doc-qa"><div class="q">Can I type amounts in Urdu digits?</div><div class="a">Yes. Money and quantity fields throughout the app accept Urdu digits (۰۱۲۳۴۵۶۷۸۹) as well as English digits (0123456789). Type whichever is natural to you.</div></div>
+<div class="doc-qa"><div class="q">How do I end demo mode?</div><div class="a">Open Settings and tap “End demo”. Only the sample demo rows are removed; everything you entered yourself remains untouched.</div></div>
+<div class="doc-qa"><div class="q">How do I protect myself against losing my records?</div><div class="a">Back up. Switch on the automatic daily backup on the Backup screen, and from time to time share a backup file somewhere off the phone — your own WhatsApp chat with yourself, email, or a computer. A backup on the same phone protects against mistakes; a backup off the phone also protects against losing the phone.</div></div>
+<h2 id="sec-9">9. Technical overview</h2>
+<p>This chapter is the developer reference. It stays accurate and plain, but it uses the terms a developer will look for. Readers who only use the app can safely skip it — nothing in the earlier chapters depends on it.</p>
+<h3 id="sec-9-1">Platform and storage</h3>
+<ul><li>Application: Flutter (Dart), single codebase, Android target; package com.talhagohar.kisandost; app version 1.0.6+7.</li><li>Database: SQLite, file kisan_dost.db, schema version 15, with 19 tables. Foreign keys are enforced.</li><li>Timezone: Asia/Karachi is set explicitly wherever times are computed and alarms are scheduled.</li><li>No network layer: the Android manifest declares no INTERNET permission; the app contains no accounts, ads or analytics components.</li></ul>
+<h3 id="sec-9-2">The 19 tables</h3>
+<p>farms, fields, crop_seasons, crop_season_fields, expenses, inventory, inventory_transactions, activities, harvests, ushr_records, sales, tasks, thekas, theka_installments, parties, party_ledger_entries, batai_agreements, batai_settlements, audit_log.</p>
+<h3 id="sec-9-3">Key relationships</h3>
+<ul><li>A farm has many fields. A field belongs to one farm.</li><li>A crop season stands on one or more fields: crop_seasons is linked to fields many-to-many through the crop_season_fields junction table, so one season can span several fields and reports can still split per field.</li><li>Activities, expenses and harvests attach to a crop season (expenses may also attach only to a farm or field, or to none). Sales are recorded against harvests.</li><li>A theka (lease) belongs to a farm and optionally a field, and has many theka_installments. A party has many party_ledger_entries. A batai_agreements row has many batai_settlements. An inventory item has many inventory_transactions — its ledger.</li></ul>
+<h3 id="sec-9-4">Money and quantities — exactness rules</h3>
+<ul><li>Money is integer paisa. All money is stored and computed as integer paisa (1 rupee = 100 paisa), never as floating point, so sums are exact. Parsing typed money rejects more than two decimal places rather than silently rounding.</li><li>Quantities are decimals, guarded. Quantities (weights, areas, hours) are decimals; NaN and Infinity values are rejected at the input boundary, so a corrupt quantity can never enter a total.</li><li>The one rounding rule. Batai settlement: each share is truncated to whole paisa; the leftover 0–99 paisa go to the larger share, ties to the owner — so shares always sum exactly to the total.</li><li>Stock is never negative by accident. Usage is an atomic check-and-decrement: the check and the deduction happen as one step, and overuse is refused rather than clamped.</li></ul>
+<h3 id="sec-9-5">Deletion, audit and integrity</h3>
+<ul><li>Soft delete on five tables: expenses, harvests, sales, tasks and parties carry a deleted-at marker. Deletes move rows to the Recycle Bin view; ordinary lists show only live rows; restore clears the marker.</li><li>Append-only audit log: every create, update and delete writes an audit_log entry. The log has no edit or clear function in the app.</li><li>Append-only party ledger: party entries are inserted, never updated in place.</li><li>Inventory edits are ledger adjustments: changing a stock quantity writes an inventory_transactions adjustment with a reason, rather than rewriting history.</li></ul>
+<h3 id="sec-9-6">Native Android alarm stack</h3>
+<p>Alarms are implemented natively (Kotlin) because they must survive process death and Doze. AlarmScheduler sets exact alarms through AlarmManager.setAlarmClock, which is exempt from Doze. AlarmReceiver receives the firing intent; AlarmService presents the ringing experience; AlarmActivity is the full-screen, show-when-locked alarm UI with complete, dismiss and snooze actions; BootReceiver re-arms all pending alarms after BOOT_COMPLETED (and package replacement), provided reminders are enabled. Flutter and the native side communicate over the method channel com.talhagohar.kisandost/share, which also serves the app's native sharing calls.</p>
+<h3 id="sec-9-7">PDF generation</h3>
+<p>PDF reports and receipts are produced by capturing the app's own report widgets as images and composing those images into the PDF. This guarantees that Urdu text in print is rendered by the same shaping and Nastaleeq display the user sees on screen, instead of being re-rendered by a PDF text engine with different shaping behaviour.</p>
+<h3 id="sec-9-8">Backup format</h3>
+<p>A backup is a byte copy of kisan_dost.db plus a JSON sidecar of the same name carrying appVersion, schemaVersion, createdAt, sha256 (the file's SHA-256 checksum) and label. Files are named kisandost_backup_&lt;yyyyMMdd_HHmmss&gt;_v&lt;schemaVersion&gt;.db. Restore verifies structure and, when a sidecar is present, the checksum before importing. Restore modes: Replace (wipe, then import) and Merge (import new rows only). Automatic daily backups keep the newest 10.</p>
+<h2 id="sec-10">10. Version history</h2>
+<p>Kisan Dost — version 1.0.6+7, package com.talhagohar.kisandost</p>
+<div class="table-wrap"><table>
+<tr><th>Item</th><th>Detail</th></tr>
+<tr><td>App name</td><td>Kisan Dost</td></tr>
+<tr><td>Tagline</td><td>Your Digital Farming Diary</td></tr>
+<tr><td>Version covered</td><td>1.0.6+7</td></tr>
+<tr><td>Package name</td><td>com.talhagohar.kisandost</td></tr>
+<tr><td>Platform</td><td>Android phones</td></tr>
+<tr><td>Price</td><td>Completely free</td></tr>
+<tr><td>Internet needed?</td><td>No — the app works fully offline</td></tr>
+<tr><td>App language</td><td>Urdu (currently the only supported language)</td></tr>
+</table></div>
+<div class="table-wrap"><table>
+<tr><th>Version</th><th>What changed</th></tr>
+<tr><td>1.0.0</td><td>Initial release — the complete digital farming diary: farms, fields, crops, activities, expenses, harvests, warehouse, theka, ushr, party ledger, batai, task alarms, backup and reports.</td></tr>
+<tr><td>1.0.1</td><td>Post-audit hardening and stability wave — security, accounting and input-handling fixes from a full production audit, including CSV formula-injection protection and quantity validation.</td></tr>
+<tr><td>1.0.2</td><td>Alarm diagnostics — the “Test Alarm” button, corrected permission-request timing, and a save confirmation showing the exact alarm time.</td></tr>
+<tr><td>1.0.3</td><td>Snooze fix — the chosen snooze duration (5/10/15 minutes) is now honoured correctly, with the lock-screen alarm permission prompt fixed alongside it.</td></tr>
+<tr><td>1.0.4</td><td>Lock-screen alarm fix — the alarm service now reliably reaches the full-screen alarm on a sleeping, locked device. Confirmed by the user: “Alarm is working now.”</td></tr>
+<tr><td>1.0.5</td><td>Rich demo data — the demo mode sample farm was expanded to cover every screen of the app.</td></tr>
+<tr><td>1.0.6</td><td>Expense-to-inventory link — on the expense form you can pick a warehouse stock item; the cost fills in automatically from quantity and price, and the stock is deducted when the expense is saved.</td></tr>
+</table></div>
+</article>
+</div></div>
+<footer><div class="wrap">
+<div class="foot-grid">
+<div><h4>Kisan Dost</h4><p style="font-size:.95rem">Your Digital Farming Diary — free, fully offline, in simple Urdu.</p></div>
+<div><h4>Links</h4><a href="en.html">Home</a><a href="https://github.com/TalhaGoharWeb/KisanDost">GitHub repository</a><a href="kisan-dost-1.0.6.apk">Download APK (v1.0.6)</a></div>
+<div><h4>Documents</h4><a href="documentation.html">Complete documentation (English)</a><a href="dastavezat.html">مکمل دستاویز (اردو)</a></div>
+</div>
+<div class="foot-bottom"><span>Developer: Muhammad Talha Farid Farooqi</span><span>Fully offline • No internet • Free</span></div>
+</div></footer>
+<script src="site.js"></script>
+</body></html>
