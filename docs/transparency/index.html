@@ -41,7 +41,7 @@
 <section><div class="wrap">
 <div class="sec-head reveal">
 <span class="sec-kicker">اسپانسر کے تحفظات</span>
-<h2>اسپانسرشپ کے نو اصول</h2>
+<h2>اسپانسرشپ کے آٹھ اصول</h2>
 <p>یہ اصول ہر اسپانسر اور ہر شراکت پر لاگو ہوتے ہیں — بغیر کسی استثنا کے۔</p>
 </div>
 <ul class="check-list reveal">
@@ -53,7 +53,6 @@
 <li><h3>تعاون سبسکرپشن نہیں</h3><p>رضاکارانہ تعاون دینا کسی سبسکرپشن، ممبرشپ یا خاص درجے کے برابر نہیں — تعاون کرنے والا اور نہ کرنے والا برابر ہیں۔</p></li>
 <li><h3>لوگو صرف اجازت سے</h3><p>کسی اسپانسر یا پارٹنر کا لوگو ویب سائٹ یا مواد پر صرف اس کی واضح اجازت سے لگایا جائے گا۔</p></li>
 <li><h3>بغیر اجازت سرکاری/کمپنی لوگو نہیں</h3><p>کسی سرکاری ادارے یا کمپنی کا لوگو یا نام ان کی اجازت کے بغیر استعمال نہیں کیا جائے گا۔</p></li>
-<li><h3>ٹیکس میں چھوٹ کا دعویٰ نہیں</h3><p>ہم یہ دعویٰ نہیں کرتے کہ آپ کے تعاون پر ٹیکس میں چھوٹ ملے گی — ایسا کوئی وعدہ نہ کیا گیا ہے نہ کیا جائے گا۔</p></li>
 </ul>
 </div></section>
 
@@ -67,22 +66,8 @@
 <div class="feat-card"><div class="feat-icon">📈</div><h3>کیا ناپا جا سکتا ہے</h3><p>صرف اس صورت میں جب پیمائش فعال ہو: ہر صفحے کے مجموعی دورے (بشمول اسپانسر/تعاون/خدمات کے صفحات)، آنے کے ذرائع، ڈیوائس کی اقسام اور ممالک — صرف مجموعی تعداد، کسی فرد کی شناخت کے بغیر۔ انفرادی بٹن کلکس مفت درجے میں الگ سے نہیں ناپے جاتے۔</p></div>
 <div class="feat-card"><div class="feat-icon">🚫</div><h3>کیا کبھی جمع نہیں ہوتا</h3><p>ذاتی معلومات، فارم ریکارڈ، لوکیشن، رابطے (contacts)، یا فون کی کوئی تفصیل — یہ سب کبھی جمع نہیں کیے جاتے، چاہے پیمائش فعال ہو یا نہ ہو۔</p></div>
 </div>
-<div class="notice-box reveal">
-<h3>منتخب فراہم کنندہ — Cloudflare Web Analytics</h3>
-<p>ویب سائٹ کی پیمائش کے لیے <strong>Cloudflare Web Analytics</strong> منتخب کیا گیا ہے — مفت، پرائیویسی دوست، کوئی cookies نہیں، کوئی fingerprinting نہیں۔ یہ ہر صفحے کے مجموعی دورے (page views)، آنے کے ذرائع (referrers)، ڈیوائس کی اقسام، ممالک اور صفحہ لوڈ کی رفتار ناپتا ہے — سب کچھ مجموعی شکل میں، کسی فرد کی شناخت کے بغیر۔</p>
-<p><strong>موجودہ حالت:</strong> سائٹ ٹوکن درج ہو چکا ہے، اس لیے پیمائش <strong>فعال</strong> ہے (<code dir="ltr">KD_CONFIG.analyticsEnabled = true</code>)۔ سائٹ میں کوئی localStorage، کوئی cookies اور کوئی fingerprinting استعمال نہیں ہوتی — صرف Cloudflare کا مفت Web Analytics۔</p>
-<p><strong>ایماندارانہ حد:</strong> مفت درجے میں انفرادی بٹن کلکس (مثلاً APK ڈاؤن لوڈ بٹن) الگ سے نہیں گنے جاتے — البتہ ہر صفحے کے دورے الگ الگ نظر آتے ہیں، جن میں <code dir="ltr">/sponsor/</code>، <code dir="ltr">/support/</code> اور <code dir="ltr">/services/</code> بھی شامل ہیں۔ ڈاؤن لوڈ بٹن کا کلک انسٹال کے برابر نہیں سمجھا جاتا۔</p>
-</div>
-<div class="notice-box reveal">
-<h3>پیمائش فعال کرنے کے مراحل (صرف سائٹ مالک کے لیے)</h3>
-<ol>
-<li><span dir="ltr">dash.cloudflare.com</span> پر مفت اکاؤنٹ بنائیں۔</li>
-<li><strong>Web Analytics</strong> میں جا کر <strong>Add a site</strong> دبائیں اور <code dir="ltr">talhagoharweb.github.io</code> درج کریں۔</li>
-<li>دیے گئے JS snippet سے سائٹ ٹوکن کاپی کریں۔</li>
-<li><code dir="ltr">docs/config.js</code> میں <code dir="ltr">cloudflareToken</code> میں ٹوکن لگائیں اور <code dir="ltr">analyticsEnabled</code> کو <code dir="ltr">true</code> کریں، پھر سائٹ push کریں۔</li>
-</ol>
-<p>ٹوکن ایک عوامی سائٹ شناخت کنندہ ہے — اسے <code dir="ltr">config.js</code> میں رکھنا محفوظ ہے۔</p>
-</div>
+
+
 </div></section>
 
 <section><div class="wrap">
