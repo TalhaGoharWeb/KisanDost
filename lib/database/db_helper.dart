@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 15;
+  static const _databaseVersion = 16;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -369,6 +369,8 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         note TEXT,
         created_at TEXT NOT NULL,
+        source_type TEXT,
+        source_id INTEGER,
         FOREIGN KEY (party_id) REFERENCES parties (id) ON DELETE RESTRICT
       )
     ''');
@@ -376,6 +378,12 @@ class DatabaseHelper {
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_party_ledger_entries_party
         ON party_ledger_entries (party_id)
+    ''');
+
+    // v16: trace links from ledger entries to their source transaction.
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_party_ledger_entries_source
+        ON party_ledger_entries (source_type, source_id)
     ''');
 
     await db.execute('''
@@ -618,6 +626,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 15) {
       await migrateV14ToV15(db);
+    }
+    if (oldVersion < 16) {
+      await migrateV15ToV16(db);
     }
   }
 
@@ -1239,6 +1250,35 @@ class DatabaseHelper {
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_audit_log_table_row
         ON audit_log (table_name, row_id)
+    ''');
+  }
+
+  /// v15 -> v16 migration, exposed for tests: party-ledger source links
+  /// (owner decision #3, S5 / FINANCIAL_POLICY §6.4).
+  ///
+  /// Adds nullable `source_type`/`source_id` to `party_ledger_entries` so a
+  /// ledger entry can reference its underlying transaction (sale, expense,
+  /// theka-installment payment, or a collection against a sale). Nullable:
+  /// legacy entries stay valid and unlinked. No FK — the link is a trace
+  /// marker that must survive the source row (soft/hard delete); the
+  /// provider verifies the row exists at write time instead.
+  /// Idempotent: ALTERs are wrapped in try/catch (partially migrated
+  /// devices), index creation uses IF NOT EXISTS.
+  @visibleForTesting
+  static Future<void> migrateV15ToV16(Database db) async {
+    for (final statement in [
+      'ALTER TABLE party_ledger_entries ADD COLUMN source_type TEXT',
+      'ALTER TABLE party_ledger_entries ADD COLUMN source_id INTEGER',
+    ]) {
+      try {
+        await db.execute(statement);
+      } catch (_) {
+        // Column might already exist on partially migrated devices.
+      }
+    }
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_party_ledger_entries_source
+        ON party_ledger_entries (source_type, source_id)
     ''');
   }
 

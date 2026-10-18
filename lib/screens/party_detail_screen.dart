@@ -201,6 +201,29 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                 urduShortDate(date),
                 style: const TextStyle(fontSize: 12, color: Colors.black54),
               ),
+            if (entry.sourceType != null && entry.sourceId != null)
+              InkWell(
+                onTap: () => _showSourceTrace(entry),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.link, size: 14, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Text(
+                        'منسلک: ${partyEntrySourceTypeUrdu(entry.sourceType!)}'
+                        ' #${entry.sourceId}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
         trailing: Text(
@@ -214,6 +237,96 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
       ),
     );
   }
+
+  /// Trace view for a linked entry (owner decision #3): shows the source
+  /// transaction's key facts plus the live outstanding computed from all
+  /// entries linked to that source. A deleted source shows as removed —
+  /// the link itself survives as an audit marker.
+  Future<void> _showSourceTrace(PartyLedgerEntry entry) async {
+    final sourceType = entry.sourceType;
+    final sourceId = entry.sourceId;
+    if (sourceType == null || sourceId == null) return;
+    final provider = Provider.of<PartyProvider>(context, listen: false);
+    final summary = await provider.sourceSummary(sourceType, sourceId);
+    final linked = await provider.entriesForSource(sourceType, sourceId);
+    int? outstanding;
+    if (sourceType == PartyEntrySourceType.sale ||
+        sourceType == PartyEntrySourceType.collection) {
+      outstanding = await provider.outstandingForSale(sourceId);
+    }
+    if (!mounted) return;
+    final summaryDate = summary == null
+        ? null
+        : tryParseStoredDate(summary.date);
+    showDialog(
+      context: context,
+      builder:
+          (dctx) => AlertDialog(
+            title: const Text('منسلک لین دین'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (summary == null)
+                    const Text(
+                      'یہ ریکارڈ اب موجود نہیں ہے۔ لنک آڈٹ کے لیے محفوظ رکھا گیا ہے۔',
+                    )
+                  else ...[
+                    _traceRow(
+                      'قسم',
+                      partyEntrySourceTypeUrdu(summary.type),
+                    ),
+                    _traceRow('نمبر', '#${summary.id}'),
+                    _traceRow('رقم', Money(summary.amountPaisa).format()),
+                    if (summaryDate != null)
+                      _traceRow('تاریخ', urduShortDate(summaryDate)),
+                    if (summary.detail != null)
+                      _traceRow('تفصیل', summary.detail!),
+                  ],
+                  const Divider(),
+                  _traceRow('منسلک اندراجات', '${linked.length}'),
+                  if (outstanding != null)
+                    _traceRow(
+                      'بقایا',
+                      '${Money(outstanding.abs()).format()} '
+                      '(${outstanding > 0
+                          ? 'لینا ہے'
+                          : outstanding < 0
+                          ? 'دینا ہے'
+                          : 'برابر'})',
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dctx),
+                child: const Text('بند کریں'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _traceRow(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(label, style: const TextStyle(color: Colors.black54)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    ),
+  );
 
   void _showEditPartyDialog(
     BuildContext context,
@@ -362,6 +475,9 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
     var date = DateTime.now();
+    // Optional source link (owner decision #3): null = plain manual entry.
+    PartyEntrySourceType? linkType;
+    final linkIdCtrl = TextEditingController();
     // Double-tap guard: addEntry appends a ledger row — a second tap would
     // record the udhaar twice.
     var isSaving = false;
@@ -451,6 +567,45 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                             border: OutlineInputBorder(),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        const Divider(),
+                        const Text(
+                          'منسلک لین دین (اختیاری)',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<PartyEntrySourceType?>(
+                          value: linkType,
+                          decoration: const InputDecoration(
+                            labelText: 'لین دین کی قسم',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('بغیر لنک'),
+                            ),
+                            for (final t in PartyEntrySourceType.values)
+                              DropdownMenuItem(
+                                value: t,
+                                child: Text(partyEntrySourceTypeUrdu(t)),
+                              ),
+                          ],
+                          onChanged:
+                              (v) => setDialogState(() => linkType = v),
+                        ),
+                        if (linkType != null) ...[
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: linkIdCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'ریکارڈ نمبر *',
+                              hintText: 'مثلاً 12',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -470,13 +625,31 @@ class _PartyDetailScreenState extends State<PartyDetailScreen> {
                               'رقم صفر سے زیادہ ہونی چاہیے۔',
                             );
                           }
-                          await provider.addEntry(
-                            partyId: widget.partyId,
-                            type: type,
-                            amountPaisa: money.paisa,
-                            date: fmtDate(date),
-                            note: noteCtrl.text,
-                          );
+                          if (linkType != null) {
+                            final linkId = int.tryParse(
+                              linkIdCtrl.text.trim(),
+                            );
+                            if (linkId == null || linkId <= 0) {
+                              throw PartyException('ریکارڈ نمبر درج کریں۔');
+                            }
+                            await provider.addLinkedEntry(
+                              partyId: widget.partyId,
+                              type: type,
+                              amountPaisa: money.paisa,
+                              date: fmtDate(date),
+                              note: noteCtrl.text,
+                              sourceType: linkType!,
+                              sourceId: linkId,
+                            );
+                          } else {
+                            await provider.addEntry(
+                              partyId: widget.partyId,
+                              type: type,
+                              amountPaisa: money.paisa,
+                              date: fmtDate(date),
+                              note: noteCtrl.text,
+                            );
+                          }
                           if (ctx.mounted) Navigator.pop(ctx);
                           await _load();
                         } on MoneyParseException catch (e) {

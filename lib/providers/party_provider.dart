@@ -267,41 +267,244 @@ class PartyProvider extends ChangeNotifier {
     required String date,
     String? note,
   }) async {
+    _validateEntryInput(amountPaisa, date);
+    final id = await _txn(
+      (txn) => _insertEntry(
+        txn,
+        partyId: partyId,
+        type: type,
+        amountPaisa: amountPaisa,
+        date: date,
+        note: note,
+      ),
+    );
+    await fetchParties();
+    return id;
+  }
+
+  /// Appends one ledger entry LINKED to its underlying transaction (owner
+  /// decision #3, S5/§6.4).
+  ///
+  /// Sign convention (same as [addEntry]): the sign ALWAYS comes from
+  /// [type] — positive = the party owes me, negative = I owe the party. A
+  /// linked entry never books income or expense: e.g. a وصولی linked to an
+  /// already-recognized sale only shrinks the receivable; the sale's income
+  /// was booked once, when the sale was recorded. Party balance = SUM of
+  /// signed entry amounts; outstanding for one source = SUM of its linked
+  /// entries (see [outstandingForSale]). The referenced row must exist —
+  /// links are never dangling.
+  Future<int> addLinkedEntry({
+    required int partyId,
+    required PartyEntryType type,
+    required int amountPaisa,
+    required String date,
+    String? note,
+    required PartyEntrySourceType sourceType,
+    required int sourceId,
+  }) async {
+    _validateEntryInput(amountPaisa, date);
+    final id = await _txn((txn) async {
+      await _requireSourceExists(txn, sourceType, sourceId);
+      return _insertEntry(
+        txn,
+        partyId: partyId,
+        type: type,
+        amountPaisa: amountPaisa,
+        date: date,
+        note: note,
+        sourceType: sourceType,
+        sourceId: sourceId,
+      );
+    });
+    await fetchParties();
+    return id;
+  }
+
+  void _validateEntryInput(int amountPaisa, String date) {
     if (amountPaisa <= 0) {
       throw PartyException('رقم صفر سے زیادہ ہونی چاہیے۔');
     }
     if (DateTime.tryParse(date) == null) {
       throw PartyException('درست تاریخ درج کریں۔');
     }
-    final id = await _txn((txn) async {
-      // Never post to a missing or soft-deleted party.
-      final party = await txn.query(
-        'parties',
-        where: 'id = ? AND deleted_at IS NULL',
-        whereArgs: [partyId],
+  }
+
+  /// The referenced source row must exist — a link is a trace marker, and
+  /// a dangling one proves nothing. Runs inside the caller's transaction.
+  Future<void> _requireSourceExists(
+    DatabaseExecutor txn,
+    PartyEntrySourceType sourceType,
+    int sourceId,
+  ) async {
+    final table = partyEntrySourceTable(sourceType);
+    List<Map<String, Object?>> rows;
+    try {
+      rows = await txn.query(
+        table,
+        columns: const ['id'],
+        where: 'id = ?',
+        whereArgs: [sourceId],
+        limit: 1,
       );
-      if (party.isEmpty) {
-        throw PartyException('یہ پارٹی موجود نہیں ہے۔');
+    } on DatabaseException catch (e) {
+      // A missing source table (older partial schema) means the link
+      // cannot be verified — fail loudly rather than store a dangling one.
+      if (e.toString().contains('no such table')) {
+        throw PartyException('منسلک لین دین کا ریکارڈ موجود نہیں ہے۔');
       }
-      final newId = await txn.insert('party_ledger_entries', {
-        'party_id': partyId,
-        'entry_type': partyEntryTypeToString(type),
-        'amount_paisa': partyEntryTypeSign(type) * amountPaisa,
-        'date': date,
-        'note': _nullIfEmpty(note),
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      await AuditService.log(
-        txn,
-        table: 'party_ledger_entries',
-        rowId: newId,
-        action: AuditService.create,
-        details: '${partyEntryTypeUrdu(type)} — ${Money(amountPaisa).format()}',
-      );
-      return newId;
+      rethrow;
+    }
+    if (rows.isEmpty) {
+      throw PartyException('منسلک لین دین موجود نہیں ہے (نمبر $sourceId)۔');
+    }
+  }
+
+  Future<int> _insertEntry(
+    DatabaseExecutor txn, {
+    required int partyId,
+    required PartyEntryType type,
+    required int amountPaisa,
+    required String date,
+    String? note,
+    PartyEntrySourceType? sourceType,
+    int? sourceId,
+  }) async {
+    // Never post to a missing or soft-deleted party.
+    final party = await txn.query(
+      'parties',
+      where: 'id = ? AND deleted_at IS NULL',
+      whereArgs: [partyId],
+    );
+    if (party.isEmpty) {
+      throw PartyException('یہ پارٹی موجود نہیں ہے۔');
+    }
+    final newId = await txn.insert('party_ledger_entries', {
+      'party_id': partyId,
+      'entry_type': partyEntryTypeToString(type),
+      'amount_paisa': partyEntryTypeSign(type) * amountPaisa,
+      'date': date,
+      'note': _nullIfEmpty(note),
+      'created_at': DateTime.now().toIso8601String(),
+      'source_type': sourceType == null
+          ? null
+          : partyEntrySourceTypeToString(sourceType),
+      'source_id': sourceId,
     });
-    await fetchParties();
-    return id;
+    final linkSuffix = sourceType == null
+        ? ''
+        : ' — منسلک: ${partyEntrySourceTypeUrdu(sourceType)} #$sourceId';
+    await AuditService.log(
+      txn,
+      table: 'party_ledger_entries',
+      rowId: newId,
+      action: AuditService.create,
+      details:
+          '${partyEntryTypeUrdu(type)} — ${Money(amountPaisa).format()}$linkSuffix',
+    );
+    return newId;
+  }
+
+  /// Ledger entries linked to one source transaction, newest first.
+  /// Exact-type match: [PartyEntrySourceType.sale] for origin entries,
+  /// [PartyEntrySourceType.collection] for settlements against a sale.
+  Future<List<PartyLedgerEntry>> entriesForSource(
+    PartyEntrySourceType sourceType,
+    int sourceId,
+  ) async {
+    final db = await _db();
+    final maps = await db.query(
+      'party_ledger_entries',
+      where: 'source_type = ? AND source_id = ?',
+      whereArgs: [partyEntrySourceTypeToString(sourceType), sourceId],
+      orderBy: 'date DESC, id DESC',
+    );
+    return maps.map(PartyLedgerEntry.fromMap).toList();
+  }
+
+  /// Live outstanding on one sale: SUM of the signed amounts of every
+  /// entry linked to it — BOTH 'sale' (origin) and 'collection'
+  /// (settlement) links. Positive = the party still owes the farmer.
+  /// Must equal sale.total − collected; 0 means fully settled.
+  Future<int> outstandingForSale(int saleId) async {
+    final db = await _db();
+    final rows = await db.rawQuery(
+      'SELECT SUM(amount_paisa) AS s FROM party_ledger_entries '
+      "WHERE source_id = ? AND source_type IN ('sale', 'collection')",
+      [saleId],
+    );
+    return ((rows.first['s'] as num?) ?? 0).toInt();
+  }
+
+  /// UI-ready summary of a linked source row for the trace view, or null
+  /// when the row is gone (soft/hard deleted) — the link itself survives
+  /// as an audit marker.
+  Future<PartyEntrySourceSummary?> sourceSummary(
+    PartyEntrySourceType sourceType,
+    int sourceId,
+  ) async {
+    final db = await _db();
+    try {
+      switch (sourceType) {
+        case PartyEntrySourceType.sale:
+        case PartyEntrySourceType.collection:
+          final rows = await db.query(
+            'sales',
+            where: 'id = ?',
+            whereArgs: [sourceId],
+            limit: 1,
+          );
+          if (rows.isEmpty) return null;
+          final r = rows.first;
+          final buyer = r['buyer_name'] as String?;
+          return PartyEntrySourceSummary(
+            type: sourceType,
+            id: sourceId,
+            title: 'فروخت #$sourceId',
+            amountPaisa: (r['total_amount_paisa'] as num).toInt(),
+            date: r['date'] as String,
+            detail: buyer != null && buyer.isNotEmpty
+                ? 'خریدار: $buyer'
+                : null,
+          );
+        case PartyEntrySourceType.expense:
+          final rows = await db.query(
+            'expenses',
+            where: 'id = ?',
+            whereArgs: [sourceId],
+            limit: 1,
+          );
+          if (rows.isEmpty) return null;
+          final r = rows.first;
+          return PartyEntrySourceSummary(
+            type: sourceType,
+            id: sourceId,
+            title: 'اخراجات #$sourceId',
+            amountPaisa: (r['amount_paisa'] as num).toInt(),
+            date: r['date'] as String,
+            detail: 'قسم: ${r['category']}',
+          );
+        case PartyEntrySourceType.payment:
+          final rows = await db.query(
+            'theka_installments',
+            where: 'id = ?',
+            whereArgs: [sourceId],
+            limit: 1,
+          );
+          if (rows.isEmpty) return null;
+          final r = rows.first;
+          return PartyEntrySourceSummary(
+            type: sourceType,
+            id: sourceId,
+            title: 'ٹھیکہ قسط #$sourceId',
+            amountPaisa: (r['amount_paisa'] as num).toInt(),
+            date: r['due_date'] as String,
+            detail: 'حالت: ${r['status']}',
+          );
+      }
+    } on DatabaseException catch (e) {
+      if (e.toString().contains('no such table')) return null;
+      rethrow;
+    }
   }
 
   /// Ledger entries for one party, newest first.

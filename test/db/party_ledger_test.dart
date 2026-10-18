@@ -35,9 +35,11 @@ void main() {
   Future<PartyProvider> openProvider() async {
     final db = await openV12Db();
     await DatabaseHelper.migrateV12ToV13(db);
-    // The current provider expects the v15 schema (soft-delete columns);
-    // chain the real v14→v15 migration on top.
+    // The current provider expects the v16 schema (soft-delete columns +
+    // source-link columns); chain the real v14→v15 and v15→v16 migrations
+    // on top.
     await DatabaseHelper.migrateV14ToV15(db);
+    await DatabaseHelper.migrateV15ToV16(db);
     // FFI in-memory databases are shared across openDatabase() calls in one
     // test run: start every test from empty tables.
     await db.delete('party_ledger_entries');
