@@ -253,4 +253,79 @@ void main() {
       },
     );
   });
+
+  group('DB v17 migration (S11: sale payment-status stash)', () {
+    /// Builds the v16-shaped sales table (fresh-install DDL minus the
+    /// v17 column) so the migration has something to upgrade.
+    Future<Database> openV16Db() async {
+      final db = await openDatabase(
+        inMemoryDatabasePath,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+      );
+      await db.execute('''
+        CREATE TABLE harvests (
+          id INTEGER PRIMARY KEY AUTOINCREMENT
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE sales (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          harvest_id INTEGER NOT NULL,
+          buyer_name TEXT,
+          quantity REAL NOT NULL,
+          price_per_unit_paisa INTEGER NOT NULL,
+          total_amount_paisa INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          deleted_at TEXT,
+          FOREIGN KEY (harvest_id) REFERENCES harvests (id) ON DELETE CASCADE
+        )
+      ''');
+      return db;
+    }
+
+    test('migrateV16ToV17 adds the stash column, idempotently', () async {
+      final db = await openV16Db();
+      final harvestId = await db.insert('harvests', {}, nullColumnHack: 'id');
+      final saleId = await db.insert('sales', {
+        'harvest_id': harvestId,
+        'quantity': 10.0,
+        'price_per_unit_paisa': 5000,
+        'total_amount_paisa': 50000,
+        'date': '2026-05-10',
+      });
+
+      await DatabaseHelper.migrateV16ToV17(db);
+
+      final cols =
+          (await db.rawQuery('PRAGMA table_info(sales)'))
+              .map((c) => c['name'] as String)
+              .toSet();
+      expect(cols, contains('harvest_payment_status_at_delete'));
+
+      // The pre-existing row survives with a NULL stash, and the stash is
+      // writable — this is what HarvestProvider.deleteSale does.
+      await db.update(
+        'sales',
+        {'harvest_payment_status_at_delete': 'Paid'},
+        where: 'id = ?',
+        whereArgs: [saleId],
+      );
+      expect(
+        (await db.query(
+          'sales',
+          columns: const ['harvest_payment_status_at_delete'],
+          where: 'id = ?',
+          whereArgs: [saleId],
+        )).single['harvest_payment_status_at_delete'],
+        'Paid',
+      );
+
+      // Re-running on an already-migrated DB is a no-op, never an error.
+      await DatabaseHelper.migrateV16ToV17(db);
+
+      await db.close();
+    });
+  });
 }

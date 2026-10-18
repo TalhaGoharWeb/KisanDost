@@ -494,6 +494,14 @@ class ActivityProvider extends ChangeNotifier {
     );
   }
 
+  /// Hard-deletes an activity (the activities table has no `deleted_at`
+  /// column — the audit log is its history).
+  ///
+  /// Atomic (owner decision #5): stock return + activity delete + linked
+  /// expense soft-delete + audit rows run in ONE transaction — a crash
+  /// mid-way can never return stock without deleting the activity (or vice
+  /// versa). Idempotent: deleting a missing activity is a safe no-op, so
+  /// the stock adjustment is never applied twice.
   Future<void> deleteActivity(
     int id, {
     InventoryProvider? inventoryProvider,
@@ -520,6 +528,15 @@ class ActivityProvider extends ChangeNotifier {
       }
 
       await txn.delete('activities', where: 'id = ?', whereArgs: [id]);
+      // The activity row itself is hard-deleted (no deleted_at column) —
+      // the audit log is its history, so the deletion is never silent.
+      await AuditService.log(
+        txn,
+        table: 'activities',
+        rowId: id,
+        action: AuditService.delete,
+        details: 'سرگرمی حذف — ${activity.activityType}',
+      );
 
       if (activity.expenseId != null) {
         // Soft-delete the linked expense (restorable via recycle bin);

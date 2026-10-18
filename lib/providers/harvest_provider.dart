@@ -57,12 +57,24 @@ class HarvestProvider extends ChangeNotifier {
 
   /// Marks one row soft-deleted and writes the audit entry. Callers pass a
   /// short Urdu [details] summary.
+  ///
+  /// Idempotent (owner decision #5): a row that is already soft-deleted —
+  /// or missing — is left untouched and NO audit row is written, so a
+  /// repeated delete can never duplicate effects or history.
   Future<void> _softDeleteRow(
     DatabaseExecutor txn,
     String table,
     int id,
     String details,
   ) async {
+    final rows = await txn.query(
+      table,
+      columns: const ['deleted_at'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty || rows.first['deleted_at'] != null) return;
     await txn.update(
       table,
       {'deleted_at': DateTime.now().toIso8601String()},
@@ -79,12 +91,24 @@ class HarvestProvider extends ChangeNotifier {
   }
 
   /// Restores one soft-deleted row and writes the audit entry.
+  ///
+  /// Idempotent (owner decision #5): a row that is already live — or
+  /// missing — is left untouched and NO audit row is written, so a
+  /// repeated restore can never duplicate effects or history.
   Future<void> _restoreRow(
     DatabaseExecutor txn,
     String table,
     int id,
     String details,
   ) async {
+    final rows = await txn.query(
+      table,
+      columns: const ['deleted_at'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty || rows.first['deleted_at'] == null) return;
     await txn.update(
       table,
       {'deleted_at': null},
@@ -546,6 +570,10 @@ class HarvestProvider extends ChangeNotifier {
 
   /// Soft delete: the harvest, its sales and its linked harvest-expense are
   /// hidden everywhere but kept for history and the recycle bin.
+  ///
+  /// Idempotent (owner decision #5): deleting an already-deleted harvest
+  /// is a safe no-op — the subtree is never re-deleted and no duplicate
+  /// audit rows are written.
   Future<void> deleteHarvest(int id) async {
     await _txn((txn) async {
       final List<Map<String, dynamic>> existing = await txn.query(
@@ -554,6 +582,7 @@ class HarvestProvider extends ChangeNotifier {
         whereArgs: [id],
       );
       if (existing.isEmpty) return;
+      if (existing.first['deleted_at'] != null) return;
       final row = existing.first;
       final int? expenseId = row['expense_id'] as int?;
       if (expenseId != null) {
@@ -588,8 +617,23 @@ class HarvestProvider extends ChangeNotifier {
     await fetchHarvests();
   }
 
+  /// Urdu label for a harvest payment_status, matching harvest_screen.dart.
+  static String _paymentStatusUrdu(String status) => switch (status) {
+    'Paid' => 'ادائیگی مکمل',
+    'Partial' => 'جزوی ادائیگی',
+    _ => 'باقی',
+  };
+
   /// Soft delete of one sale; the parent harvest is reset so the sale can
   /// be re-recorded.
+  ///
+  /// Idempotent (owner decision #5): deleting a missing or already-deleted
+  /// sale is a safe no-op — the harvest reset is never applied twice.
+  ///
+  /// S11 (owner decision #5): the harvest's pre-delete `payment_status` is
+  /// stashed on the sale row (`harvest_payment_status_at_delete`, v17) so
+  /// [restoreSale] can bring it back exactly — a restored sale reads as
+  /// the genuine sale it was, not an unsold estimate.
   Future<void> deleteSale(int id) async {
     await _txn((txn) async {
       final List<Map<String, dynamic>> sMaps = await txn.query(
@@ -597,16 +641,44 @@ class HarvestProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [id],
       );
-      final int? harvestId =
-          sMaps.isEmpty ? null : sMaps.first['harvest_id'] as int?;
+      if (sMaps.isEmpty) return;
+      if (sMaps.first['deleted_at'] != null) return;
+      final sale = sMaps.first;
+      final int? harvestId = sale['harvest_id'] as int?;
+
+      // Stash the pre-delete status BEFORE the reset below overwrites it.
+      // Best-effort on pre-v17 schemas (e.g. hermetic v14→v15 fixtures):
+      // when the column is absent the stash is skipped and restoreSale
+      // falls back to 'Pending' — the old behavior, never a crash.
+      String? preDeleteStatus;
+      if (harvestId != null) {
+        final hMaps = await txn.query(
+          'harvests',
+          columns: const ['payment_status'],
+          where: 'id = ?',
+          whereArgs: [harvestId],
+          limit: 1,
+        );
+        preDeleteStatus =
+            hMaps.isEmpty ? null : hMaps.first['payment_status'] as String?;
+        try {
+          await txn.update(
+            'sales',
+            {'harvest_payment_status_at_delete': preDeleteStatus},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        } on DatabaseException catch (e) {
+          if (!e.toString().contains('no such column')) rethrow;
+        }
+      }
 
       await _softDeleteRow(
         txn,
         'sales',
         id,
-        sMaps.isEmpty
-            ? 'فروخت حذف'
-            : 'فروخت — ${Money((sMaps.first['total_amount_paisa'] as num).toInt()).format()}',
+        'فروخت — ${Money((sale['total_amount_paisa'] as num).toInt()).format()}'
+        '${preDeleteStatus == null ? '' : ' (حیثیت: ${_paymentStatusUrdu(preDeleteStatus)})'}',
       );
 
       // Reset the parent harvest so the sale can be re-recorded instead of
@@ -695,16 +767,21 @@ class HarvestProvider extends ChangeNotifier {
 
   /// Restores a soft-deleted sale (recycle bin only).
   ///
-  /// S11: [deleteSale] zeroes the parent harvest's rate/buyer/status so the
-  /// sale can be re-recorded. Restoring the sale row alone would leave the
-  /// harvest card (rate 0) disagreeing with the sale — so the harvest's
-  /// rate and buyer are restored from the sale's own pre-delete values
-  /// (gross/total are computed from the rate, so they follow).
+  /// Idempotent (owner decision #5): restoring a missing or already-live
+  /// sale is a safe no-op — the harvest is never touched twice.
+  ///
+  /// S11 (owner decision #5): [deleteSale] zeroes the parent harvest's
+  /// rate/buyer/status so the sale can be re-recorded. Restoring the sale
+  /// row alone would leave the harvest card (rate 0) disagreeing with the
+  /// sale — so the harvest's rate, buyer AND pre-delete payment_status are
+  /// restored from the sale's own stashed values (gross/total are computed
+  /// from the rate, so they follow). A sale deleted before the v17 column
+  /// existed falls back to 'Pending' (the old behavior).
   ///
   /// If the harvest was re-sold after the delete (another live sale
   /// exists), the current live sale wins: the harvest keeps its present
-  /// rate and the restored row comes back as history only, never clobbering
-  /// the newer sale's values.
+  /// rate/buyer/status and the restored row comes back as history only,
+  /// never clobbering the newer sale's values.
   Future<void> restoreSale(int id) async {
     await _txn((txn) async {
       final List<Map<String, dynamic>> sMaps = await txn.query(
@@ -714,6 +791,7 @@ class HarvestProvider extends ChangeNotifier {
       );
       if (sMaps.isEmpty) return;
       final sale = sMaps.first;
+      if (sale['deleted_at'] == null) return;
       final int harvestId = sale['harvest_id'] as int;
 
       await _restoreRow(txn, 'sales', id, 'فروخت بحال');
@@ -731,6 +809,9 @@ class HarvestProvider extends ChangeNotifier {
             'rate_per_unit_paisa':
                 (sale['price_per_unit_paisa'] as num).toInt(),
             'buyer_name': sale['buyer_name'],
+            'payment_status':
+                (sale['harvest_payment_status_at_delete'] as String?) ??
+                'Pending',
           },
           where: 'id = ?',
           whereArgs: [harvestId],
@@ -740,7 +821,7 @@ class HarvestProvider extends ChangeNotifier {
           table: 'harvests',
           rowId: harvestId,
           action: AuditService.update,
-          details: 'فروخت بحالی پر ریٹ بحال',
+          details: 'فروخت بحالی پر ریٹ و حیثیت بحال',
         );
       } else {
         await AuditService.log(
@@ -758,6 +839,13 @@ class HarvestProvider extends ChangeNotifier {
   /// Permanent delete of a harvest and its subtree — recycle bin only,
   /// with the caller's destructive confirmation. The audit log keeps the
   /// record.
+  ///
+  /// D1 (owner decision #5): the linked expense mirror is destroyed ONLY
+  /// while it is still soft-deleted. If the farmer restored the expense
+  /// individually from the recycle bin, it is a live standalone row now —
+  /// the harvest's permanent delete must never cascade into it.
+  /// Party-ledger source links are trace markers and always survive
+  /// (worker B): nothing here touches `party_ledger_entries`.
   Future<void> permanentDeleteHarvest(int id) async {
     await _txn((txn) async {
       final existing = await txn.query(
@@ -765,10 +853,25 @@ class HarvestProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [id],
       );
-      final int? expenseId =
-          existing.isEmpty ? null : existing.first['expense_id'] as int?;
+      // Idempotent: repeating a permanent delete is a safe no-op — no
+      // duplicate audit rows.
+      if (existing.isEmpty) return;
+      final int? expenseId = existing.first['expense_id'] as int?;
       if (expenseId != null) {
-        await txn.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
+        final changed = await txn.delete(
+          'expenses',
+          where: 'id = ? AND deleted_at IS NOT NULL',
+          whereArgs: [expenseId],
+        );
+        if (changed == 0) {
+          await AuditService.log(
+            txn,
+            table: 'expenses',
+            rowId: expenseId,
+            action: AuditService.update,
+            details: 'پیداوار مستقل حذف — بحال شدہ خرچہ برقرار رکھا گیا',
+          );
+        }
       }
       await txn.delete('sales', where: 'harvest_id = ?', whereArgs: [id]);
       await txn.delete('harvests', where: 'id = ?', whereArgs: [id]);
@@ -784,8 +887,21 @@ class HarvestProvider extends ChangeNotifier {
   }
 
   /// Permanent delete of a sale — recycle bin only.
+  ///
+  /// Party-ledger entries linked to this sale are trace markers and always
+  /// survive (worker B / owner decision #3): nothing here touches
+  /// `party_ledger_entries`.
   Future<void> permanentDeleteSale(int id) async {
     await _txn((txn) async {
+      // Idempotent: repeating a permanent delete is a safe no-op.
+      final existing = await txn.query(
+        'sales',
+        columns: const ['id'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
       await txn.delete('sales', where: 'id = ?', whereArgs: [id]);
       await AuditService.log(
         txn,

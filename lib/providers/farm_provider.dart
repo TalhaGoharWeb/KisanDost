@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
 import '../services/quantity.dart';
 
 class FarmProvider extends ChangeNotifier {
@@ -13,6 +14,18 @@ class FarmProvider extends ChangeNotifier {
 
   Future<DatabaseExecutor> _db() async =>
       testExecutor ?? await DatabaseHelper.instance.database;
+
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly.
+  /// (Owner decision #5: delete + its audit row must be atomic.)
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
 
   List<Farm> _farms = [];
   final Map<int, List<Field>> _farmFields = {}; // farmId -> fields
@@ -119,9 +132,39 @@ class FarmProvider extends ChangeNotifier {
     await fetchFarms();
   }
 
+  /// Hard-deletes a farm. Its fields cascade via FK (disclosed in the UI
+  /// confirmation); the audit log keeps the record so the delete is never
+  /// silent. Atomic (owner decision #5): delete + audit row are one
+  /// transaction. Idempotent: deleting a missing farm is a safe no-op.
   Future<void> deleteFarm(int id) async {
-    final db = await _db();
-    await db.delete('farms', where: 'id = ?', whereArgs: [id]);
+    await _txn((txn) async {
+      final existing = await txn.query(
+        'farms',
+        columns: const ['name'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
+      final fieldCount =
+          Sqflite.firstIntValue(
+            await txn.rawQuery(
+              'SELECT COUNT(*) FROM fields WHERE farm_id = ?',
+              [id],
+            ),
+          ) ??
+          0;
+      await AuditService.log(
+        txn,
+        table: 'farms',
+        rowId: id,
+        action: AuditService.delete,
+        details:
+            'زمین حذف — ${existing.first['name']}'
+            '${fieldCount == 0 ? '' : ' ($fieldCount کھیت سمیت)'}',
+      );
+      await txn.delete('farms', where: 'id = ?', whereArgs: [id]);
+    });
     await fetchFarms();
   }
 
@@ -151,9 +194,28 @@ class FarmProvider extends ChangeNotifier {
     await fetchFields(farmId);
   }
 
+  /// Hard-deletes one field. Atomic (owner decision #5): delete + audit
+  /// row are one transaction. Idempotent: deleting a missing field is a
+  /// safe no-op.
   Future<void> deleteField(int id, int farmId) async {
-    final db = await _db();
-    await db.delete('fields', where: 'id = ?', whereArgs: [id]);
+    await _txn((txn) async {
+      final existing = await txn.query(
+        'fields',
+        columns: const ['name'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
+      await AuditService.log(
+        txn,
+        table: 'fields',
+        rowId: id,
+        action: AuditService.delete,
+        details: 'کھیت حذف — ${existing.first['name']}',
+      );
+      await txn.delete('fields', where: 'id = ?', whereArgs: [id]);
+    });
     await fetchFields(farmId);
   }
 }

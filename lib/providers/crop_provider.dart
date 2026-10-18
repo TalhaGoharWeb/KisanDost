@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/models.dart';
+import '../services/audit_service.dart';
 
 class CropSeasonWithDetails {
   final CropSeason cropSeason;
@@ -322,9 +323,29 @@ class CropProvider extends ChangeNotifier {
     await fetchCropSeasons();
   }
 
+  /// Hard-deletes a crop season (confirmation-gated in UI; the audit log
+  /// keeps the record so the delete is never silent). Atomic (owner
+  /// decision #5): delete + audit row are one transaction. Idempotent:
+  /// deleting a missing season is a safe no-op.
   Future<void> deleteCropSeason(int id) async {
-    final db = await _db();
-    await db.delete('crop_seasons', where: 'id = ?', whereArgs: [id]);
+    await _txn((txn) async {
+      final existing = await txn.query(
+        'crop_seasons',
+        columns: const ['crop_name'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
+      await AuditService.log(
+        txn,
+        table: 'crop_seasons',
+        rowId: id,
+        action: AuditService.delete,
+        details: 'فصل حذف — ${existing.first['crop_name']}',
+      );
+      await txn.delete('crop_seasons', where: 'id = ?', whereArgs: [id]);
+    });
     await fetchCropSeasons();
   }
 }

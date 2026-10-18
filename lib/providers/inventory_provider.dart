@@ -459,6 +459,9 @@ class InventoryProvider extends ChangeNotifier {
   /// history keeps it — deleteInventoryItem throws an Urdu error (mirrors
   /// PartyProvider.deleteParty). This resolves the deferred "item deletion
   /// cascades its ledger" decision: the ledger always survives now.
+  ///
+  /// Atomic (owner decision #5): the row delete and its audit row run in
+  /// one transaction when this call owns the executor.
   Future<void> deleteInventoryItem(int id, {DatabaseExecutor? executor}) async {
     final db = await _executor(executor);
     final count = await db.rawQuery(
@@ -476,15 +479,29 @@ class InventoryProvider extends ChangeNotifier {
       where: 'id = ?',
       whereArgs: [id],
     );
-    await db.delete('inventory', where: 'id = ?', whereArgs: [id]);
-    await AuditService.log(
-      db,
-      table: 'inventory',
-      rowId: id,
-      action: AuditService.delete,
-      details:
-          existing.isEmpty ? 'آئٹم حذف' : 'آئٹم: ${existing.first['name']}',
-    );
+    if (existing.isEmpty) return;
+    Future<void> run(DatabaseExecutor ex) async {
+      await ex.delete('inventory', where: 'id = ?', whereArgs: [id]);
+      await AuditService.log(
+        ex,
+        table: 'inventory',
+        rowId: id,
+        action: AuditService.delete,
+        details: 'آئٹم: ${existing.first['name']}',
+      );
+    }
+    // Same ownership rule as recordPurchase/recordUsage: an explicitly
+    // passed executor means the caller owns the transaction.
+    final DatabaseExecutor? transactionExecutor = executor;
+    if (transactionExecutor == null) {
+      if (db is Database) {
+        await db.transaction(run);
+      } else {
+        await run(db);
+      }
+    } else {
+      await run(transactionExecutor);
+    }
     if (executor == null) await fetchInventory();
   }
 

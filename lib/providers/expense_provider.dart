@@ -155,6 +155,14 @@ class ExpenseProvider extends ChangeNotifier {
   /// Soft delete: the row is hidden everywhere but kept for history and the
   /// recycle bin. Callers keep calling [deleteExpense] — the name is
   /// unchanged on purpose.
+  ///
+  /// Idempotent (owner decision #5): deleting a missing or already-deleted
+  /// expense is a safe no-op — no duplicate audit rows.
+  ///
+  /// SEC1: deleting an expense NEVER moves stock. An expense that deducted
+  /// inventory recorded a real physical use; the deduction stays in the
+  /// ledger. Symmetrically [restoreExpense] never deducts again — so a
+  /// delete → restore cycle can never double-apply (or invent) stock.
   Future<void> deleteExpense(int id) async {
     await _txn((txn) async {
       final existing = await txn.query(
@@ -163,6 +171,7 @@ class ExpenseProvider extends ChangeNotifier {
         whereArgs: [id],
       );
       if (existing.isEmpty) return;
+      if (existing.first['deleted_at'] != null) return;
       final row = existing.first;
       await txn.update(
         'expenses',
@@ -185,8 +194,22 @@ class ExpenseProvider extends ChangeNotifier {
   }
 
   /// Restores a soft-deleted expense (recycle bin only).
+  ///
+  /// Idempotent (owner decision #5): restoring a missing or already-live
+  /// expense is a safe no-op. SEC1: restore never re-deducts inventory
+  /// (see [deleteExpense]) — the stock effect of a delete → restore cycle
+  /// is exactly zero.
   Future<void> restoreExpense(int id) async {
     await _txn((txn) async {
+      final existing = await txn.query(
+        'expenses',
+        columns: const ['deleted_at'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
+      if (existing.first['deleted_at'] == null) return;
       await txn.update(
         'expenses',
         {'deleted_at': null},
@@ -206,8 +229,21 @@ class ExpenseProvider extends ChangeNotifier {
 
   /// Permanent delete — offered ONLY from the recycle bin, with the caller's
   /// destructive confirmation. The audit log keeps the record.
+  ///
+  /// Party-ledger entries linked to this expense are trace markers and
+  /// always survive (worker B / owner decision #3): nothing here touches
+  /// `party_ledger_entries`.
   Future<void> permanentDeleteExpense(int id) async {
     await _txn((txn) async {
+      // Idempotent: repeating a permanent delete is a safe no-op.
+      final existing = await txn.query(
+        'expenses',
+        columns: const ['id'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
       await txn.delete('expenses', where: 'id = ?', whereArgs: [id]);
       await AuditService.log(
         txn,

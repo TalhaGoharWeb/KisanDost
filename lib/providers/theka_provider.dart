@@ -118,8 +118,20 @@ class ThekaProvider extends ChangeNotifier {
 
   /// DELIBERATE Phase 11: deleteTheka keeps its hard-delete semantics (the
   /// delete-theka problem is deferred by design). It is logged as a delete.
+  ///
+  /// Atomic (owner decision #5): theka + installments + linked expenses +
+  /// audit rows run in ONE transaction. Idempotent: deleting a missing
+  /// theka is a safe no-op.
   Future<void> deleteTheka(int thekaId) async {
     await _txn((txn) async {
+      final existing = await txn.query(
+        'thekas',
+        columns: const ['id'],
+        where: 'id = ?',
+        whereArgs: [thekaId],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
       await _deleteThekaTx(txn, thekaId);
       await AuditService.log(
         txn,

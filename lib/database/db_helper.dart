@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 16;
+  static const _databaseVersion = 17;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -299,6 +299,7 @@ class DatabaseHelper {
         total_amount_paisa INTEGER NOT NULL,
         date TEXT NOT NULL,
         deleted_at TEXT,
+        harvest_payment_status_at_delete TEXT,
         FOREIGN KEY (harvest_id) REFERENCES harvests (id) ON DELETE CASCADE
       )
     ''');
@@ -629,6 +630,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 16) {
       await migrateV15ToV16(db);
+    }
+    if (oldVersion < 17) {
+      await migrateV16ToV17(db);
     }
   }
 
@@ -1251,6 +1255,27 @@ class DatabaseHelper {
       CREATE INDEX IF NOT EXISTS idx_audit_log_table_row
         ON audit_log (table_name, row_id)
     ''');
+  }
+
+  /// v16 -> v17 migration, exposed for tests: S11 (owner decision #5).
+  ///
+  /// Adds nullable `harvest_payment_status_at_delete` to `sales` so
+  /// [HarvestProvider.deleteSale] can stash the parent harvest's
+  /// pre-delete `payment_status` on the sale row itself, and
+  /// [HarvestProvider.restoreSale] can bring it back exactly. The value
+  /// travels with the soft-deleted row (not the audit log — details are
+  /// human Urdu text, not machine state), so delete → restore →
+  /// delete → restore cycles stay exact. Idempotent: ALTER wrapped in
+  /// try/catch (partially migrated devices).
+  @visibleForTesting
+  static Future<void> migrateV16ToV17(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE sales ADD COLUMN harvest_payment_status_at_delete TEXT',
+      );
+    } catch (_) {
+      // Column might already exist on partially migrated devices.
+    }
   }
 
   /// v15 -> v16 migration, exposed for tests: party-ledger source links

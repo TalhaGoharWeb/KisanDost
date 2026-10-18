@@ -169,6 +169,9 @@ class PartyProvider extends ChangeNotifier {
   /// entries OR is referenced by a batai agreement — financial/share history
   /// must survive. A zero-entry, unreferenced party is hidden but kept for
   /// the recycle bin.
+  ///
+  /// Idempotent (owner decision #5): deleting a missing or already-deleted
+  /// party is a safe no-op.
   Future<void> deleteParty(int partyId) async {
     final db = await _db();
     final count = await db.rawQuery(
@@ -203,6 +206,8 @@ class PartyProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [partyId],
       );
+      if (existing.isEmpty) return;
+      if (existing.first['deleted_at'] != null) return;
       await txn.update(
         'parties',
         {'deleted_at': DateTime.now().toIso8601String()},
@@ -214,16 +219,27 @@ class PartyProvider extends ChangeNotifier {
         table: 'parties',
         rowId: partyId,
         action: AuditService.softDelete,
-        details:
-            existing.isEmpty ? 'پارٹی حذف' : 'پارٹی: ${existing.first['name']}',
+        details: 'پارٹی: ${existing.first['name']}',
       );
     });
     await fetchParties();
   }
 
   /// Restores a soft-deleted party (recycle bin only).
+  ///
+  /// Idempotent (owner decision #5): restoring a missing or already-live
+  /// party is a safe no-op.
   Future<void> restoreParty(int partyId) async {
     await _txn((txn) async {
+      final existing = await txn.query(
+        'parties',
+        columns: const ['deleted_at'],
+        where: 'id = ?',
+        whereArgs: [partyId],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
+      if (existing.first['deleted_at'] == null) return;
       await txn.update(
         'parties',
         {'deleted_at': null},
@@ -243,8 +259,19 @@ class PartyProvider extends ChangeNotifier {
 
   /// Permanent delete — recycle bin only. A party with ledger entries can
   /// never reach here ([deleteParty] blocks it).
+  ///
+  /// Idempotent (owner decision #5): repeating a permanent delete is a
+  /// safe no-op.
   Future<void> permanentDeleteParty(int partyId) async {
     await _txn((txn) async {
+      final existing = await txn.query(
+        'parties',
+        columns: const ['id'],
+        where: 'id = ?',
+        whereArgs: [partyId],
+        limit: 1,
+      );
+      if (existing.isEmpty) return;
       await txn.delete('parties', where: 'id = ?', whereArgs: [partyId]);
       await AuditService.log(
         txn,

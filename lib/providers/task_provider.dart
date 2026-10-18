@@ -70,6 +70,18 @@ class TaskProvider with ChangeNotifier {
   Future<DatabaseExecutor> _db() async =>
       testExecutor ?? await DatabaseHelper.instance.database;
 
+  /// Runs [action] inside a real transaction when the executor is a full
+  /// [Database]; a bare [Transaction] (or any other executor a test hands
+  /// in) already runs inside one, so the action runs directly.
+  /// (Owner decision #5: delete/restore must be atomic.)
+  Future<T> _txn<T>(Future<T> Function(DatabaseExecutor txn) action) async {
+    final db = await _db();
+    if (db is Database) {
+      return await db.transaction(action);
+    }
+    return await action(db);
+  }
+
   List<TaskItem> _tasks = [];
   bool _isLoading = false;
 
@@ -283,22 +295,38 @@ class TaskProvider with ChangeNotifier {
   /// Soft delete: the task is hidden everywhere but kept for history and
   /// the recycle bin. Callers keep calling [deleteTask] — the name is
   /// unchanged on purpose.
+  ///
+  /// Atomic (owner decision #5): the row update and its audit row are one
+  /// transaction — a crash between them can no longer hide the task without
+  /// a history entry. Idempotent: deleting a missing or already-deleted
+  /// task is a safe no-op.
   Future<void> deleteTask(int id) async {
-    final db = await _db();
-    final existing = await db.query('tasks', where: 'id = ?', whereArgs: [id]);
-    await db.update(
-      'tasks',
-      {'deleted_at': DateTime.now().toIso8601String()},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    await AuditService.log(
-      db,
-      table: 'tasks',
-      rowId: id,
-      action: AuditService.softDelete,
-      details: existing.isEmpty ? 'کام حذف' : 'کام: ${existing.first['title']}',
-    );
+    final deleted = await _txn((txn) async {
+      final existing = await txn.query(
+        'tasks',
+        columns: const ['title', 'deleted_at'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return false;
+      if (existing.first['deleted_at'] != null) return false;
+      await txn.update(
+        'tasks',
+        {'deleted_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'tasks',
+        rowId: id,
+        action: AuditService.softDelete,
+        details: 'کام: ${existing.first['title']}',
+      );
+      return true;
+    });
+    if (!deleted) return;
 
     _tasks.removeWhere((t) => t.id == id);
 
@@ -309,21 +337,37 @@ class TaskProvider with ChangeNotifier {
   }
 
   /// Restores a soft-deleted task (recycle bin only).
+  ///
+  /// Atomic (owner decision #5): the row update and its audit row are one
+  /// transaction. Idempotent: restoring a missing or already-live task is
+  /// a safe no-op — alarms are never re-armed twice.
   Future<void> restoreTask(int id) async {
-    final db = await _db();
-    await db.update(
-      'tasks',
-      {'deleted_at': null},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    await AuditService.log(
-      db,
-      table: 'tasks',
-      rowId: id,
-      action: AuditService.restore,
-      details: 'کام بحال کیا گیا',
-    );
+    final restored = await _txn((txn) async {
+      final existing = await txn.query(
+        'tasks',
+        columns: const ['deleted_at'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return false;
+      if (existing.first['deleted_at'] == null) return false;
+      await txn.update(
+        'tasks',
+        {'deleted_at': null},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      await AuditService.log(
+        txn,
+        table: 'tasks',
+        rowId: id,
+        action: AuditService.restore,
+        details: 'کام بحال کیا گیا',
+      );
+      return true;
+    });
+    if (!restored) return;
     await fetchTasks();
 
     // The task's alarms were cancelled when it was trashed; re-arm them now
@@ -346,16 +390,31 @@ class TaskProvider with ChangeNotifier {
 
   /// Permanent delete — offered ONLY from the recycle bin, with the caller's
   /// destructive confirmation. The audit log keeps the record.
+  ///
+  /// Atomic (owner decision #5): the row delete and its audit row are one
+  /// transaction.
   Future<void> permanentDeleteTask(int id) async {
-    final db = await _db();
-    await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
-    await AuditService.log(
-      db,
-      table: 'tasks',
-      rowId: id,
-      action: AuditService.permanentDelete,
-      details: 'کام مستقل حذف کیا گیا',
-    );
+    final deleted = await _txn((txn) async {
+      // Idempotent: repeating a permanent delete is a safe no-op.
+      final existing = await txn.query(
+        'tasks',
+        columns: const ['id'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isEmpty) return false;
+      await txn.delete('tasks', where: 'id = ?', whereArgs: [id]);
+      await AuditService.log(
+        txn,
+        table: 'tasks',
+        rowId: id,
+        action: AuditService.permanentDelete,
+        details: 'کام مستقل حذف کیا گیا',
+      );
+      return true;
+    });
+    if (!deleted) return;
     await NotificationService().cancelTaskNotifications(id);
     await fetchTasks();
   }

@@ -21,9 +21,9 @@ import 'package:kisan_dost/services/pnl_summary.dart';
 ///   on an unsold harvest: it contributes ZERO income and is tracked as
 ///   the separate "remaining produce" figure;
 /// * a canceled (soft-deleted) sale contributes nothing anywhere;
-/// * a restored sale comes back under CURRENT restore behavior
-///   (payment_status stays 'Pending' — the pre-delete status is not stored;
-///   see the S11 follow-up note in the test).
+/// * a restored sale comes back with its PRE-DELETE payment_status
+///   (S11, owner decision #5: deleteSale stashes it on the sale row, v17),
+///   so a restored genuine sale counts as realized income again.
 void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
@@ -211,13 +211,15 @@ void main() {
       expect(pnl.crops.single.incomePaisa, 0);
     });
 
-    test('restored sale comes back as an unsold estimate (current behavior)',
+    test('restored sale comes back as the genuine sale it was (S11 fix)',
         () async {
-      // S11 follow-up: restoreSale restores the sale row but leaves the
-      // harvest's payment_status at 'Pending' (deleteSale's reset value —
-      // the pre-delete status is not stored). Under the realized-income
-      // rule that means the restored sale reads as an unsold estimate
-      // until the delete/restore hardening (decision #5) decides otherwise.
+      // S11 (owner decision #5, 2026-10-18): restoreSale restores the
+      // harvest's PRE-DELETE payment_status, stashed by deleteSale on the
+      // sale row (sales.harvest_payment_status_at_delete, v17). A sale
+      // that was a genuine ('Paid') sale therefore reads as realized
+      // income again after restore — not as an unsold estimate. (The old
+      // behavior left payment_status at 'Pending', which this test used
+      // to pin; that was the S11 bug being fixed, not a contract.)
       await harvests.addHarvest(
         cropSeasonId: seasonId,
         quantity: 10.0,
@@ -237,11 +239,14 @@ void main() {
       await harvests.restoreSale(saleId);
 
       expect(harvests.harvests.single.sale, isNotNull);
-      expect(harvests.harvests.single.harvest.paymentStatus, 'Pending');
+      // 10 من @ Rs 50/من, sold Paid before the delete: the pre-delete
+      // status comes back exactly.
+      expect(harvests.harvests.single.harvest.paymentStatus, 'Paid');
 
       final pnl = pnlOf(harvests);
-      expect(pnl.totalSalesPaisa, 0);
-      expect(pnl.unsoldProducePaisa, 50000);
+      expect(pnl.totalSalesPaisa, 50000);
+      expect(pnl.salesIncomePaisa, 50000);
+      expect(pnl.unsoldProducePaisa, 0);
     });
 
     test('harvest with no rate and no sale contributes nothing', () async {
