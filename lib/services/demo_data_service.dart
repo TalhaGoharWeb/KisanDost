@@ -46,6 +46,7 @@ class DemoDataService extends ChangeNotifier {
     'farms',
     'fields',
     'crop_seasons',
+    'crop_season_fields',
     'expenses',
     'harvests',
     'sales',
@@ -61,6 +62,74 @@ class DemoDataService extends ChangeNotifier {
     'activities',
     'ushr_records',
   ];
+
+  /// Tables with a soft-delete (`deleted_at`) column: rows with
+  /// `deleted_at IS NULL` are the live ones.
+  static const Set<String> _softDeleteTables = {
+    'expenses',
+    'sales',
+    'harvests',
+    'tasks',
+    'parties',
+  };
+
+  /// Child FK relations that make deleting a demo PARENT dangerous.
+  /// Each entry is (child table, child FK column, parent table).
+  /// Covered relations are the ON DELETE CASCADE ones (the farmer's rows
+  /// would be silently hard-deleted) and the ON DELETE RESTRICT ones (the
+  /// delete would throw mid-exit). ON DELETE SET NULL relations are safe
+  /// to ignore: the farmer's row survives, only unlinked.
+  static const List<(String, String, String)> _childLinks = [
+    // CASCADE — silent data loss without a guard.
+    ('fields', 'farm_id', 'farms'),
+    ('thekas', 'farm_id', 'farms'),
+    ('crop_seasons', 'field_id', 'fields'),
+    ('crop_season_fields', 'field_id', 'fields'),
+    ('thekas', 'field_id', 'fields'),
+    ('activities', 'crop_season_id', 'crop_seasons'),
+    ('harvests', 'crop_season_id', 'crop_seasons'),
+    ('ushr_records', 'crop_season_id', 'crop_seasons'),
+    ('crop_season_fields', 'crop_season_id', 'crop_seasons'),
+    ('sales', 'harvest_id', 'harvests'),
+    ('theka_installments', 'theka_id', 'thekas'),
+    ('inventory_transactions', 'inventory_id', 'inventory'),
+    // RESTRICT — would throw mid-exit; guard up front instead.
+    ('party_ledger_entries', 'party_id', 'parties'),
+    ('batai_agreements', 'other_party_id', 'parties'),
+    ('batai_settlements', 'agreement_id', 'batai_agreements'),
+  ];
+
+  /// Returns the demo PARENT table names whose tracked rows are referenced
+  /// by at least one NON-DEMO (farmer-owned) child row. Called before any
+  /// delete runs, so a blocked exit deletes nothing.
+  Future<List<String>> _linkedDemoParents(
+    DatabaseExecutor db,
+    Map<String, dynamic> ids,
+  ) async {
+    final linked = <String>{};
+    for (final (child, fk, parent) in _childLinks) {
+      final parents =
+          (ids[parent] as List?)?.map((e) => e as int).toList() ?? [];
+      if (parents.isEmpty) continue;
+      final childDemoIds =
+          (ids[child] as List?)?.map((e) => e as int).toList() ?? [];
+      final placeholders = List.filled(parents.length, '?').join(',');
+      // Soft-deleted rows are already gone from the farmer's view.
+      final liveOnly =
+          _softDeleteTables.contains(child) ? 'AND deleted_at IS NULL' : '';
+      final notDemo =
+          childDemoIds.isEmpty
+              ? ''
+              : "AND id NOT IN (${List.filled(childDemoIds.length, '?').join(',')})";
+      final rows = await db.rawQuery(
+        'SELECT 1 FROM $child WHERE $fk IN ($placeholders) '
+        '$liveOnly $notDemo LIMIT 1',
+        [...parents, ...childDemoIds],
+      );
+      if (rows.isNotEmpty) linked.add(_urduTableName(parent));
+    }
+    return linked.toList();
+  }
 
   /// Cleanup order: children before parents. (crop_season_fields,
   /// sales→harvests and theka_installments→thekas are ON DELETE CASCADE,
@@ -591,7 +660,12 @@ class DemoDataService extends ChangeNotifier {
   }
 
   /// Removes exactly the tracked demo rows, children before parents.
-  /// A table blocked by the farmer's own rows referencing demo rows is
+  /// D1 guard (2026-10-18): BEFORE deleting anything, check whether any
+  /// farmer-owned (non-demo) row references a tracked demo parent. With
+  /// ON DELETE CASCADE those rows would be silently hard-deleted along
+  /// with the demo data, so the exit is BLOCKED with an Urdu message
+  /// instead — the farmer's records are never auto-deleted.
+  /// A table blocked by an FK conflict the guard did not foresee is still
   /// skipped (never a crash) and reported in the returned message.
   Future<DemoExitResult> exitDemo() async {
     final prefs = await SharedPreferences.getInstance();
@@ -600,6 +674,20 @@ class DemoDataService extends ChangeNotifier {
         raw == null ? {} : jsonDecode(raw) as Map<String, dynamic>;
 
     final db = await _ex();
+
+    // D1: the farmer added their own records on top of the demo data
+    // (e.g. a real crop season on a demo field). Deleting the demo
+    // parents would hard-delete those rows via FK CASCADE — abort first.
+    final linked = await _linkedDemoParents(db, ids);
+    if (linked.isNotEmpty) {
+      notifyListeners();
+      return DemoExitResult.blocked(
+        'آپ کا اپنا کچھ ریکارڈ ڈیمو ڈیٹا سے جڑا ہوا ہے '
+        '(${linked.join('، ')})۔ پہلے وہ ریکارڈ حذف کریں یا ڈیمو موڈ '
+        'جاری رہنے دیں، پھر دوبارہ کوشش کریں۔',
+      );
+    }
+
     final blocked = <String>[];
     for (final t in deleteOrder) {
       final list = (ids[t] as List?)?.map((e) => e as int).toList() ?? [];
