@@ -8,63 +8,59 @@
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="assets/logo.png">
 </head>
-<body class="urdu">
+<body>
+<a class="skip-link" href="#main">مرکزی مواد پر جائیں</a>
+<main id="main">
+
 <nav class="nav"><div class="wrap nav-inner">
 <a class="brand" href="index.html"><img src="assets/logo.png" alt="کسان دوست لوگو">کسان دوست</a>
-<ul class="nav-links">
+<ul class="nav-links" id="navLinks">
 <li><a href="#features">خصوصیات</a></li>
 <li><a href="#how">استعمال کا طریقہ</a></li>
+<li><a href="#shots">جھلکیاں</a></li>
 <li><a href="#docs">دستاویز</a></li>
 <li><a href="#faq">سوالات</a></li>
 <li><a href="#versions">ورژن</a></li>
 </ul>
 <div class="nav-cta">
 <a class="lang-toggle" href="en.html">English</a>
-<a class="btn btn-primary" href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">APK ڈاؤن لوڈ</a>
-<button class="burger" aria-label="مینیو">☰</button>
+<a class="btn btn-primary" href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">⬇ ایپ ڈاؤن لوڈ کریں</a>
+<button class="burger" aria-label="مینیو" aria-expanded="false" aria-controls="navLinks">☰</button>
 </div></div></nav>
 
 <header class="hero"><div class="wrap hero-inner">
 <div>
 <span class="badge"><span class="dot"></span>ورژن 1.0.6 دستیاب ہے — مفت</span>
 <h1>کسان دوست<br><span class="gold">آپ کی ڈیجیٹل کھیتی ڈائری</span></h1>
-<p class="lead">زمین، فصل، خرچہ، پیداوار، فروخت، گودام، ٹھیکہ، عشر، پارٹی کھاتہ اور الارم — آپ کی پوری کھیتی کا حساب، اب آپ کے فون میں۔ مکمل آف لائن، مکمل مفت، سادہ اردو میں۔</p>
+<p class="lead">اپنی زمین، فصل، خرچے، پیداوار، گودام اور منافع کا حساب ایک ہی جگہ رکھیں۔ سادہ اردو میں، مکمل آف لائن، بالکل مفت۔</p>
 <div class="hero-btns">
-<a class="btn btn-gold" href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">⬇ APK ڈاؤن لوڈ کریں</a>
-<a class="btn btn-outline" href="dastavezat.html">📖 دستاویز پڑھیں</a>
+<a class="btn btn-gold" href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">⬇ ایپ ڈاؤن لوڈ کریں</a>
+<a class="btn btn-outline" href="#shots">📸 ایپ کی جھلکیاں دیکھیں</a>
 </div>
 <div class="hero-meta">
-<span>✅ کوئی انٹرنیٹ نہیں چاہیے</span>
-<span>✅ کوئی فیس نہیں</span>
+<span>✅ مکمل آف لائن</span>
 <span>✅ کوئی اکاؤنٹ نہیں</span>
+<span>✅ بالکل مفت</span>
 </div>
 </div>
 <div class="hero-art">
-<img class="farmer" src="assets/farmer.png" alt="" aria-hidden="true">
-<div class="phone" role="img" aria-label="کسان دوست ایپ کا ڈیش بورڈ">
-<div class="phone-screen">
-<div class="phone-notch"></div>
-<div class="appbar"><img class="mini-logo" src="assets/logo.png" alt="">کسان دوست</div>
-<div class="mock-body">
-<div class="mock-card"><h4>📋 آج کے کام</h4>
-<div class="mock-row"><span>کھیت میں پانی لگائیں</span><span class="mock-pill">آج شام 5 بجے</span></div>
-<div class="mock-row"><span>یوریا کھاد ڈالیں</span><span class="mock-pill green">مکمل ✓</span></div>
-<div class="mock-row"><span>سپرے کا الارم</span><span class="mock-pill red">رہ گیا!</span></div>
-</div>
-<div class="mock-card"><h4>💰 رقم کی صورتحال</h4>
-<div class="mock-row"><span>آج کے خرچے</span><b>روپے 2,450</b></div>
-<div class="mock-row"><span>لینا ہے</span><b>روپے 15,000</b></div>
-<div class="mock-row"><span>دینا ہے</span><b>روپے 3,000</b></div>
-</div>
-<div class="mock-card"><h4>🌱 فصلوں کی صورتحال</h4>
-<div class="mock-row"><span>گندم — 25 ایکڑ</span><span class="mock-pill green">بڑھوتری</span></div>
-<div class="mock-row"><span>کپاس — 8 ایکڑ</span><span class="mock-pill">پھول</span></div>
+<div class="device">
+<div class="device-screen">
+<picture>
+<source srcset="screenshots/webp/dashboard.webp" type="image/webp">
+<img src="screenshots/dashboard.jpg" alt="کسان دوست ایپ کا ڈیش بورڈ" width="297" height="1600" loading="eager" fetchpriority="high">
+</picture>
 </div>
 </div>
-<div class="mock-nav"><span class="on">ہوم</span><span>کام</span><span>خرچے</span><span>رپورٹ</span></div>
-</div></div>
 </div>
 </div></header>
+
+<section class="trust-strip"><div class="wrap">
+<div class="trust-item reveal"><div class="icon">📴</div><div><h3>مکمل آف لائن</h3><p>بغیر انٹرنیٹ چلے — کھیت میں سگنل ہو یا نہ ہو</p></div></div>
+<div class="trust-item reveal"><div class="icon">🗣️</div><div><h3>سادہ اردو</h3><p>پوری ایپ اردو میں، دائیں سے بائیں</p></div></div>
+<div class="trust-item reveal"><div class="icon">🌾</div><div><h3>کھیتی کا حساب</h3><p>زمین سے لے کر منافع تک، ہر چیز ایک جگہ</p></div></div>
+<div class="trust-item reveal"><div class="icon">🆓</div><div><h3>بالکل مفت</h3><p>کوئی فیس نہیں، کوئی اشتہار نہیں</p></div></div>
+</div></section>
 
 <section id="features"><div class="wrap">
 <div class="sec-head reveal">
@@ -72,20 +68,114 @@
 <h2>ایک ایپ، آپ کی پوری کھیتی کا حساب</h2>
 <p>کاپی اور رجسٹر کو بھول جائیں — ہر چیز تاریخ کے ساتھ محفوظ، اور حساب خودکار۔</p>
 </div>
+
+<div class="feat-group reveal">
+<h3 class="feat-group-title">زمین اور فصل</h3>
 <div class="feat-grid">
-<div class="feat reveal"><div class="icon">🚜</div><h3>میری زمینیں</h3><p>اپنی تمام زمینیں اور ہر زمین کے کھیت — سائز اور پانی کے ذریعے سمیت۔</p></div>
-<div class="feat reveal"><div class="icon">🌱</div><h3>میری فصلیں</h3><p>کون سی فصل کس کھیت میں، کب بوئی، کتنی جگہ پر — پورے سیزن کا ریکارڈ۔</p></div>
-<div class="feat reveal"><div class="icon">📝</div><h3>آج کے کام</h3><p>روز کی ڈیجیٹل ڈائری — پانی، کھاد، سپرے، مزدوری، ہر کام تاریخ کے ساتھ۔</p></div>
-<div class="feat reveal"><div class="icon">💰</div><h3>خرچے</h3><p>ہر روپیہ زمرے کے ساتھ لکھیں — اور گودام کی شے چن کر قیمت خودکار بھروائیں۔</p></div>
-<div class="feat reveal"><div class="icon">🌾</div><h3>پیداوار اور فروخت</h3><p>کتنی پیداوار ہوئی، کس کو کتنے ریٹ پر بیچی — وصولی سمیت مکمل حساب۔</p></div>
-<div class="feat reveal"><div class="icon">📊</div><h3>منافع و نقصان</h3><p>ہر فصل کا الگ حساب — کتنا لگا، کتنا آیا، کتنا بچا۔ اندازہ نہیں، اصل اعداد۔</p></div>
-<div class="feat reveal"><div class="icon">🏚️</div><h3>گودام</h3><p>کھاد، بیج، سپرے، دوائی، ڈیزل کا اسٹاک — استعمال پر خودکار کٹوتی، پوری لین دین تاریخ۔</p></div>
-<div class="feat reveal"><div class="icon">⏰</div><h3>الارم یاددہانیاں</h3><p>وقت پر بجنے والے الارم — فون لاک ہو تو بھی فل اسکرین الارم، سنوز کے ساتھ۔</p></div>
-<div class="feat reveal"><div class="icon">📜</div><h3>ٹھیکہ</h3><p>زمین ٹھیکے پر دی ہو یا لی ہو — معاہدہ، کل رقم اور قسطوں کا پورا حساب۔</p></div>
-<div class="feat reveal"><div class="icon">🤝</div><h3>پارٹی کھاتہ</h3><p>ادھار کا صاف ریکارڈ — کس سے لینا ہے، کس کو دینا ہے، رسید سمیت۔</p></div>
-<div class="feat reveal"><div class="icon">⚖️</div><h3>عشر</h3><p>فصل پر واجب عشر کا خودکار حساب — نقد ادائیگی ہو یا جنس میں۔</p></div>
-<div class="feat reveal"><div class="icon">💾</div><h3>بیک اپ اور رپورٹس</h3><p>روزانہ خودکار بیک اپ، CSV اور PDF رپورٹیں — ڈیٹا ہمیشہ محفوظ۔</p></div>
-</div></div></section>
+<div class="feat-card reveal">
+<div class="feat-icon">🚜</div>
+<h3>میری زمینیں</h3>
+<p>اپنی تمام زمینیں اور ہر زمین کے کھیت — نام، سائز اور پانی کے ذریعے سمیت۔</p>
+<img class="feat-shot" src="screenshots/farms.jpg" alt="میری زمینیں اسکرین" width="720" height="1618" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">🌱</div>
+<h3>میری فصلیں</h3>
+<p>کون سی فصل کس کھیت میں، کب بوئی، کتنی جگہ پر — پورے سیزن کا ریکارڈ۔</p>
+<img class="feat-shot" src="screenshots/crops.jpg" alt="میری فصلیں اسکرین" width="716" height="1600" loading="lazy">
+</div>
+</div>
+</div>
+
+<div class="feat-group reveal">
+<h3 class="feat-group-title">روزمرہ کا حساب</h3>
+<div class="feat-grid">
+<div class="feat-card reveal">
+<div class="feat-icon">📝</div>
+<h3>آج کے کام</h3>
+<p>روز کی ڈیجیٹل ڈائری — پانی، کھاد، سپرے، مزدوری، ہر کام تاریخ کے ساتھ۔</p>
+<img class="feat-shot" src="screenshots/activities.jpg" alt="آج کے کام اسکرین" width="720" height="1608" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">💰</div>
+<h3>خرچے</h3>
+<p>ہر روپیہ زمرے کے ساتھ لکھیں — اور گودام کی شے چن کر قیمت خودکار بھروائیں۔</p>
+<img class="feat-shot" src="screenshots/expenses.jpg" alt="خرچے اسکرین" width="716" height="1600" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">🏚️</div>
+<h3>گودام</h3>
+<p>کھاد، بیج، سپرے، دوائی، ڈیزل کا اسٹاک — استعمال پر خودکار کٹوتی، پوری لین دین تاریخ۔</p>
+<img class="feat-shot" src="screenshots/inventory.jpg" alt="گودام اسکرین" width="716" height="1600" loading="lazy">
+</div>
+</div>
+</div>
+
+<div class="feat-group reveal">
+<h3 class="feat-group-title">آمدن اور منافع</h3>
+<div class="feat-grid">
+<div class="feat-card reveal">
+<div class="feat-icon">🌾</div>
+<h3>پیداوار اور فروخت</h3>
+<p>کتنی پیداوار ہوئی، کس کو کتنے ریٹ پر بیچی — وصولی سمیت مکمل حساب۔</p>
+<img class="feat-shot" src="screenshots/harvest.jpg" alt="پیداوار اور فروخت اسکرین" width="716" height="1600" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">📊</div>
+<h3>منافع و نقصان</h3>
+<p>ہر فصل کا الگ حساب — کتنا لگا، کتنا آیا، کتنا بچا۔ اندازہ نہیں، اصل اعداد۔</p>
+<img class="feat-shot" src="screenshots/profit-loss.jpg" alt="منافع و نقصان اسکرین" width="716" height="1600" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">📒</div>
+<h3>پارٹی کھاتہ</h3>
+<p>ادھار کا صاف ریکارڈ — کس سے لینا ہے، کس کو دینا ہے، رسید سمیت۔</p>
+<img class="feat-shot" src="screenshots/party-ledger.jpg" alt="پارٹی کھاتہ اسکرین" width="720" height="1608" loading="lazy">
+</div>
+</div>
+</div>
+
+<div class="feat-group reveal">
+<h3 class="feat-group-title">یاددہانی اور تحفظ</h3>
+<div class="feat-grid">
+<div class="feat-card reveal">
+<div class="feat-icon">⏰</div>
+<h3>الارم اور یاددہانیاں</h3>
+<p>وقت پر بجنے والے الارم — فون لاک ہو تو بھی فل اسکرین الارم، سنوز کے ساتھ۔</p>
+<img class="feat-shot" src="screenshots/tasks.jpg" alt="الارم اور یاددہانیاں اسکرین" width="716" height="1600" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">📜</div>
+<h3>ٹھیکہ</h3>
+<p>زمین ٹھیکے پر دی ہو یا لی ہو — معاہدہ، کل رقم اور قسطوں کا پورا حساب۔</p>
+<img class="feat-shot" src="screenshots/theka.jpg" alt="ٹھیکہ اسکرین" width="720" height="1608" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">🧮</div>
+<h3>بٹائی</h3>
+<p>شرکت پر دی ہوئی فصل کا حصہ داری حساب — پیداوار کی منصفانہ تقسیم۔</p>
+<img class="feat-shot" src="screenshots/batai.jpg" alt="بٹائی اسکرین" width="720" height="1608" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">⚖️</div>
+<h3>عشر</h3>
+<p>فصل پر واجب عشر کا خودکار حساب — نقد ادائیگی ہو یا جنس میں۔</p>
+<img class="feat-shot" src="screenshots/ushr.jpg" alt="عشر اسکرین" width="716" height="1600" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">📑</div>
+<h3>رپورٹس</h3>
+<p>ہر حصے کی رپورٹیں — CSV اور PDF میں نکالیں، کسی کو بھیجیں۔</p>
+<img class="feat-shot" src="screenshots/reports.jpg" alt="رپورٹس اسکرین" width="720" height="1608" loading="lazy">
+</div>
+<div class="feat-card reveal">
+<div class="feat-icon">💾</div>
+<h3>بیک اپ</h3>
+<p>روزانہ خودکار بیک اپ — فون بدل جائے تو بھی آپ کا ڈیٹا محفوظ رہے۔</p>
+</div>
+</div>
+</div>
+</div></section>
 
 <section id="how" style="background:var(--green-50)"><div class="wrap">
 <div class="sec-head reveal">
@@ -107,17 +197,24 @@
 <div class="sec-head reveal">
 <span class="sec-kicker">جھلکیاں</span>
 <h2>ایپ اندر سے کیسی لگتی ہے</h2>
-<p>سادہ اردو، بڑے بٹن، ہر چیز ایک نظر میں۔</p>
+<p>سادہ اردو، بڑے بٹن، ہر چیز ایک نظر میں — کسی بھی تصویر پر ٹیپ کر کے بڑا دیکھیں۔</p>
 </div>
 <div class="shots">
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/dashboard.jpg" alt="ڈیش بورڈ" loading="lazy"></div><figcaption>ڈیش بورڈ — سب کچھ ایک نظر میں</figcaption></figure>
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/crops.jpg" alt="میری فصلیں" loading="lazy"></div><figcaption>میری فصلیں — ہر فصل کا سیزن</figcaption></figure>
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/expenses.jpg" alt="خرچے کا ریکارڈ" loading="lazy"></div><figcaption>خرچے — اسٹاک سے جڑا حساب</figcaption></figure>
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/harvest.jpg" alt="پیداوار اور فروخت" loading="lazy"></div><figcaption>پیداوار اور فروخت</figcaption></figure>
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/profit-loss.jpg" alt="منافع و نقصان" loading="lazy"></div><figcaption>منافع و نقصان — اصل حساب</figcaption></figure>
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/inventory.jpg" alt="گودام کا اسٹاک" loading="lazy"></div><figcaption>گودام کا اسٹاک</figcaption></figure>
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/tasks.jpg" alt="کام کی منصوبہ بندی" loading="lazy"></div><figcaption>کام اور الارم — لاک اسکرین پر بھی</figcaption></figure>
-<figure class="shot reveal"><div class="shot-frame"><img src="screenshots/ushr.jpg" alt="عشر مینجمنٹ" loading="lazy"></div><figcaption>عشر کیلکولیٹر</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/dashboard.jpg" data-cap="ڈیش بورڈ — آج کے کام، رقم کی صورتحال اور فصلوں کی حالت ایک نظر میں" aria-label="بڑا دیکھیں: ڈیش بورڈ"><picture><source srcset="screenshots/webp/dashboard.webp" type="image/webp"><img src="screenshots/dashboard.jpg" alt="ڈیش بورڈ" width="297" height="1600" loading="lazy"></picture></button><figcaption><strong>ڈیش بورڈ</strong> — آج کے کام، رقم کی صورتحال اور فصلوں کی حالت ایک نظر میں</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/activities.jpg" data-cap="آج کے کام — روز کی ڈیجیٹل ڈائری، ہر کام تاریخ کے ساتھ" aria-label="بڑا دیکھیں: آج کے کام"><picture><source srcset="screenshots/webp/activities.webp" type="image/webp"><img src="screenshots/activities.jpg" alt="آج کے کام" width="720" height="1608" loading="lazy"></picture></button><figcaption><strong>آج کے کام</strong> — روز کی ڈیجیٹل ڈائری، ہر کام تاریخ کے ساتھ</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/expenses.jpg" data-cap="خرچے — زمرے کے ساتھ ہر روپیہ، گودام سے جوڑا ہوا حساب" aria-label="بڑا دیکھیں: خرچے"><picture><source srcset="screenshots/webp/expenses.webp" type="image/webp"><img src="screenshots/expenses.jpg" alt="خرچے" width="716" height="1600" loading="lazy"></picture></button><figcaption><strong>خرچے</strong> — زمرے کے ساتھ ہر روپیہ، گودام سے جوڑا ہوا حساب</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/profit-loss.jpg" data-cap="منافع و نقصان — ہر فصل کا اصل حساب، اندازہ نہیں" aria-label="بڑا دیکھیں: منافع و نقصان"><picture><source srcset="screenshots/webp/profit-loss.webp" type="image/webp"><img src="screenshots/profit-loss.jpg" alt="منافع و نقصان" width="716" height="1600" loading="lazy"></picture></button><figcaption><strong>منافع و نقصان</strong> — ہر فصل کا اصل حساب، اندازہ نہیں</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/tasks.jpg" data-cap="الارم اور یاددہانیاں — وقت پر فل اسکرین الارم، سنوز کے ساتھ" aria-label="بڑا دیکھیں: الارم اور یاددہانیاں"><picture><source srcset="screenshots/webp/tasks.webp" type="image/webp"><img src="screenshots/tasks.jpg" alt="الارم اور یاددہانیاں" width="716" height="1600" loading="lazy"></picture></button><figcaption><strong>الارم اور یاددہانیاں</strong> — وقت پر فل اسکرین الارم، سنوز کے ساتھ</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/inventory.jpg" data-cap="گودام — کھاد، بیج، سپرے، ڈیزل کا اسٹاک اور لین دین کی تاریخ" aria-label="بڑا دیکھیں: گودام"><picture><source srcset="screenshots/webp/inventory.webp" type="image/webp"><img src="screenshots/inventory.jpg" alt="گودام" width="716" height="1600" loading="lazy"></picture></button><figcaption><strong>گودام</strong> — کھاد، بیج، سپرے، ڈیزل کا اسٹاک اور لین دین کی تاریخ</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/crops.jpg" data-cap="میری فصلیں — کون سی فصل کس کھیت میں، پورے سیزن کا ریکارڈ" aria-label="بڑا دیکھیں: میری فصلیں"><picture><source srcset="screenshots/webp/crops.webp" type="image/webp"><img src="screenshots/crops.jpg" alt="میری فصلیں" width="716" height="1600" loading="lazy"></picture></button><figcaption><strong>میری فصلیں</strong> — کون سی فصل کس کھیت میں، پورے سیزن کا ریکارڈ</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/harvest.jpg" data-cap="پیداوار اور فروخت — کتنی پیداوار ہوئی، کس کو کتنے ریٹ پر بیچی" aria-label="بڑا دیکھیں: پیداوار اور فروخت"><picture><source srcset="screenshots/webp/harvest.webp" type="image/webp"><img src="screenshots/harvest.jpg" alt="پیداوار اور فروخت" width="716" height="1600" loading="lazy"></picture></button><figcaption><strong>پیداوار اور فروخت</strong> — کتنی پیداوار ہوئی، کس کو کتنے ریٹ پر بیچی</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/party-ledger.jpg" data-cap="پارٹی کھاتہ — کس سے لینا ہے، کس کو دینا ہے، رسید سمیت صاف ریکارڈ" aria-label="بڑا دیکھیں: پارٹی کھاتہ"><picture><source srcset="screenshots/webp/party-ledger.webp" type="image/webp"><img src="screenshots/party-ledger.jpg" alt="پارٹی کھاتہ" width="720" height="1608" loading="lazy"></picture></button><figcaption><strong>پارٹی کھاتہ</strong> — کس سے لینا ہے، کس کو دینا ہے، رسید سمیت صاف ریکارڈ</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/ushr.jpg" data-cap="عشر — فصل پر واجب عشر کا خودکار حساب" aria-label="بڑا دیکھیں: عشر"><picture><source srcset="screenshots/webp/ushr.webp" type="image/webp"><img src="screenshots/ushr.jpg" alt="عشر" width="716" height="1600" loading="lazy"></picture></button><figcaption><strong>عشر</strong> — فصل پر واجب عشر کا خودکار حساب</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/theka.jpg" data-cap="ٹھیکہ — معاہدہ، کل رقم اور قسطوں کا پورا حساب" aria-label="بڑا دیکھیں: ٹھیکہ"><picture><source srcset="screenshots/webp/theka.webp" type="image/webp"><img src="screenshots/theka.jpg" alt="ٹھیکہ" width="720" height="1608" loading="lazy"></picture></button><figcaption><strong>ٹھیکہ</strong> — معاہدہ، کل رقم اور قسطوں کا پورا حساب</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/batai.jpg" data-cap="بٹائی — شرکت کی فصل کے حصے کی منصفانہ تقسیم" aria-label="بڑا دیکھیں: بٹائی"><picture><source srcset="screenshots/webp/batai.webp" type="image/webp"><img src="screenshots/batai.jpg" alt="بٹائی" width="720" height="1608" loading="lazy"></picture></button><figcaption><strong>بٹائی</strong> — شرکت کی فصل کے حصے کی منصفانہ تقسیم</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/farms.jpg" data-cap="میری زمینیں — زمینیں اور کھیت، سائز اور پانی کے ذریعے سمیت" aria-label="بڑا دیکھیں: میری زمینیں"><picture><source srcset="screenshots/webp/farms.webp" type="image/webp"><img src="screenshots/farms.jpg" alt="میری زمینیں" width="720" height="1618" loading="lazy"></picture></button><figcaption><strong>میری زمینیں</strong> — زمینیں اور کھیت، سائز اور پانی کے ذریعے سمیت</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/reports.jpg" data-cap="رپورٹس — ہر حصے کی رپورٹ، CSV اور PDF میں" aria-label="بڑا دیکھیں: رپورٹس"><picture><source srcset="screenshots/webp/reports.webp" type="image/webp"><img src="screenshots/reports.jpg" alt="رپورٹس" width="720" height="1608" loading="lazy"></picture></button><figcaption><strong>رپورٹس</strong> — ہر حصے کی رپورٹ، CSV اور PDF میں</figcaption></figure>
+<figure class="shot reveal"><button class="shot-frame" data-full="screenshots/settings.jpg" data-cap="ترتیبات — بیک اپ، ری سائیکل بن، ڈیمو اور الارم کی جانچ" aria-label="بڑا دیکھیں: ترتیبات"><picture><source srcset="screenshots/webp/settings.webp" type="image/webp"><img src="screenshots/settings.jpg" alt="ترتیبات" width="291" height="1600" loading="lazy"></picture></button><figcaption><strong>ترتیبات</strong> — بیک اپ، ری سائیکل بن، ڈیمو اور الارم کی جانچ</figcaption></figure>
 </div></div></section>
 
 <section id="docs"><div class="wrap">
@@ -145,13 +242,13 @@
 <h2>عام سوالات اور جوابات</h2>
 </div>
 <div class="faq">
-<div class="faq-item reveal"><button class="faq-q">کیا یہ ایپ انٹرنیٹ کے بغیر چلتی ہے؟<span class="plus">+</span></button><div class="faq-a"><p>جی ہاں! کسان دوست مکمل آف لائن ہے — اسے انٹرنیٹ کی بالکل ضرورت نہیں۔ کھیت میں سگنل ہو یا نہ ہو، ایپ چلتی رہتی ہے اور آپ کا سارا ڈیٹا آپ کے فون میں محفوظ رہتا ہے۔</p></div></div>
-<div class="faq-item reveal"><button class="faq-q">کیا ایپ واقعی مفت ہے؟<span class="plus">+</span></button><div class="faq-a"><p>جی ہاں، مکمل مفت — کوئی فیس، کوئی ماہانہ خرچہ، کوئی اشتہار نہیں۔ کوئی اکاؤنٹ بنانا نہیں پڑتا اور کوئی لاگ اِن نہیں۔</p></div></div>
-<div class="faq-item reveal"><button class="faq-q">الارم نہیں بجا — کیا کروں؟<span class="plus">+</span></button><div class="faq-a"><p>ترتیبات میں جا کر چار اجازتیں جانچیں: نوٹیفکیشن، صحیح وقت پر الارم، فل اسکرین الارم اور بیٹری بچت سے استثنیٰ۔ پھر «ٹیسٹ الارم» چلائیں — پندرہ سیکنڈ بعد الارم بجنا چاہیے۔ یہ بھی دیکھ لیں کہ یاددہانیوں کا بڑا سوئچ آن ہو۔</p></div></div>
-<div class="faq-item reveal"><button class="faq-q">غلطی سے کوئی ریکارڈ حذف ہو گیا؟<span class="plus">+</span></button><div class="faq-a"><p>گھبرائیں نہیں — خرچے، فروخت، پیداوار، کام اور پارٹیاں فوراً ختم نہیں ہوتیں، وہ «حذف شدہ» (ری سائیکل بن) میں چلی جاتی ہیں۔ ترتیبات سے ری سائیکل بن کھول کر ایک ٹیپ میں واپس لائیں۔</p></div></div>
-<div class="faq-item reveal"><button class="faq-q">فون بدلنا ہے — ڈیٹا کیسے منتقل کروں؟<span class="plus">+</span></button><div class="faq-a"><p>پرانے فون میں بیک اپ بنائیں، فائل نئے فون میں بھیجیں، وہاں کسان دوست انسٹال کر کے بیک اپ اسکرین سے درآمد کر لیں۔ ایپ روزانہ خودکار بیک اپ بھی بناتی ہے۔</p></div></div>
-<div class="faq-item reveal"><button class="faq-q">کیا رقم اردو ہندسوں میں لکھ سکتا ہوں؟<span class="plus">+</span></button><div class="faq-a"><p>جی ہاں — رقم اور مقدار اردو ہندسوں (۱۲۳) میں بھی لکھ سکتے ہیں اور انگریزی ہندسوں (123) میں بھی۔ ایپ دونوں کو درست سمجھتی ہے۔</p></div></div>
-<div class="faq-item reveal"><button class="faq-q">ڈیمو ڈیٹا کیسے ختم کروں؟<span class="plus">+</span></button><div class="faq-a"><p>ترتیبات میں «ڈیمو ختم کریں» دبائیں — صرف نمونہ ڈیٹا صاف ہو گا، آپ کا اپنا اصل ڈیٹا بالکل محفوظ رہے گا۔</p></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">کیا یہ ایپ انٹرنیٹ کے بغیر چلتی ہے؟<span class="plus">+</span></button><div class="faq-a"><p>جی ہاں! کسان دوست مکمل آف لائن ہے — اسے انٹرنیٹ کی بالکل ضرورت نہیں۔ کھیت میں سگنل ہو یا نہ ہو، ایپ چلتی رہتی ہے اور آپ کا سارا ڈیٹا آپ کے فون میں محفوظ رہتا ہے۔</p></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">کیا ایپ واقعی مفت ہے؟<span class="plus">+</span></button><div class="faq-a"><p>جی ہاں، مکمل مفت — کوئی فیس، کوئی ماہانہ خرچہ، کوئی اشتہار نہیں۔ کوئی اکاؤنٹ بنانا نہیں پڑتا اور کوئی لاگ اِن نہیں۔</p></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">الارم نہیں بجا — کیا کروں؟<span class="plus">+</span></button><div class="faq-a"><p>ترتیبات میں جا کر چار اجازتیں جانچیں: نوٹیفکیشن، صحیح وقت پر الارم، فل اسکرین الارم اور بیٹری بچت سے استثنیٰ۔ پھر «ٹیسٹ الارم» چلائیں — پندرہ سیکنڈ بعد الارم بجنا چاہیے۔ یہ بھی دیکھ لیں کہ یاددہانیوں کا بڑا سوئچ آن ہو۔</p></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">غلطی سے کوئی ریکارڈ حذف ہو گیا؟<span class="plus">+</span></button><div class="faq-a"><p>گھبرائیں نہیں — خرچے، فروخت، پیداوار، کام اور پارٹیاں فوراً ختم نہیں ہوتیں، وہ «حذف شدہ» (ری سائیکل بن) میں چلی جاتی ہیں۔ ترتیبات سے ری سائیکل بن کھول کر ایک ٹیپ میں واپس لائیں۔</p></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">فون بدلنا ہے — ڈیٹا کیسے منتقل کروں؟<span class="plus">+</span></button><div class="faq-a"><p>پرانے فون میں بیک اپ بنائیں، فائل نئے فون میں بھیجیں، وہاں کسان دوست انسٹال کر کے بیک اپ اسکرین سے درآمد کر لیں۔ ایپ روزانہ خودکار بیک اپ بھی بناتی ہے۔</p></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">کیا رقم اردو ہندسوں میں لکھ سکتا ہوں؟<span class="plus">+</span></button><div class="faq-a"><p>جی ہاں — رقم اور مقدار اردو ہندسوں (۱۲۳) میں بھی لکھ سکتے ہیں اور انگریزی ہندسوں (123) میں بھی۔ ایپ دونوں کو درست سمجھتی ہے۔</p></div></div>
+<div class="faq-item reveal"><button class="faq-q" aria-expanded="false">ڈیمو ڈیٹا کیسے ختم کروں؟<span class="plus">+</span></button><div class="faq-a"><p>ترتیبات میں «ڈیمو ختم کریں» دبائیں — صرف نمونہ ڈیٹا صاف ہو گا، آپ کا اپنا اصل ڈیٹا بالکل محفوظ رہے گا۔</p></div></div>
 </div></div></section>
 
 <section id="versions"><div class="wrap">
@@ -176,7 +273,8 @@
 <h2>⬇ کسان دوست ڈاؤن لوڈ کریں</h2>
 <p>ورژن 1.0.6 — مفت، مکمل آف لائن۔ ڈاؤن لوڈ کر کے انسٹال کریں اور اپنی ڈیجیٹل ڈائری شروع کریں۔</p>
 <a class="btn btn-gold" style="font-size:1.15rem;padding:.9rem 2.4rem" href="https://drive.google.com/uc?id=1taiPECFG5z9vVgBANVfHRRK8UMcUWbk9&export=download">APK ڈاؤن لوڈ کریں (v1.0.6)</a>
-<p class="dl-note">kisan-dost-1.0.6.apk • ~76 MB • SHA-256: cf0de7a0c87aef365bb7f9a0476039e0ddc256f61be1806bf873330c42efe36e</p>
+<p class="dl-note"><span dir="ltr">kisan-dost-1.0.6.apk • ~76 MB • SHA-256: cf0de7a0c87aef365bb7f9a0476039e0ddc256f61be1806bf873330c42efe36e</span></p>
+<p>APK فائل ڈاؤن لوڈ کر کے کھولیں؛ انسٹال کی اجازت دیں۔</p>
 </div></div></section>
 
 <footer><div class="wrap">
@@ -187,5 +285,10 @@
 </div>
 <div class="foot-bottom"><span>ڈیولپر: Muhammad Talha Farid Farooqi</span><span>مکمل آف لائن • کوئی انٹرنیٹ نہیں • مفت</span></div>
 </div></footer>
+
+</main>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="اسکرین شاٹ"><button class="lb-close" aria-label="بند کریں">×</button><button class="lb-prev" aria-label="پچھلا">‹</button><img class="lb-img" alt=""><p class="lb-cap"></p><button class="lb-next" aria-label="اگلا">›</button></div>
+
 <script src="site.js"></script>
 </body></html>
