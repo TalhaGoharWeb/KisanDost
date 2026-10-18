@@ -13,8 +13,63 @@ import '../widgets/empty_state_widget.dart';
 import '../services/money.dart';
 import '../l10n/strings.dart';
 
-class TodaysWorkScreen extends StatelessWidget {
+class TodaysWorkScreen extends StatefulWidget {
   const TodaysWorkScreen({super.key});
+
+  @override
+  State<TodaysWorkScreen> createState() => _TodaysWorkScreenState();
+}
+
+class _TodaysWorkScreenState extends State<TodaysWorkScreen> {
+  /// S9: the diary below the activity grid is a lifetime list, so it gets a
+  /// date filter — defaulting to today — instead of being mislabeled as
+  /// "today's work".
+  DateTime _selectedDate = DateTime.now();
+
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  bool get _showingToday => _isSameDay(_selectedDate, DateTime.now());
+
+  /// Urdu date label with Latin digits, matching this screen's existing
+  /// timestamp style ('yyyy-MM-dd HH:mm').
+  static String _formatDateUrdu(DateTime date) {
+    const months = [
+      'جنوری',
+      'فروری',
+      'مارچ',
+      'اپریل',
+      'مئی',
+      'جون',
+      'جولائی',
+      'اگست',
+      'ستمبر',
+      'اکتوبر',
+      'نومبر',
+      'دسمبر',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _shiftDay(int delta) {
+    setState(() {
+      _selectedDate = _selectedDate.add(Duration(days: delta));
+    });
+  }
 
   final List<Map<String, dynamic>> activities = const [
     {'title': 'پانی لگایا', 'icon': Icons.water_drop, 'color': Colors.blue},
@@ -61,6 +116,15 @@ class TodaysWorkScreen extends StatelessWidget {
     final cropProvider = Provider.of<CropProvider>(context);
     final theme = Theme.of(context);
 
+    // S9: the diary shows only the selected day's entries (default: today).
+    final diaryEntries =
+        activityProvider.activities.where((item) {
+          return _isSameDay(
+            DateTime.parse(item.activity.date),
+            _selectedDate,
+          );
+        }).toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text('آج آپ نے کھیت میں کیا کیا؟')),
       body: RefreshIndicator(
@@ -103,17 +167,19 @@ class TodaysWorkScreen extends StatelessWidget {
               ),
             ),
 
-            // 2. Section Title: Recent Diary Entries
+            // 2. Section Title: diary entries for the selected date (S9)
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.only(
                   left: 16.0,
                   right: 16.0,
                   top: 24.0,
-                  bottom: 8.0,
+                  bottom: 4.0,
                 ),
                 child: Text(
-                  'حالیہ سرگرمیاں (ڈیجیٹل ڈائری)',
+                  _showingToday
+                      ? 'آج کی سرگرمیاں (ڈیجیٹل ڈائری)'
+                      : '${_formatDateUrdu(_selectedDate)} کی سرگرمیاں (ڈیجیٹل ڈائری)',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.primary,
@@ -122,23 +188,67 @@ class TodaysWorkScreen extends StatelessWidget {
               ),
             ),
 
-            // 3. List of Activities (Diary entries)
-            activityProvider.activities.isEmpty
-                ? const SliverToBoxAdapter(
+            // 2b. Date filter: previous day / pick a date / next day
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.navigate_before),
+                      tooltip: 'پچھلا دن',
+                      onPressed: () => _shiftDay(-1),
+                    ),
+                    TextButton.icon(
+                      onPressed: _pickDate,
+                      icon: const Icon(Icons.calendar_today, size: 18),
+                      label: Text(
+                        _showingToday ? 'آج' : _formatDateUrdu(_selectedDate),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.navigate_next),
+                      tooltip: 'اگلا دن',
+                      onPressed: () => _shiftDay(1),
+                    ),
+                    if (!_showingToday)
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedDate = DateTime.now();
+                          });
+                        },
+                        child: const Text('آج پر واپس جائیں'),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 3. List of diary entries for the selected date
+            diaryEntries.isEmpty
+                ? SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20.0),
+                    padding: const EdgeInsets.symmetric(vertical: 20.0),
                     child: EmptyStateWidget(
                       imageAsset: 'assets/images/tractor.png',
-                      message: 'آج کے لیے کوئی کام نہیں ہے',
-                      subtitle:
-                          'آپ کی آنے والی زرعی سرگرمیاں یہاں نظر آئیں گی۔',
+                      message:
+                          _showingToday
+                              ? 'آج کے لیے کوئی سرگرمی درج نہیں'
+                              : '${_formatDateUrdu(_selectedDate)} کو کوئی سرگرمی درج نہیں',
+                      subtitle: 'اوپر دیے گئے بٹنوں سے نئی سرگرمی شامل کریں۔',
                       fallbackIcon: Icons.agriculture,
                     ),
                   ),
                 )
                 : SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
-                    final item = activityProvider.activities[index];
+                    final item = diaryEntries[index];
                     final act = item.activity;
                     final cropNameUrdu =
                         cropProvider.predefinedCrops[item.cropName] ??
@@ -289,7 +399,7 @@ class TodaysWorkScreen extends StatelessWidget {
                         ),
                       ),
                     );
-                  }, childCount: activityProvider.activities.length),
+                  }, childCount: diaryEntries.length),
                 ),
             const SliverPadding(padding: EdgeInsets.only(bottom: 50)),
           ],

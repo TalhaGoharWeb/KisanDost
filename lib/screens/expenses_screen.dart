@@ -24,6 +24,14 @@ class ExpensesScreen extends StatefulWidget {
 }
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
+  /// Expense categories created automatically by other screens
+  /// (harvest, theka and ushr mirrors). Deleting one can orphan its source
+  /// record, so the delete dialog warns first (S19).
+  static const Set<String> _systemLinkedCategories = {
+    'Harvest Expenses',
+    'Ushr Expense',
+    'Land Rent',
+  };
   /// Maps an expense category to the inventory category it draws stock from.
   /// Null means the category has no inventory linkage (e.g. Labour).
   static const Map<String, String> _expenseToInventoryCategory = {
@@ -54,11 +62,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       qtyInItemUnits = qty / item.weightPerUnitKg!;
     }
     final costPaisa = (qtyInItemUnits * item.costPerUnitPaisa).round();
-    final rupees = costPaisa / 100.0;
-    amountController.text =
-        rupees == rupees.roundToDouble()
-            ? rupees.toInt().toString()
-            : rupees.toStringAsFixed(2);
+    amountController.text = _paisaToRupeesText(costPaisa);
+  }
+
+  /// Formats integer paisa as the rupees text the amount field expects
+  /// ("1500" or "1500.50") — the inverse of [Money.parse].
+  static String _paisaToRupeesText(int paisa) {
+    final rupees = paisa / 100.0;
+    return rupees == rupees.roundToDouble()
+        ? rupees.toInt().toString()
+        : rupees.toStringAsFixed(2);
   }
 
   static String _formatPaisa(int paisa) {
@@ -210,13 +223,25 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                                   const SizedBox(width: 8),
                                   IconButton(
                                     icon: const Icon(
+                                      Icons.edit_outlined,
+                                      color: Colors.grey,
+                                    ),
+                                    tooltip: 'ترمیم کریں',
+                                    onPressed:
+                                        () => _showAddExpenseDialog(
+                                          context,
+                                          existing: exp,
+                                        ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
                                       Icons.delete_outline,
                                       color: Colors.grey,
                                     ),
                                     onPressed:
                                         () => _confirmDeleteExpense(
                                           context,
-                                          exp.id!,
+                                          exp,
                                         ),
                                   ),
                                 ],
@@ -239,7 +264,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  void _showAddExpenseDialog(BuildContext context) {
+  /// Shows the add/edit expense form. When [existing] is given the form is
+  /// pre-filled and saving calls [ExpenseProvider.updateExpense] instead of
+  /// [ExpenseProvider.addExpense] (S15). Edit mode skips the inventory
+  /// linkage: stock was already deducted at creation time and there is no
+  /// stock-reversal path on edit.
+  void _showAddExpenseDialog(BuildContext context, {Expense? existing}) {
+    final isEdit = existing != null;
     final expenseProvider = Provider.of<ExpenseProvider>(
       context,
       listen: false,
@@ -256,19 +287,24 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
     final formKey = GlobalKey<FormState>();
 
-    String selectedCategory = 'Miscellaneous';
-    int? selectedFarmId;
-    int? selectedFieldId;
-    int? selectedCropSeasonId;
+    String selectedCategory = existing?.category ?? 'Miscellaneous';
+    int? selectedFarmId = existing?.farmId;
+    int? selectedFieldId = existing?.fieldId;
+    int? selectedCropSeasonId = existing?.cropSeasonId;
     // Inventory linkage: when the expense category maps to a stocked
     // inventory category, the farmer can pick an item and enter the used
     // quantity — the amount auto-calculates and stock is deducted on save.
     int? selectedInventoryItemId;
     final usedQtyController = TextEditingController();
     String usedQtyUnit = 'item'; // 'item' or 'kg'
-    final amountController = TextEditingController();
-    final descController = TextEditingController();
-    DateTime selectedDate = DateTime.now();
+    final amountController = TextEditingController(
+      text: existing == null ? '' : _paisaToRupeesText(existing.amountPaisa),
+    );
+    final descController = TextEditingController(
+      text: existing?.description ?? '',
+    );
+    DateTime selectedDate =
+        existing == null ? DateTime.now() : DateTime.parse(existing.date);
     // Double-tap guard: the save writes an expense (+ an activity when
     // crop-linked) — a second tap would create a full duplicate set.
     bool isSaving = false;
@@ -297,7 +333,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         .toList();
 
             return AlertDialog(
-              title: const Text('نیا خرچہ درج کریں'),
+              title: Text(isEdit ? 'خرچے میں ترمیم کریں' : 'نیا خرچہ درج کریں'),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -335,7 +371,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         builder: (context) {
                           final invCat =
                               _expenseToInventoryCategory[selectedCategory];
-                          if (invCat == null) {
+                          // Edit mode never touches stock: it was deducted
+                          // when the expense was created.
+                          if (invCat == null || isEdit) {
                             return const SizedBox.shrink();
                           }
                           final items =
@@ -637,6 +675,25 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       final String categoryUrdu =
                           expenseProvider.expenseCategories[selectedCategory] ??
                           selectedCategory;
+                      if (isEdit) {
+                        // Edit path: update only the expense row. Inventory
+                        // stock was deducted at creation time and any linked
+                        // activity keeps its original reference — neither is
+                        // touched here.
+                        await expenseProvider.updateExpense(
+                          id: existing!.id!,
+                          category: selectedCategory,
+                          amountPaisa: amountPaisa,
+                          date: selectedDate.toIso8601String(),
+                          description:
+                              descController.text.isEmpty
+                                  ? null
+                                  : descController.text,
+                          farmId: selectedFarmId,
+                          fieldId: selectedFieldId,
+                          cropSeasonId: selectedCropSeasonId,
+                        );
+                      } else {
                       // Resolve the linked inventory item, if any, and validate
                       // stock BEFORE writing anything.
                       Inventory? usedItem;
@@ -718,24 +775,33 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           expenseId: expenseId,
                         );
                       }
+                      } // end else (add path)
 
                       if (context.mounted) {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('خرچہ کامیابی سے محفوظ ہو گیا!'),
+                          SnackBar(
+                            content: Text(
+                              isEdit
+                                  ? 'خرچہ کامیابی سے اپ ڈیٹ ہو گیا!'
+                                  : 'خرچہ کامیابی سے محفوظ ہو گیا!',
+                            ),
                           ),
                         );
                       }
                     }
                     } catch (e) {
-                      // SEC1: the three writes run in sequence — if
+                      // SEC1: the add-path writes run in sequence — if
                       // recordUsage or addActivity throws AFTER the expense
                       // row is already committed, the raw exception must
                       // never reach the farmer, and the dialog must show an
                       // honest message: re-tapping Save blindly would
                       // duplicate the expense, so the farmer must check the
                       // list first to see what actually got saved.
+                      // (Edit mode is a single atomic updateExpense, so
+                      // retry is safe there — the same honest message
+                      // still applies.)
+                      // Input is preserved: the dialog stays open.
                       if (ctx.mounted) {
                         final detail =
                             e is InventoryException
@@ -768,13 +834,40 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     );
   }
 
-  void _confirmDeleteExpense(BuildContext context, int id) {
+  void _confirmDeleteExpense(BuildContext context, Expense exp) {
+    // S19: harvest/theka/ushr mirrors are created automatically by other
+    // screens — deleting one can orphan its source record.
+    final isSystemLinked = _systemLinkedCategories.contains(exp.category);
     showDialog(
       context: context,
       builder:
           (ctx) => AlertDialog(
             title: const Text('خرچہ حذف کریں؟'),
-            content: const Text('کیا آپ واقعی یہ خرچہ حذف کرنا چاہتے ہیں؟'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('کیا آپ واقعی یہ خرچہ حذف کرنا چاہتے ہیں؟'),
+                const SizedBox(height: 8),
+                // S18: expense deletes are soft deletes — say so instead of
+                // implying the record is gone forever.
+                const Text(
+                  'یہ خرچہ کوڑے دان (ریسائیکل بن) میں چلا جائے گا — ضرورت ہو تو وہاں سے بحال کیا جا سکتا ہے۔',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                if (isSystemLinked) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'خبردار: یہ خرچہ کسی خودکار ریکارڈ (کٹائی، ٹھیکہ یا عشر) سے جڑا ہو سکتا ہے۔ رقم درست کرنے کے لیے حذف کرنے کے بجائے ترمیم کا استعمال کریں۔',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ],
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
@@ -786,7 +879,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   Provider.of<ExpenseProvider>(
                     context,
                     listen: false,
-                  ).deleteExpense(id);
+                  ).deleteExpense(exp.id!);
                   Navigator.pop(ctx);
                 },
                 child: const Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class AboutUsScreen extends StatelessWidget {
   const AboutUsScreen({super.key});
@@ -69,15 +70,23 @@ class AboutUsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Version Info
-            const Center(
-              child: Chip(
-                label: Text(
-                  'ورژن 1.0.0 (مکمل آف لائن)',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                backgroundColor: deepPurpleHighlight,
-                labelStyle: TextStyle(color: Colors.deepPurple),
+            // Version Info (real version from package_info_plus)
+            Center(
+              child: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final label = snapshot.hasData
+                      ? 'ورژن ${snapshot.data!.version} (مکمل آف لائن)'
+                      : 'ورژن … (مکمل آف لائن)';
+                  return Chip(
+                    label: Text(
+                      label,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: deepPurpleHighlight,
+                    labelStyle: const TextStyle(color: Colors.deepPurple),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 24),

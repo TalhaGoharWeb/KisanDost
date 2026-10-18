@@ -8,7 +8,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import '../providers/task_provider.dart';
 import '../database/db_helper.dart';
-import '../screens/alarm_screen.dart';
 import '../l10n/strings.dart';
 
 /// Background notification-action handler. Runs in a separate isolate with
@@ -97,7 +96,7 @@ Future<void> _notificationTapBackgroundUnsafe(
       // Schedule a new alarm notification using slot 9 for snooze
       await flutterLocalNotificationsPlugin.zonedSchedule(
         taskId * 10 + 9,
-        'کسان دوست - یاد دہانی (سوز)',
+        'کسان دوست - یاد دہانی (سنوز)',
         taskTitle,
         tz.TZDateTime.from(snoozeTime, tz.local),
         NotificationDetails(
@@ -130,7 +129,7 @@ Future<void> _notificationTapBackgroundUnsafe(
               ),
               AndroidNotificationAction(
                 'action_snooze',
-                'سوز کریں ($snoozeDuration منٹ)',
+                'سنوز کریں ($snoozeDuration منٹ)',
                 showsUserInterface: false,
               ),
             ],
@@ -214,18 +213,11 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('Notification clicked: ${response.payload}');
-        if (response.payload != null) {
-          final taskId = int.tryParse(response.payload!);
-          if (taskId != null) {
-            if (navigatorKey.currentState != null) {
-              navigatorKey.currentState!.push(
-                MaterialPageRoute(builder: (_) => AlarmScreen(taskId: taskId)),
-              );
-            } else {
-              launchPayload = response.payload;
-            }
-          }
-        }
+        // S12: the FLN alarm UI (AlarmScreen) was removed — on Android all
+        // alarms are delivered by the native stack (AlarmActivity), so an
+        // FLN tap has no screen to open. The payload is stashed for
+        // diagnostics only.
+        launchPayload = response.payload;
       },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
@@ -362,7 +354,7 @@ class NotificationService {
                 ),
                 AndroidNotificationAction(
                   'action_snooze',
-                  'سوز کریں ($defaultSnooze منٹ)',
+                  'سنوز کریں ($defaultSnooze منٹ)',
                   showsUserInterface: false,
                 ),
               ],
@@ -414,7 +406,7 @@ class NotificationService {
                   ),
                   AndroidNotificationAction(
                     'action_snooze',
-                    'سوز کریں ($defaultSnooze منٹ)',
+                    'سنوز کریں ($defaultSnooze منٹ)',
                     showsUserInterface: false,
                   ),
                 ],

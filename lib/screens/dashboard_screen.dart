@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../widgets/digit_text.dart';
-import '../services/notification_service.dart';
 import '../services/today_summary.dart';
 import '../services/money.dart';
 import '../widgets/demo_banner.dart';
@@ -14,7 +13,6 @@ import '../providers/theka_provider.dart';
 import '../providers/crop_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/party_provider.dart';
-import 'alarm_screen.dart';
 import 'about_us_screen.dart';
 import 'settings_screen.dart';
 import 'my_farms_screen.dart';
@@ -50,26 +48,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkNotificationLaunch();
       context.read<TaskProvider>().fetchTasks();
     });
   }
 
-  void _checkNotificationLaunch() {
-    if (NotificationService.launchPayload != null) {
-      final payload = NotificationService.launchPayload;
-      NotificationService.launchPayload = null; // Clear so it only runs once
-      if (payload != null) {
-        final taskId = int.tryParse(payload);
-        if (taskId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AlarmScreen(taskId: taskId)),
-          );
-        }
-      }
-    }
-  }
+  // S12: _checkNotificationLaunch removed with the dead AlarmScreen — on
+  // Android all alarms are delivered by the native stack (AlarmActivity),
+  // so no FLN launch payload can ever arrive.
 
   Future<void> _shareApk() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -262,6 +247,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildTodaySection() {
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
+        // S10: never claim "all clear" while tasks are still loading.
+        if (taskProvider.isLoading) {
+          return _sectionCard(
+            title: 'آج کے کام',
+            icon: Icons.checklist_rtl,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
         if (taskProvider.errorMessage != null) {
           return _sectionErrorCard(
             taskProvider.errorMessage!,

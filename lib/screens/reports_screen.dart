@@ -31,6 +31,7 @@ import '../services/pdf_report_service.dart';
 import '../services/pnl_summary.dart';
 import '../widgets/report_widgets.dart';
 import '../utils/error_messages.dart';
+import '../l10n/strings.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -152,8 +153,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // ---------------- CSV exports ----------------
 
-  Future<void> _exportExpensesCsv() =>
-      _withProgress('CSV تیار ہو رہا ہے...', () async {
+  // S14: empty data shows a clear Urdu empty state — never a green
+  // "success" snackbar for a headers-only CSV.
+  Future<void> _exportExpensesCsv() async {
+    if (context.read<ExpenseProvider>().expenses.isEmpty) {
+      _snack(
+        'کوئی خرچہ ریکارڈ نہیں — ایکسپورٹ کے لیے پہلے خرچہ درج کریں',
+        Colors.orange,
+      );
+      return;
+    }
+    await _withProgress('CSV تیار ہو رہا ہے...', () async {
         final expenses = context.read<ExpenseProvider>().expenses;
         final farms = context.read<FarmProvider>().farms;
         final farmNames = {
@@ -188,23 +198,38 @@ class _ReportsScreenState extends State<ReportsScreen> {
         await _saveAndShare('kisan_dost_expenses_${_stamp()}.csv', _utf8(csv));
         _snack('اخراجات کی CSV تیار ہے', Colors.green);
       });
+  }
 
-  Future<void> _exportSalesCsv() =>
-      _withProgress('CSV تیار ہو رہا ہے...', () async {
-        final harvests = context.read<HarvestProvider>().harvests;
-        final csv = salesCsv(harvests);
-        await _saveAndShare('kisan_dost_sales_${_stamp()}.csv', _utf8(csv));
-        _snack('فروخت کی CSV تیار ہے', Colors.green);
-      });
+  Future<void> _exportSalesCsv() async {
+    final harvests = context.read<HarvestProvider>().harvests;
+    if (harvests.where((h) => h.sale != null).isEmpty) {
+      _snack(
+        'کوئی فروخت ریکارڈ نہیں — ایکسپورٹ کے لیے پہلے فروخت درج کریں',
+        Colors.orange,
+      );
+      return;
+    }
+    await _withProgress('CSV تیار ہو رہا ہے...', () async {
+      final csv = salesCsv(harvests);
+      await _saveAndShare('kisan_dost_sales_${_stamp()}.csv', _utf8(csv));
+      _snack('فروخت کی CSV تیار ہے', Colors.green);
+    });
+  }
 
-  Future<void> _exportPartyCsv() => _withProgress(
-    'CSV تیار ہو رہا ہے...',
-    () async {
-      final partyProvider = context.read<PartyProvider>();
-      final entries = <PartyLedgerEntry>[];
-      for (final p in partyProvider.parties) {
-        if (p.id != null) entries.addAll(await partyProvider.getEntries(p.id!));
-      }
+  Future<void> _exportPartyCsv() async {
+    final partyProvider = context.read<PartyProvider>();
+    final entries = <PartyLedgerEntry>[];
+    for (final p in partyProvider.parties) {
+      if (p.id != null) entries.addAll(await partyProvider.getEntries(p.id!));
+    }
+    if (entries.isEmpty) {
+      _snack(
+        'کوئی پارٹی اندراج ریکارڈ نہیں — ایکسپورٹ کے لیے پہلے اندراج درج کریں',
+        Colors.orange,
+      );
+      return;
+    }
+    await _withProgress('CSV تیار ہو رہا ہے...', () async {
       entries.sort((a, b) => a.date.compareTo(b.date));
       final csv = partyLedgerCsv(entries, {
         for (final p in partyProvider.parties)
@@ -215,27 +240,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _utf8(csv),
       );
       _snack('پارٹی کھاتے کی CSV تیار ہے', Colors.green);
-    },
-  );
+    });
+  }
 
-  Future<void> _exportInventoryCsv() =>
-      _withProgress('CSV تیار ہو رہا ہے...', () async {
-        final inventoryProvider = context.read<InventoryProvider>();
-        final txns = <InventoryTransaction>[];
-        final itemNames = <int, String>{};
-        for (final item in inventoryProvider.inventoryList) {
-          if (item.id == null) continue;
-          itemNames[item.id!] = '${item.name} (${item.unit})';
-          txns.addAll(await inventoryProvider.getTransactions(item.id!));
-        }
-        txns.sort((a, b) => b.date.compareTo(a.date));
-        final csv = inventoryTransactionsCsv(txns, itemNames);
-        await _saveAndShare('kisan_dost_inventory_${_stamp()}.csv', _utf8(csv));
-        _snack('گودام لین دین کی CSV تیار ہے', Colors.green);
-      });
+  Future<void> _exportInventoryCsv() async {
+    final inventoryProvider = context.read<InventoryProvider>();
+    final txns = <InventoryTransaction>[];
+    final itemNames = <int, String>{};
+    for (final item in inventoryProvider.inventoryList) {
+      if (item.id == null) continue;
+      itemNames[item.id!] = '${item.name} (${item.unit})';
+      txns.addAll(await inventoryProvider.getTransactions(item.id!));
+    }
+    if (txns.isEmpty) {
+      _snack(
+        'گودام کا کوئی لین دین ریکارڈ نہیں — ایکسپورٹ کے لیے پہلے خریداری یا استعمال درج کریں',
+        Colors.orange,
+      );
+      return;
+    }
+    await _withProgress('CSV تیار ہو رہا ہے...', () async {
+      txns.sort((a, b) => b.date.compareTo(a.date));
+      final csv = inventoryTransactionsCsv(txns, itemNames);
+      await _saveAndShare('kisan_dost_inventory_${_stamp()}.csv', _utf8(csv));
+      _snack('گودام لین دین کی CSV تیار ہے', Colors.green);
+    });
+  }
 
-  Future<void>
-  _exportBataiCsv() => _withProgress('CSV تیار ہو رہا ہے...', () async {
+  Future<void> _exportBataiCsv() async {
     final bataiProvider = context.read<BataiProvider>();
     final settlements = <BataiSettlement>[];
     final labels = <int, String>{};
@@ -246,11 +278,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
           '${a.partyName ?? 'نامعلوم'} — ${a.agreement.ownerSharePercent}/${a.agreement.cultivatorSharePercent}';
       settlements.addAll(await bataiProvider.getSettlements(id));
     }
-    settlements.sort((a, b) => a.settleDate.compareTo(b.settleDate));
-    final csv = bataiSettlementsCsv(settlements, labels);
-    await _saveAndShare('kisan_dost_batai_${_stamp()}.csv', _utf8(csv));
-    _snack('بٹائی چکتائیوں کی CSV تیار ہے', Colors.green);
-  });
+    if (settlements.isEmpty) {
+      _snack(
+        'کوئی بٹائی چکتائی ریکارڈ نہیں — ایکسپورٹ کے لیے پہلے چکتائی درج کریں',
+        Colors.orange,
+      );
+      return;
+    }
+    await _withProgress('CSV تیار ہو رہا ہے...', () async {
+      settlements.sort((a, b) => a.settleDate.compareTo(b.settleDate));
+      final csv = bataiSettlementsCsv(settlements, labels);
+      await _saveAndShare('kisan_dost_batai_${_stamp()}.csv', _utf8(csv));
+      _snack('بٹائی چکتائیوں کی CSV تیار ہے', Colors.green);
+    });
+  }
 
   // ---------------- PDF ----------------
 
@@ -284,27 +325,88 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _snack('فارم رپورٹ PDF تیار ہے', Colors.green);
       });
 
+  /// S14: scrollable + searchable picker. The old unbounded SimpleDialog
+  /// lists overflowed with 15+ parties/entries.
+  Future<T?> _showSearchablePicker<T>({
+    required String title,
+    required List<T> items,
+    required String Function(T) label,
+    required String Function(T) searchText,
+  }) {
+    return showDialog<T>(
+      context: context,
+      builder: (ctx) {
+        String query = '';
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            final q = query.trim();
+            final filtered =
+                q.isEmpty
+                    ? items
+                    : items
+                        .where((it) => searchText(it).contains(q))
+                        .toList();
+            return AlertDialog(
+              title: Text(title),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: MediaQuery.of(ctx).size.height * 0.5,
+                child: Column(
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'تلاش کریں',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (v) => setState(() => query = v),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child:
+                          filtered.isEmpty
+                              ? const Center(
+                                child: Text('کوئی نتیجہ نہیں ملا'),
+                              )
+                              : ListView.builder(
+                                itemCount: filtered.length,
+                                itemBuilder: (ctx, i) {
+                                  final it = filtered[i];
+                                  return ListTile(
+                                    title: Text(label(it)),
+                                    onTap: () => Navigator.pop(ctx, it),
+                                  );
+                                },
+                              ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(Strings.cancel),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _exportReceiptFlow(BuildContext captureContext) async {
     final partyProvider = context.read<PartyProvider>();
     if (partyProvider.parties.isEmpty) {
       _snack('پہلے کوئی پارٹی شامل کریں', Colors.orange);
       return;
     }
-    final party = await showDialog<Party>(
-      context: context,
-      builder:
-          (_) => SimpleDialog(
-            title: const Text('پارٹی منتخب کریں'),
-            children: [
-              for (final p in partyProvider.parties)
-                SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, p),
-                  child: Text(
-                    '${p.name} — ${Money(partyProvider.balanceOf(p.id!)).format()}',
-                  ),
-                ),
-            ],
-          ),
+    final party = await _showSearchablePicker<Party>(
+      title: 'پارٹی منتخب کریں',
+      items: partyProvider.parties,
+      label:
+          (p) => '${p.name} — ${Money(partyProvider.balanceOf(p.id!)).format()}',
+      searchText: (p) => p.name,
     );
     if (party == null || party.id == null || !mounted) return;
     final entries =
@@ -323,21 +425,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
       return;
     }
     if (!mounted) return;
-    final entry = await showDialog<PartyLedgerEntry>(
-      context: context,
-      builder:
-          (_) => SimpleDialog(
-            title: const Text('رسید کے لیے اندراج منتخب کریں'),
-            children: [
-              for (final e in entries)
-                SimpleDialogOption(
-                  onPressed: () => Navigator.pop(context, e),
-                  child: Text(
-                    '${partyEntryTypeUrdu(e.type)} — ${Money(e.amountPaisa.abs()).format()} — ${e.date}',
-                  ),
-                ),
-            ],
-          ),
+    final entry = await _showSearchablePicker<PartyLedgerEntry>(
+      title: 'رسید کے لیے اندراج منتخب کریں',
+      items: entries,
+      label:
+          (e) =>
+              '${partyEntryTypeUrdu(e.type)} — ${Money(e.amountPaisa.abs()).format()} — ${e.date}',
+      searchText:
+          (e) =>
+              '${partyEntryTypeUrdu(e.type)} ${e.amountPaisa} ${e.date} ${e.note ?? ''}',
     );
     if (entry == null || !mounted) return;
 
