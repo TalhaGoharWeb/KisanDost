@@ -99,7 +99,7 @@ object AlarmScheduler {
             val snoozeTimeMs = parseIsoDateTime(task.snoozed_until)
             if (snoozeTimeMs > now) {
                 val snoozeAlarmId = task.id * 10 + 9 // Slot 9 is reserved for snooze
-                scheduleAlarm(context, snoozeAlarmId, snoozeTimeMs, "سوز کریں: ${task.title}")
+                scheduleAlarm(context, snoozeAlarmId, snoozeTimeMs, "سنوز کریں: ${task.title}")
                 Log.d(TAG, "Scheduled snooze alarm $snoozeAlarmId at ${Date(snoozeTimeMs)}")
             }
         }

@@ -122,7 +122,7 @@ class AlarmService : Service() {
             .setAutoCancel(false)
             .setFullScreenIntent(fullscreenPendingIntent, true)
             .addAction(android.R.drawable.ic_menu_save, "مکمل ہو گیا", completePendingIntent)
-            .addAction(android.R.drawable.ic_menu_send, "سوز کریں ($snoozeMinutes منٹ)", snoozePendingIntent)
+            .addAction(android.R.drawable.ic_menu_send, "سنوز کریں ($snoozeMinutes منٹ)", snoozePendingIntent)
 
         val notification = builder.build()
         notification.flags = notification.flags or Notification.FLAG_INSISTENT
