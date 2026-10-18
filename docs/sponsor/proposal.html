@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>اسپانسرشپ تجویز — کسان دوست | Sponsorship Proposal — Kisan Dost</title>
+<meta name="description" content="کسان دوست (آپ کی ڈیجیٹل کھیتی ڈائری) کے لیے اسپانسرشپ تجویز — مفت، آف لائن، پاکستانی کسانوں کے لیے فارم مینجمنٹ ایپ">
+<link rel="stylesheet" href="../style.css">
+<style>
+/* ============================================================
+   Kisan Dost — sponsorship proposal page (docs/sponsor/)
+   Reuses site design tokens from ../style.css; page-specific
+   classes below. Print-friendly: Ctrl/Cmd+P → "Save as PDF".
+   ============================================================ */
+.sponsor-nav{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 0;flex-wrap:wrap}
+.sponsor-nav .brand img{width:44px;height:44px;border-radius:12px;box-shadow:var(--shadow-sm)}
+.sponsor-nav .brand{display:flex;align-items:center;gap:.7rem;font-weight:700;font-size:1.25rem;color:var(--pine)}
+.sponsor-actions{display:flex;gap:.7rem;flex-wrap:wrap}
+
+.cover{
+  background:
+    radial-gradient(700px 340px at 85% -10%,rgba(217,174,80,.22),transparent 60%),
+    linear-gradient(180deg,var(--sage) 0%,var(--ivory) 100%);
+  border-bottom:1px solid var(--line);
+  padding:3rem 0 2.6rem;
+}
+.cover h1{font-size:clamp(1.6rem,4.6vw,2.7rem);color:var(--pine);font-weight:700;margin-bottom:.4rem;line-height:1.9}
+.cover .en{color:var(--muted);font-size:1.02rem;margin-bottom:1.2rem}
+.fact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.9rem;margin-top:1.6rem}
+.fact{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;box-shadow:var(--shadow-sm)}
+.fact .k{font-size:.85rem;color:var(--muted);font-weight:700}
+.fact .v{font-weight:700;color:var(--pine)}
+.fact .v .en{display:block;font-weight:600;color:var(--muted);font-size:.85rem}
+
+section.s-sec{padding:2.4rem 0;border-bottom:1px solid var(--line)}
+section.s-sec h2{color:var(--pine);font-size:clamp(1.3rem,3vw,1.8rem);margin-bottom:.3rem}
+section.s-sec h2 .en{display:block;font-size:.95rem;color:var(--muted);font-weight:600;margin-top:.2rem}
+section.s-sec p,section.s-sec li{color:var(--ink)}
+section.s-sec ul{margin:.8rem 1.2rem 0 0;list-style:disc}
+[dir="ltr"] section.s-sec ul{margin:.8rem 0 0 1.2rem}
+section.s-sec ul li{margin-bottom:.45rem}
+section.s-sec p{margin-top:.7rem;max-width:62rem}
+
+.shot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1.2rem;margin-top:1.2rem}
+.shot{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm)}
+.shot picture img{aspect-ratio:9/19;object-fit:cover;object-position:top;width:100%}
+.shot figcaption{padding:.7rem .9rem;font-size:.92rem;color:var(--muted);font-weight:600}
+
+.pkg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.2rem;margin-top:1.2rem}
+.pkg{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:1.4rem;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
+.pkg .tier{font-weight:700;color:var(--gold-deep);font-size:.95rem;margin-bottom:.4rem}
+.pkg h3{color:var(--pine);font-size:1.15rem;margin-bottom:.5rem}
+.pkg p{font-size:.95rem;color:var(--muted)}
+.pkg ul{margin:.6rem 1.1rem 0 0}
+.pkg ul li{font-size:.93rem;margin-bottom:.3rem}
+
+.policy{background:var(--emerald-soft);border-radius:var(--radius);padding:1.4rem;margin-top:1.2rem}
+.policy li{margin-bottom:.5rem}
+
+.ph{background:var(--gold-soft);border:1px dashed var(--gold-deep);border-radius:8px;padding:.15rem .55rem;font-weight:700;color:var(--gold-deep);font-size:.92rem;white-space:nowrap}
+.contact-card{background:var(--pine);color:#fff;border-radius:var(--radius);padding:1.6rem;margin-top:1.2rem}
+.contact-card h3{color:var(--gold-soft);margin-bottom:.6rem}
+.contact-card p{color:#EAF1EA}
+.contact-card .en{color:#CBD8CC;font-size:.9rem}
+.next-steps{margin-top:1.2rem}
+.next-steps ol{margin:.8rem 1.2rem 0 0;counter-reset:step}
+.next-steps li{margin-bottom:.5rem}
+[dir="ltr"] .next-steps ol{margin:.8rem 0 0 1.2rem}
+
+.hint-print{margin-top:2.4rem;padding:1.1rem 1.3rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);color:var(--muted);font-size:.93rem}
+footer.s-footer{padding:2rem 0;color:var(--muted);font-size:.9rem;text-align:center}
+
+/* ---------- Print ---------- */
+@media print{
+  .sponsor-nav .sponsor-actions,.hint-print,.skip-link,#inquiry,footer.s-footer .no-print{display:none!important}
+  body{background:#fff;color:#000}
+  [dir="rtl"] body,body.urdu{line-height:2.0}
+  .cover{background:#fff;border-bottom:2px solid #000;padding:1.2rem 0}
+  .cover h1{color:#000;font-size:1.7rem}
+  section.s-sec{padding:1.2rem 0;break-inside:auto}
+  section.s-sec h2{color:#000;break-after:avoid}
+  .fact,.shot,.pkg{box-shadow:none;break-inside:avoid}
+  .contact-card{background:#fff;color:#000;border:2px solid #000}
+  .contact-card h3{color:#000}
+  .contact-card p,.contact-card .en{color:#000}
+  .shot picture img{aspect-ratio:9/19}
+  .shot-grid{grid-template-columns:repeat(3,1fr)}
+  .pkg-grid{grid-template-columns:repeat(3,1fr)}
+  .policy{background:#fff;border:1px solid #000}
+  .ph{border-color:#000;color:#000;background:#fff}
+}
+</style>
+</head>
+<body class="urdu">
+<a class="skip-link" href="#main">مواد پر جائیں / Skip to content</a>
+
+<nav class="nav sponsor-nav wrap" aria-label="proposal navigation">
+  <a class="brand" href="https://talhagoharweb.github.io/KisanDost/">
+    <span>کسان دوست</span>
+  </a>
+  <div class="sponsor-actions">
+    <a class="btn btn-outline" href="https://talhagoharweb.github.io/KisanDost/">ویب سائٹ دیکھیں</a>
+    <a class="btn btn-primary" href="#" onclick="window.print();return false;">ڈاؤن لوڈ / پرنٹ بطور PDF</a>
+  </div>
+</nav>
+
+<header class="cover">
+  <div class="wrap">
+    <span class="badge"><span class="dot"></span>اسپانسرشپ تجویز · Sponsorship Proposal</span>
+    <h1>کسان دوست — آپ کی ڈیجیٹل کھیتی ڈائری</h1>
+    <p class="en">Kisan Dost — "Your Digital Farming Diary". A free, offline-first farm management app for Pakistani farmers.</p>
+    <div class="fact-grid">
+      <div class="fact"><div class="k">حیثیت / Status</div><div class="v">مفت، ہمیشہ کے لیے<span class="en">Free, forever</span></div></div>
+      <div class="fact"><div class="k">ورژن / Version</div><div class="v">1.0.6+7</div></div>
+      <div class="fact"><div class="k">پیکج / Package</div><div class="v">com.talhagohar.kisandost</div></div>
+      <div class="fact"><div class="k">سائز / Size</div><div class="v">~76.7 MB APK</div></div>
+      <div class="fact"><div class="k">آف لائن / Offline</div><div class="v">مکمل آف لائن<span class="en">No internet, no accounts</span></div></div>
+      <div class="fact"><div class="k">ڈویلپر / Developer</div><div class="v">Muhammad Talha Farid Farooqi</div></div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- 1 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۱۔ تعارف <span class="en">1. Introduction</span></h2>
+    <p>کسان دوست پاکستانی کسانوں کے لیے بنائی گئی ایک مفت، آف لائن فارم مینجمنٹ ایپ ہے۔ اس کا مقصد چھوٹے کسان کو وہی حساب کتاب، ریکارڈ اور منصوبہ بندی کی سہولت دینا ہے جو ابھی تک بڑے اداروں تک محدود تھی — بغیر انٹرنیٹ، بغیر اکاؤنٹ، اور بغیر کسی فیس کے۔</p>
+    <p class="en">Kisan Dost is a free, offline-first farm management app built for Pakistani farmers. It gives smallholder farmers the same record-keeping, accounting, and planning tools that were previously limited to larger institutions — no internet, no account, no fees.</p>
+  </div></section>
+
+  <!-- 2 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۲۔ مصنوعات کا جائزہ <span class="en">2. Product Overview</span></h2>
+    <p>ایپ کسان کے پورے کام کو ایک جگہ منظم کرتی ہے: کھیت اور فصلیں، روزانہ کی سرگرمیاں، اخراجات، گودام (انوینٹری)، کٹائی و فروخت، منافع و نقصان، ٹھیکہ (زمین کی لیز)، بتائی (شراکتی کاشت)، عشر کا حساب، پارٹیوں کے کھاتے، کام اور الارم (لاک اسکرین پر)، رپورٹس (CSV/PDF ایکسپورٹ)، بیک اپ/ریسٹور اور ڈیمو موڈ۔ ریلیز بلڈ میں انٹرنیٹ پرمیشن ہی موجود نہیں، اس لیے کسان کا ڈیٹا ہمیشہ اس کے اپنے فون میں رہتا ہے۔</p>
+    <p class="en">The app organizes the farmer's entire operation in one place: farms and crops, daily activities, expenses, inventory (warehouse), harvest &amp; sales, profit &amp; loss, theka (land lease), batai (sharecropping), the ushr calculator, party ledgers, tasks &amp; alarms (on the lock screen), reports (CSV/PDF export), backup/restore, and demo mode. The release build carries no INTERNET permission at all, so a farmer's data always stays on their own phone.</p>
+  </div></section>
+
+  <!-- 3 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۳۔ ہدف صارفین اور مارکیٹ کی اہمیت <span class="en">3. Target Users &amp; Market Relevance</span></h2>
+    <p>یہ ایپ چھوٹے کسانوں کے لیے ڈیزائن کی گئی ہے جو ابھی تک کاغذی رجسٹر یا یادداشت پر انحصار کرتے ہیں۔ ساتھ ہی یہ مفید ہے: زرعی کاروباروں، این جی اوز، کسان تنظیموں اور زرعی تعلیم کے اداروں کے لیے جو کسانوں کی تربیت یا ڈیٹا پر مبنی منصوبہ بندی کرتے ہیں۔ (یہاں کوئی غیر مصدقہ اعداد و شمار نہیں دیے گئے — کسانوں کی تعداد، ڈاؤن لوڈز یا صارفین کی شرح جیسی معلومات جب دستیاب ہوں گی تو ثبوت کے ساتھ شامل کی جائیں گی۔)</p>
+    <p class="en">The app is designed for smallholder farmers who still rely on paper registers or memory — and is equally useful to agri businesses, NGOs, farmer organizations, and agri education institutions involved in farmer training or data-driven planning. No unsupported numbers are claimed here; figures such as farmer counts, downloads, or adoption rates will be added only with evidence when available.</p>
+  </div></section>
+
+  <!-- 4 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۴۔ اسکرین شاٹس <span class="en">4. Screenshots</span></h2>
+    <div class="shot-grid">
+      <figure class="shot">
+        <picture>
+          <source srcset="../screenshots/webp/dashboard.webp" type="image/webp">
+          <img src="../screenshots/dashboard.jpg" alt="ڈیش بورڈ اسکرین" loading="lazy">
+        </picture>
+        <figcaption>ڈیش بورڈ — تمام ریکارڈ کا ایک نظر خلاصہ</figcaption>
+      </figure>
+      <figure class="shot">
+        <picture>
+          <source srcset="../screenshots/webp/crops.webp" type="image/webp">
+          <img src="../screenshots/crops.jpg" alt="فصلوں کی اسکرین" loading="lazy">
+        </picture>
+        <figcaption>فصلیں — کھیت وار فصل کا ریکارڈ</figcaption>
+      </figure>
+      <figure class="shot">
+        <picture>
+          <source srcset="../screenshots/webp/profit-loss.webp" type="image/webp">
+          <img src="../screenshots/profit-loss.jpg" alt="منافع و نقصان کی اسکرین" loading="lazy">
+        </picture>
+        <figcaption>منافع و نقصان — فصل کی اصل کمائی کا حساب</figcaption>
+      </figure>
+      <figure class="shot">
+        <picture>
+          <source srcset="../screenshots/webp/harvest.webp" type="image/webp">
+          <img src="../screenshots/harvest.jpg" alt="کٹائی و فروخت کی اسکرین" loading="lazy">
+        </picture>
+        <figcaption>کٹائی و فروخت — پیداوار اور فروخت کا ریکارڈ</figcaption>
+      </figure>
+      <figure class="shot">
+        <picture>
+          <source srcset="../screenshots/webp/ushr.webp" type="image/webp">
+          <img src="../screenshots/ushr.jpg" alt="عشر کیلکولیٹر اسکرین" loading="lazy">
+        </picture>
+        <figcaption>عشر کیلکولیٹر — شرعی عشر کا آسان حساب</figcaption>
+      </figure>
+      <figure class="shot">
+        <picture>
+          <source srcset="../screenshots/webp/tasks.webp" type="image/webp">
+          <img src="../screenshots/tasks.jpg" alt="کام اور الارم کی اسکرین" loading="lazy">
+        </picture>
+        <figcaption>کام اور الارم — لاک اسکرین پر یاددہانی</figcaption>
+      </figure>
+    </div>
+    <p style="font-size:.9rem;color:var(--muted)">مزید اسکرین شاٹس ویب سائٹ پر: <a href="https://talhagoharweb.github.io/KisanDost/">talhagoharweb.github.io/KisanDost/</a></p>
+  </div></section>
+
+  <!-- 5 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۵۔ خصوصیات <span class="en">5. Features</span></h2>
+    <ul>
+      <li><strong>کھیت اور فصلیں:</strong> ہر کھیت اور فصل کا مکمل ریکارڈ</li>
+      <li><strong>روزانہ کی سرگرمیاں:</strong> ہر دن کا کام اور اخراجات ایک جگہ</li>
+      <li><strong>گودام (انوینٹری):</strong> کھاد، بیج اور دیگر سامان کا ذخیرہ</li>
+      <li><strong>منافع و نقصان:</strong> ہر فصل کی اصل کمائی کا واضح حساب</li>
+      <li><strong>ٹھیکہ اور بتائی:</strong> زمین کی لیز اور شراکتی کاشت کے معاہدے</li>
+      <li><strong>عشر کیلکولیٹر:</strong> شرعی عشر کا آسان حساب کتاب</li>
+      <li><strong>پارٹی کھاتے:</strong> لین دین اور بقایا جات کے لیجر</li>
+      <li><strong>کام اور الارم:</strong> لاک اسکرین پر وقت کی یاددہانیاں</li>
+      <li><strong>رپورٹس:</strong> CSV/PDF ایکسپورٹ برائے ریکارڈ اور شیئرنگ</li>
+      <li><strong>بیک اپ/ریسٹور اور ڈیمو موڈ:</strong> ڈیٹا محفوظ، نیا صارف آزما کر سیکھے</li>
+    </ul>
+    <p class="en">Farms and crops, daily activities, expenses, inventory (warehouse), harvest &amp; sales, profit &amp; loss, theka (land lease), batai (sharecropping), ushr calculator, party ledgers, tasks &amp; lock-screen alarms, reports (CSV/PDF export), backup/restore, and demo mode.</p>
+  </div></section>
+
+  <!-- 6 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۶۔ یہ ایپ مفت کیوں رہے گی <span class="en">6. Why the App Stays Free</span></h2>
+    <p>کسان دوست کا بنیادی اصول یہ ہے کہ کسان سے کوئی فیس، سبسکرپشن یا اشتہار نہیں لیا جائے گا۔ ایپ کی تعمیر و دیکھ بھال کی لاگت کمیونٹی اور اسپانسرز کی رضاکارانہ معاونت سے پوری کی جائے گی — اسپانسر مشن کی فنڈنگ کرتا ہے، کسانوں تک رسائی یا ان کے ڈیٹا تک نہیں۔ اس ماڈل میں ایپ کسان کی ملکیت رہتی ہے، نہ کہ کسی تجارتی دباؤ کی۔</p>
+    <p class="en">Kisan Dost's core principle: no fees, no subscriptions, no ads for the farmer. Build and maintenance costs are covered by voluntary community and sponsor support — a sponsor funds the mission, never access to farmers or their data. Under this model the app belongs to the farmer, not to commercial pressure.</p>
+  </div></section>
+
+  <!-- 7 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۷۔ اسپانسرشپ کے مواقع <span class="en">7. Sponsorship Opportunities</span></h2>
+    <p>تجویز کردہ تین زمرے (قیمتیں پہلے سے طے شدہ نہیں — ہر پارٹنر سے شرائط الگ سے طے ہوں گی):</p>
+    <div class="pkg-grid">
+      <div class="pkg">
+        <div class="tier">زمرہ ۱ · Category 1</div>
+        <h3>کمیونٹی سپورٹر<br><span style="font-size:.85rem;color:var(--muted)">Community Supporter</span></h3>
+        <p>چھوٹے مقامی کاروباروں اور افراد کے لیے جو مفت ایپ کی حمایت چاہتے ہیں۔</p>
+        <ul>
+          <li>ویب سائٹ پر نام/لوگو کی شمولیت (اجازت سے)</li>
+          <li>ماہانہ امپیکٹ رپورٹ میں شکریہ</li>
+        </ul>
+      </div>
+      <div class="pkg">
+        <div class="tier">زمرہ ۲ · Category 2</div>
+        <h3>زرعی تعلیم پارٹنر<br><span style="font-size:.85rem;color:var(--muted)">Agriculture Education Partner</span></h3>
+        <p>زرعی اداروں، این جی اوز اور تعلیمی اداروں کے لیے جو کسانوں کی تربیت میں حصہ لیں۔</p>
+        <ul>
+          <li>تربیتی مواد اور ڈیمو سیشنز میں تعاون</li>
+          <li>تعلیمی ریسورسز کی مشترکہ تیاری</li>
+          <li>لوگو اور برانڈ کی شمولیت (اجازت سے)</li>
+        </ul>
+      </div>
+      <div class="pkg">
+        <div class="tier">زمرہ ۳ · Category 3</div>
+        <h3>ڈویلپمنٹ اسپانسر<br><span style="font-size:.85rem;color:var(--muted)">Development Sponsor</span></h3>
+        <p>ان اداروں کے لیے جو ایپ کی مزید ترقی اور نئی خصوصیات کی فنڈنگ چاہتے ہیں۔</p>
+        <ul>
+          <li>روڈ میپ پر مشاورت (فیصلہ ڈویلپر کا)</li>
+          <li>خصوصی فیچرز کی تجویز کا حق (ترجیح کی ضمانت نہیں)</li>
+          <li>تفصیلی امپیکٹ اور مالی رپورٹنگ</li>
+        </ul>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- 8 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۸۔ تجویز کردہ ڈیلیوریبلز <span class="en">8. Proposed Deliverables</span></h2>
+    <ul>
+      <li>ہر اسپانسر کو ماہانہ امپیکٹ رپورٹ (آمدن، اخراجات، تیار شدہ کام)</li>
+      <li>ویب سائٹ اور رپورٹس میں اسپانسر کا تسلیم شدہ شکریہ (صرف اجازت سے)</li>
+      <li>شفافیت: ہر تعاون اور ہر خرچ کا ریکارڈ، رسیدوں کے حوالے کے ساتھ</li>
+      <li>جو کام فنڈ ہوا، اس کی تکمیل کی دستاویز (چینج لاگ/ریلیز نوٹس)</li>
+    </ul>
+  </div></section>
+
+  <!-- 9 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۹۔ شفافیت اور انکشاف کی پالیسی <span class="en">9. Transparency &amp; Disclosure Policy</span></h2>
+    <div class="policy">
+      <ul>
+        <li><strong>انکشاف:</strong> ہر اسپانسر شدہ مواد واضح طور پر لیبل کیا جائے گا۔</li>
+        <li><strong>کسان کے ڈیٹا تک رسائی نہیں:</strong> اسپانسر کو کبھی کسانوں کے فارم ڈیٹا تک رسائی نہیں دی جائے گی۔</li>
+        <li><strong>پے ٹو ون نہیں:</strong> اسپانسرشپ سے ایپ میں کوئی تجارتی ترجیح یا "جیت" کی خریداری نہیں ہوگی۔</li>
+        <li><strong>لیبل شدہ مواد:</strong> اسپانسر سے متعلق مواد ہمیشہ واضح طور پر اسپانسر شدہ کے طور پر نشان زد ہوگا۔</li>
+        <li><strong>لوگو صرف اجازت سے:</strong> کسی کا نام یا لوگو صرف اس کی صریح اجازت سے استعمال ہوگا۔</li>
+      </ul>
+    </div>
+  </div></section>
+
+  <!-- 10 -->
+  <section class="s-sec"><div class="wrap">
+    <h2>۱۰۔ رابطہ اور اگلے اقدامات <span class="en">10. Contact &amp; Next Steps</span></h2>
+    <div class="contact-card">
+      <h3>رابطہ کریں · Get in touch</h3>
+      <p>نام: Muhammad Talha Farid Farooqi</p>
+      <p>ای میل: <span class="ph">[رابطہ ای میل — تصدیق کے بعد]</span></p>
+      <p>فون/واٹس ایپ: <span class="ph">[رابطہ نمبر — تصدیق کے بعد]</span></p>
+      <p class="en">Contact email and phone will be added once verified by the owner.</p>
+    </div>
+    <div class="next-steps">
+      <ol>
+        <li>ابتدائی گفتگو — آپ کے اہداف اور مناسب زمرے کا تعین</li>
+        <li>شرائط کا مسودہ — ہر پارٹنر کے ساتھ الگ معاہدہ</li>
+        <li>امپیکٹ رپورٹنگ کا آغاز — پہلی ماہانہ رپورٹ سے شفافیت</li>
+      </ol>
+    </div>
+    <div class="hint-print">💡 <strong>PDF بنانے کے لیے:</strong> براؤزر میں Ctrl+P (یا Cmd+P) دبائیں اور "Save as PDF" منتخب کریں — نیویگیشن اور بٹن خود بخود چھپ جائیں گے۔</div>
+  </div></section>
+
+  <!-- 11 — inquiry form (shared .kd-form component) -->
+  <section class="s-sec" id="inquiry"><div class="wrap">
+    <form class="kd-form form-card" data-preset="sponsor" novalidate aria-labelledby="form-title-proposal">
+    <h2 id="form-title-proposal" style="font-size:1.4rem">اسپانسرشپ تجویز مانگوائیں</h2>
+    <p class="form-sub">نیچے دیا گیا فارم پُر کریں — آپ کا ای میل ایپ کھلے گا اور آپ کی درخواست ہمیں موصول ہو جائے گی۔</p>
+    <div class="form-field">
+    <label for="kd-name">نام <span class="req">*</span></label>
+    <input type="text" id="kd-name" name="name" autocomplete="name" required aria-describedby="kd-name-err">
+    <span class="form-error" id="kd-name-err" hidden></span>
+    </div>
+    <div class="form-field">
+    <label for="kd-org">تنظیم</label>
+    <input type="text" id="kd-org" name="org" autocomplete="organization">
+    </div>
+    <div class="form-field">
+    <label for="kd-contact">ای میل یا فون <span class="req">*</span></label>
+    <input type="text" id="kd-contact" name="contact" autocomplete="email" required aria-describedby="kd-contact-err">
+    <span class="form-error" id="kd-contact-err" hidden></span>
+    </div>
+    <div class="form-field">
+    <label for="kd-type">درخواست کی قسم <span class="req">*</span></label>
+    <select id="kd-type" name="type" required>
+    <option value="sponsor">اسپانسرشپ</option>
+    <option value="support">تعاون</option>
+    <option value="training">تربیت</option>
+    <option value="partnership">شراکت</option>
+    <option value="other">دیگر</option>
+    </select>
+    </div>
+    <div class="form-field">
+    <label for="kd-message">پیغام <span class="req">*</span></label>
+    <textarea id="kd-message" name="message" required aria-describedby="kd-message-err" placeholder="مثلاً: ہماری تنظیم کسان دوست کی اسپانسرشپ میں دلچسپی رکھتی ہے۔"></textarea>
+    <span class="form-error" id="kd-message-err" hidden></span>
+    </div>
+    <div class="form-field consent-row">
+    <input type="checkbox" id="kd-consent" name="consent" required aria-describedby="kd-consent-err">
+    <label for="kd-consent">مجھ سے رابطہ کیا جا سکتا ہے <span class="req">*</span></label>
+    <span class="form-error" id="kd-consent-err" hidden></span>
+    </div>
+    <button type="submit" class="btn btn-primary">درخواست بھیجیں</button>
+    <p class="kd-mailto-note" hidden>آپ کا ای میل ایپ کھلے گا — وہاں بھیجنے پر آپ کی درخواست موصول ہوگی۔</p>
+    </form>
+  </div></section>
+
+</main>
+
+<footer class="s-footer">
+  <div class="wrap">
+    کسان دوست — آپ کی ڈیجیٹل کھیتی ڈائری · مفت، آف لائن، کسان کے لیے<br>
+    <span class="no-print">تجویز کا مسودہ — قیمتیں اور شرائط ہر پارٹنر سے الگ طے ہوں گی۔</span>
+  </div>
+</footer>
+
+<script src="../config.js"></script>
+<script src="../site.js"></script>
+</body>
+</html>

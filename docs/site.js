@@ -119,3 +119,158 @@
     });
   }
 })();
+
+/* ============================================================
+   2026-10-18: Monetization pages — contact forms + analytics.
+   ------------------------------------------------------------
+   (a) Contact form (.kd-form): validates, then composes a mailto:
+       mailto link to KD_CONFIG.contactEmail with prefilled
+       subject/body, opening the user's email app. If no contact
+       email is configured, the form is replaced by an honest
+       placeholder notice — never a dead form.
+   (b) KD.track(eventName): privacy-first analytics hook.
+       No-ops unless KD_CONFIG.analyticsEnabled === true.
+       Wires [data-track] attributes (download buttons, doc links,
+       nav CTAs) as click trackers. No localStorage, no cookies,
+       no fingerprinting.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var cfg = (typeof window !== 'undefined' && window.KD_CONFIG) || {};
+
+  /* ---------- (b) Analytics hook ---------- */
+  window.KD = window.KD || {};
+  /**
+   * Track an event name. No-ops unless analytics is explicitly enabled.
+   * A provider hook can be attached as KD.send(eventName) when the
+   * owner configures one; until then nothing is recorded.
+   */
+  window.KD.track = function (eventName) {
+    if (!cfg || cfg.analyticsEnabled !== true) return;
+    if (typeof window.KD.send === 'function') {
+      try { window.KD.send(eventName); } catch (e) { /* never break the page */ }
+    }
+  };
+
+  /* Wire data-track attributes (runs even when analytics is off —
+     KD.track silently no-ops). */
+  document.querySelectorAll('[data-track]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      window.KD.track(el.getAttribute('data-track'));
+    });
+  });
+
+  /* ---------- (a) Contact / inquiry forms ---------- */
+  var REQUIRED_MSG = {
+    name: 'براہِ کرم اپنا نام لکھیں۔',
+    contact: 'ای میل یا فون نمبر لکھیں تاکہ ہم رابطہ کر سکیں۔',
+    message: 'اپنا پیغام لکھیں۔',
+    consent: 'آگے بڑھنے کے لیے رابطے کی اجازت ضروری ہے۔'
+  };
+
+  function showError(input, field, text) {
+    var err = document.getElementById(input.id + '-err');
+    if (err) {
+      err.textContent = text;
+      err.hidden = false;
+    }
+    input.setAttribute('aria-invalid', 'true');
+    field.classList.add('has-error');
+  }
+
+  function clearError(input, field) {
+    var err = document.getElementById(input.id + '-err');
+    if (err) {
+      err.textContent = '';
+      err.hidden = true;
+    }
+    input.removeAttribute('aria-invalid');
+    field.classList.remove('has-error');
+  }
+
+  function checkRequired(input, field, msgKey) {
+    var ok = input.type === 'checkbox'
+      ? input.checked
+      : input.value.trim().length > 0;
+    if (!ok) { showError(input, field, REQUIRED_MSG[msgKey]); return false; }
+    clearError(input, field);
+    return true;
+  }
+
+  function labelFor(select, value) {
+    var opt = select.querySelector('option[value="' + value + '"]');
+    return opt ? opt.textContent : value;
+  }
+
+  document.querySelectorAll('form.kd-form').forEach(function (form) {
+    var email = (cfg.contactEmail || '').trim();
+
+    /* No configured contact → honest placeholder instead of a dead form. */
+    if (!email) {
+      var fallback = document.createElement('div');
+      fallback.className = 'kd-no-contact notice-box';
+      fallback.setAttribute('role', 'status');
+      fallback.textContent = 'رابطہ ای میل جلد شائع کی جائے گی۔ اس فارم کے فعال ہونے تک آپ ہم سے براہِ راست رابطہ کر سکتے ہیں۔';
+      form.replaceWith(fallback);
+      return;
+    }
+
+    /* Preset the inquiry-type select if the page declares one. */
+    var preset = form.getAttribute('data-preset');
+    var typeSel = form.querySelector('#kd-type');
+    if (preset && typeSel) typeSel.value = preset;
+
+    var nameIn = form.querySelector('#kd-name');
+    var orgIn = form.querySelector('#kd-org');
+    var contactIn = form.querySelector('#kd-contact');
+    var msgIn = form.querySelector('#kd-message');
+    var consentIn = form.querySelector('#kd-consent');
+    var notice = form.querySelector('.kd-mailto-note');
+
+    /* Clear errors live as the user types / toggles. */
+    form.querySelectorAll('input, select, textarea').forEach(function (input) {
+      var field = input.closest('.form-field');
+      if (!field) return;
+      input.addEventListener('input', function () { clearError(input, field); });
+      input.addEventListener('change', function () { clearError(input, field); });
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var ok = true;
+      ok = checkRequired(nameIn, nameIn.closest('.form-field'), 'name') && ok;
+      ok = checkRequired(contactIn, contactIn.closest('.form-field'), 'contact') && ok;
+      ok = checkRequired(msgIn, msgIn.closest('.form-field'), 'message') && ok;
+      ok = checkRequired(consentIn, consentIn.closest('.form-field'), 'consent') && ok;
+      if (!ok) {
+        var firstErr = form.querySelector('.has-error input, .has-error textarea');
+        if (firstErr) firstErr.focus();
+        return;
+      }
+
+      var typeLabel = typeSel ? labelFor(typeSel, typeSel.value) : 'دیگر';
+      var subject = 'کسان دوست — ' + typeLabel + ': ' + nameIn.value.trim();
+      var lines = [
+        'نام: ' + nameIn.value.trim(),
+        'تنظیم: ' + (orgIn && orgIn.value.trim() ? orgIn.value.trim() : '—'),
+        'ای میل یا فون: ' + contactIn.value.trim(),
+        'درخواست کی قسم: ' + typeLabel,
+        '',
+        'پیغام:',
+        msgIn.value.trim()
+      ];
+      var mailto = 'mailto:' + encodeURIComponent(email) +
+        '?subject=' + encodeURIComponent(subject) +
+        '&body=' + encodeURIComponent(lines.join('\n'));
+
+      window.location.href = mailto;
+
+      /* Honest notice: the email app opens — nothing is "submitted" yet. */
+      if (notice) {
+        notice.hidden = false;
+        notice.setAttribute('role', 'status');
+      }
+    });
+  });
+})();

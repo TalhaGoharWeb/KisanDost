@@ -515,3 +515,115 @@ footer{background:var(--pine-deep);color:#cfe3d4;padding:3rem 0 1.6rem;margin-to
   .lb-next{inset-inline-end:.4rem}
   section{padding:3rem 0}
 }
+
+/* ============================================================
+   21. Monetization pages (2026-10-18): sponsor / support /
+   services / transparency. Reuses design-system classes.
+   ============================================================ */
+
+/* Informational / placeholder notice box */
+.notice-box{
+  background:var(--gold-soft);border:1px solid var(--gold);
+  border-inline-start:6px solid var(--gold-deep);
+  border-radius:var(--radius);padding:1.4rem 1.6rem;
+  margin:1.6rem 0;box-shadow:var(--shadow-sm);
+}
+.notice-box h3{color:var(--gold-deep);margin-bottom:.4rem;font-size:1.08rem}
+.notice-box p{color:var(--ink);font-size:.97rem;margin-bottom:.5rem}
+.notice-box p:last-child{margin-bottom:0}
+
+/* Highlighted sponsor package (middle tier) */
+.plan-featured{
+  border:2px solid var(--gold)!important;
+  position:relative;
+}
+.plan-featured .plan-ribbon{
+  display:inline-block;background:var(--gold);color:#2e2203;
+  font-weight:700;font-size:.85rem;border-radius:999px;
+  padding:.2rem 1rem;margin-bottom:.6rem;
+}
+.feat-card ul.plan-benefits{
+  list-style:none;padding:0;margin:.8rem 0 0;color:var(--muted);font-size:.95rem;
+}
+.feat-card ul.plan-benefits li{
+  padding:.28rem 0;padding-inline-start:1.6rem;position:relative;margin-bottom:0;
+}
+.feat-card ul.plan-benefits li::before{
+  content:"✓";position:absolute;inset-inline-start:0;
+  color:var(--emerald);font-weight:800;
+}
+
+/* Inquiry / contact form (shared .kd-form component) */
+.form-card{
+  background:var(--white);border:1px solid var(--line);
+  border-radius:22px;box-shadow:var(--shadow-md);
+  padding:2rem;max-width:720px;margin:0 auto;
+}
+.form-card h2{color:var(--pine);margin-bottom:.4rem}
+.form-card>p.form-sub{color:var(--muted);margin-bottom:1.6rem}
+.form-field{margin-bottom:1.2rem}
+.form-field label{
+  display:block;font-weight:700;color:var(--pine);margin-bottom:.4rem;
+}
+.form-field .req{color:#b3261e;font-weight:800}
+.form-field input[type="text"],
+.form-field input[type="email"],
+.form-field input[type="tel"],
+.form-field select,
+.form-field textarea{
+  width:100%;font-family:inherit;font-size:1rem;color:var(--ink);
+  background:var(--ivory);border:1.5px solid var(--line);
+  border-radius:12px;padding:.7rem .9rem;min-height:48px;
+}
+.form-field textarea{min-height:140px;resize:vertical}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{
+  border-color:var(--emerald);outline:none;
+  box-shadow:0 0 0 3px rgba(79,152,89,.18);
+}
+.form-field.has-error input,.form-field.has-error textarea{
+  border-color:#b3261e;
+}
+.form-error{
+  display:block;color:#b3261e;font-size:.9rem;margin-top:.35rem;
+}
+.consent-row{
+  display:flex;gap:.7rem;align-items:flex-start;
+  background:var(--sage);border-radius:12px;padding:.9rem 1rem;
+}
+.consent-row input[type="checkbox"]{
+  width:22px;height:22px;flex:0 0 22px;margin-top:.3rem;accent-color:var(--emerald);
+}
+.consent-row label{font-weight:600;color:var(--ink);font-size:.97rem}
+.kd-mailto-note{
+  background:var(--emerald-soft);border:1px solid var(--crop);
+  border-radius:12px;padding:1rem 1.2rem;margin-top:1.2rem;
+  color:var(--pine);font-weight:600;font-size:.97rem;
+}
+.kd-no-contact{
+  max-width:720px;margin:0 auto;text-align:center;
+}
+
+/* Two-column safeguard checklist */
+.check-list{list-style:none;padding:0;margin:0;display:grid;gap:1rem}
+@media (min-width:820px){
+  .check-list{grid-template-columns:1fr 1fr}
+}
+.check-list li{
+  background:var(--white);border:1px solid var(--line);
+  border-radius:14px;padding:1.1rem 1.3rem;box-shadow:var(--shadow-sm);
+  padding-inline-start:3rem;position:relative;
+}
+.check-list li::before{
+  content:"🛡";position:absolute;inset-inline-start:1rem;top:1.05rem;font-size:1.2rem;
+}
+.check-list h3{color:var(--pine);font-size:1.02rem;margin-bottom:.25rem}
+.check-list p{color:var(--muted);font-size:.95rem}
+
+/* Workflow chips row (sponsor page) */
+.chips{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center}
+.chip{
+  background:var(--white);border:1.5px solid var(--line);
+  border-radius:999px;padding:.5rem 1.2rem;font-weight:600;
+  color:var(--pine);font-size:.95rem;box-shadow:var(--shadow-sm);
+}
+.chip:hover{border-color:var(--crop)}

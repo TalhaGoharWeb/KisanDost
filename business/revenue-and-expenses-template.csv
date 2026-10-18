@@ -1,0 +1,2 @@
+# type values: sponsorship | contribution | service | operating_expense
+date,type,description,amount_pkr,partner,payment_method,receipt_ref,notes
