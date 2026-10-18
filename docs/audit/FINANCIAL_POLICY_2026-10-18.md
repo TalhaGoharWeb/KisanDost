@@ -200,14 +200,26 @@ more clutter).
   `test/db/harvest_restore_sale_test.dart` (3 tests). All values
   hand-computed; no assertions weakened.
 
-## Open questions for the owner (consolidated)
+## Owner decisions — DECIDED 2026-10-18 (owner's words, recorded verbatim)
 
-1. S2: cash vs accrual for auto-created Pending sales (§6.1).
-2. S3: batai settlement → P&L linkage; recommended: manual farmer action (§6.3).
-3. S5: party ledger ↔ P&L linkage (§6.4).
-4. S8: ushr due-vs-paid basis in P&L (§6.2).
-5. S7 follow-up: should in-kind ushr also shrink the linked auto-sale? (§6.5).
-6. D4: batai double-settle guard — UNIQUE constraint vs product flow (§6.3).
-7. S11 follow-up: `payment_status` after `restoreSale` stays `Pending`
-   (deleteSale's reset value) because the pre-delete status isn't stored.
-   Options: store it, or always restore `Paid`. Minor; needs a call.
+The owner approved the following defaults. Status: DECIDED, pending
+implementation on the `prod-readiness` branch.
+
+| # | Decision | Owner's chosen option |
+|---|---|---|
+| 1 | Unsold harvest (S2, §6.1) | Track remaining produce separately; do not count it as realized sales income |
+| 2 | Batai ↔ P&L (S3, §6.3) | Record the farmer's actual share; prevent duplicate income or expenses |
+| 3 | Party ledger (S5, §6.4) | Link ledger entries to the underlying transaction, where applicable |
+| 4 | Ushr due vs paid (S8, §6.2) | Show due, paid, and remaining separately |
+| 5 | Delete/restore (cross-cutting) | Atomic, reversible changes for linked records; prevent duplicate restoration |
+| 6 | Backup encryption | Prefer encrypted backups with a recovery method the farmer can actually use |
+| 7 | Lock-screen alarms | Hide sensitive details by default; allow a clear, safe notification |
+| 8 | In-app updates | DEFERRED — preserves the offline-first design (no INTERNET permission) |
+| 9 | Release scope (1.0.7) | Reliability and verified bug fixes only — no new features |
+
+Remaining minor open items (owner has not decided yet):
+- S7 follow-up: should in-kind ushr also shrink the linked auto-sale? (§6.5).
+- D4: batai double-settle guard — UNIQUE constraint vs product flow (§6.3).
+- S11 follow-up: `payment_status` after `restoreSale` stays `Pending`
+  (deleteSale's reset value) because the pre-delete status isn't stored.
+  Options: store it, or always restore `Paid`.
