@@ -28,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _remindersEnabled = true;
   bool _alarmSoundEnabled = true;
   bool _vibrationEnabled = true;
+  bool _lockScreenDetails = false; // owner decision #7: default = redacted
   int _snoozeDuration = 10;
   bool _prefAtTime = true;
   bool _pref1h = true;
@@ -130,6 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _remindersEnabled = prefs.getBool('reminders_enabled') ?? true;
       _alarmSoundEnabled = prefs.getBool('alarm_sound_enabled') ?? true;
       _vibrationEnabled = prefs.getBool('vibration_enabled') ?? true;
+      _lockScreenDetails = prefs.getBool('lockscreen_show_details') ?? false;
       _snoozeDuration = prefs.getInt('snooze_duration') ?? 10;
       _prefAtTime = prefs.getBool('reminder_pref_at_time') ?? true;
       _pref1h = prefs.getBool('reminder_pref_1h') ?? true;
@@ -450,6 +452,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 });
                                 await _setBoolPreference(
                                   'vibration_enabled',
+                                  value,
+                                );
+                              }
+                              : null,
+                    ),
+                    const Divider(),
+
+                    // Lock-screen details (owner decision #7): default off =
+                    // notifications show generic text on the lock screen
+                    // instead of the task title (amounts/party names).
+                    SwitchListTile(
+                      title: const Text(
+                        'لاک اسکرین پر تفصیل',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'آن کریں تو لاک اسکرین پر کام کا نام بھی دکھے گا',
+                      ),
+                      value: _lockScreenDetails,
+                      activeColor: Colors.deepPurple,
+                      onChanged:
+                          _remindersEnabled
+                              ? (value) async {
+                                setState(() {
+                                  _lockScreenDetails = value;
+                                });
+                                await _setBoolPreference(
+                                  'lockscreen_show_details',
                                   value,
                                 );
                               }

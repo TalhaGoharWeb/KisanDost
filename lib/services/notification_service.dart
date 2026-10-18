@@ -94,10 +94,16 @@ Future<void> _notificationTapBackgroundUnsafe(
       );
 
       // Schedule a new alarm notification using slot 9 for snooze
+      final showDetails = prefs.getBool('lockscreen_show_details') ?? false;
+      final snoozeContent = AlarmNotificationContent.build(
+        taskTitle: taskTitle,
+        reminderSuffix: ' (سنوز)',
+        showDetails: showDetails,
+      );
       await flutterLocalNotificationsPlugin.zonedSchedule(
         taskId * 10 + 9,
-        'کسان دوست - یاد دہانی (سنوز)',
-        taskTitle,
+        snoozeContent.title,
+        snoozeContent.body,
         tz.TZDateTime.from(snoozeTime, tz.local),
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -141,6 +147,54 @@ Future<void> _notificationTapBackgroundUnsafe(
         payload: taskId.toString(),
       );
     }
+  }
+}
+
+/// Lock-screen redaction for alarm notifications (owner decision #7,
+/// 2026-10-18).
+///
+/// The notification body carries the farmer's free-text task title, which
+/// routinely holds sensitive details (amounts owed/received, party names,
+/// financial titles). By default the notification is REDACTED: a generic,
+/// actionable title/body that reveals nothing about the task. Enabling the
+/// «لاک اسکرین پر تفصیل» settings toggle restores the task title.
+///
+/// Pure and unit-testable: no plugin, no prefs, no platform code — the
+/// caller reads the `lockscreen_show_details` preference and passes the
+/// boolean in. (SharedPreferences in the background isolate and on the
+/// native side use the same key with default `false`.)
+///
+/// Visibility semantics: we keep `NotificationVisibility.public` even when
+/// redacted. `secret` is NOT the right semantic here — it hides the
+/// notification from a secure lock screen entirely (no "clear and
+/// actionable" reminder). `private` would show only the app name. Once the
+/// text itself is redacted there is no sensitive content left to protect,
+/// so `public` with generic text is exactly what the owner asked for:
+/// title «یاد دہانی» / body «کام کا وقت ہو گیا — کھولنے کے لیے
+/// تھپتھپائیں». When the toggle is on, `public` restores the previous
+/// behavior (task title visible).
+class AlarmNotificationContent {
+  final String title;
+  final String body;
+
+  const AlarmNotificationContent({required this.title, required this.body});
+
+  static AlarmNotificationContent build({
+    required String taskTitle,
+    required String reminderSuffix,
+    required bool showDetails,
+  }) {
+    if (showDetails) {
+      return AlarmNotificationContent(
+        title: 'کسان دوست - یاد دہانی$reminderSuffix',
+        body: taskTitle,
+      );
+    }
+    // Redacted default: generic and actionable, no task details.
+    return const AlarmNotificationContent(
+      title: Strings.alarmRedactedTitle,
+      body: Strings.alarmRedactedBody,
+    );
   }
 }
 
@@ -273,6 +327,8 @@ class NotificationService {
     final playSound = prefs.getBool('alarm_sound_enabled') ?? true;
     final enableVibration = prefs.getBool('vibration_enabled') ?? true;
     final defaultSnooze = prefs.getInt('snooze_duration') ?? 10;
+    // Owner decision #7: lock-screen redaction, default off (redacted).
+    final showDetails = prefs.getBool('lockscreen_show_details') ?? false;
 
     // 2. Parse the reminder offsets (minutes before event)
     final offsets =
@@ -316,11 +372,20 @@ class NotificationService {
         reminderSuffix = ' (1 دن پہلے)';
       }
 
+      // Apply lock-screen redaction (owner decision #7): the body is the
+      // farmer's free-text task title, so it is replaced with generic text
+      // unless the farmer opted in to lock-screen details.
+      final content = AlarmNotificationContent.build(
+        taskTitle: task.title,
+        reminderSuffix: reminderSuffix,
+        showDetails: showDetails,
+      );
+
       try {
         await flutterLocalNotificationsPlugin.zonedSchedule(
           notificationId,
-          'کسان دوست - یاد دہانی$reminderSuffix',
-          task.title,
+          content.title,
+          content.body,
           tz.TZDateTime.from(triggerTime, tz.local),
           NotificationDetails(
             android: AndroidNotificationDetails(
@@ -373,8 +438,8 @@ class NotificationService {
         try {
           await flutterLocalNotificationsPlugin.zonedSchedule(
             notificationId,
-            'کسان دوست - یاد دہانی$reminderSuffix',
-            task.title,
+            content.title,
+            content.body,
             tz.TZDateTime.from(triggerTime, tz.local),
             NotificationDetails(
               android: AndroidNotificationDetails(

@@ -33,4 +33,17 @@ class Strings {
   // ---- shared validation ----
   static const String quantityRequired = 'مقدار درج کریں';
   static const String nameRequired = 'نام درج کریں';
+
+  // ---- lock-screen notification redaction (owner decision #7) ----
+  // Generic, actionable alarm text shown when the «لاک اسکرین پر تفصیل»
+  // toggle is off (default). Carries no task details — no amounts, no
+  // party names.
+  static const String alarmRedactedTitle = 'کسان دوست — یاد دہانی';
+  static const String alarmRedactedBody =
+      'کام کا وقت ہو گیا — کھولنے کے لیے تھپتھپائیں';
+
+  // Settings toggle labels for showing task details on the lock screen.
+  static const String lockScreenDetailsTitle = 'لاک اسکرین پر تفصیل';
+  static const String lockScreenDetailsSubtitle =
+      'آن کریں تو لاک اسکرین پر کام کا نام بھی دکھے گا';
 }

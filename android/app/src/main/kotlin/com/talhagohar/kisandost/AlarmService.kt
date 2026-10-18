@@ -39,6 +39,26 @@ class AlarmService : Service() {
 
         Log.d(TAG, "Starting foreground alarm service for task: $taskId")
 
+        // Owner decision #7 (2026-10-18): lock-screen redaction. The
+        // notification text carries the farmer's free-text task title, which
+        // can hold sensitive details (amounts, party names). Unless the
+        // farmer enabled «لاک اسکرین پر تفصیل» in settings, show generic,
+        // actionable text instead. Same SharedPreferences key as the Dart
+        // side (booleans are stored verbatim, unlike ints which need
+        // getLong — see the snooze_minutes note below). Default = redacted.
+        val showDetails = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            .getBoolean("lockscreen_show_details", false)
+        val displayTitle = if (showDetails) "کسان دوست یاد دہانی" else "کسان دوست — یاد دہانی"
+        val displayText = if (showDetails) taskTitle else "کام کا وقت ہو گیا — کھولنے کے لیے تھپتھپائیں"
+
+        // Visibility note: we deliberately keep VISIBILITY_PUBLIC (the
+        // channel default) even when redacted. SECRET would hide the
+        // notification from a secure lock screen entirely (not actionable),
+        // PRIVATE would show only the app name — but once the text is
+        // redacted there is nothing sensitive left to protect, so PUBLIC
+        // with the generic text is exactly "clear and actionable". When the
+        // toggle is on, PUBLIC restores the previous full-display behavior.
+
         // 1. Create Notification Channel (fast, no blocking I/O).
         createNotificationChannel()
 
@@ -49,10 +69,11 @@ class AlarmService : Service() {
         // no notification. (Alarm fix 2026-10-04.)
         val earlyNotification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("کسان دوست یاد دہانی")
-            .setContentText(taskTitle)
+            .setContentTitle(displayTitle)
+            .setContentText(displayText)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
             .build()
@@ -111,13 +132,14 @@ class AlarmService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Build notification
+        // Build notification (redacted per owner decision #7; see above)
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("کسان دوست یاد دہانی")
-            .setContentText(taskTitle)
+            .setContentTitle(displayTitle)
+            .setContentText(displayText)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
             .setFullScreenIntent(fullscreenPendingIntent, true)
