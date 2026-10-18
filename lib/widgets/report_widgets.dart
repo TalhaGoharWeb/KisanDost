@@ -267,7 +267,10 @@ class ReceiptWidget extends StatelessWidget {
             child: Text(
               value,
               style: _ts(18, weight: FontWeight.bold),
-              textAlign: TextAlign.left,
+              // Directionality-aware: renders left in the RTL report,
+              // matching the previous physical-left intent without
+              // fighting the app's RTL direction.
+              textAlign: TextAlign.end,
             ),
           ),
         ],

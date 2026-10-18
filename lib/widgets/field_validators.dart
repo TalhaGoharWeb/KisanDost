@@ -164,4 +164,58 @@ class FieldValidators {
     }
     return null;
   }
+
+  /// Strict Pakistani *mobile* check for quick-add flows: empty is OK
+  /// (optional field). Otherwise the number must be a Pakistani mobile —
+  /// 03xx-xxxxxxx (11 digits), optionally with a +92/0092 country prefix.
+  /// Spaces, dashes and Urdu/Persian digits are tolerated; landlines and
+  /// foreign numbers are rejected.
+  ///
+  /// The prefix check is deliberately limited to "starts with 03" (rather
+  /// than policing operator codes) so newly allocated series are never
+  /// wrongly rejected.
+  static String? phonePkOptional(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return null;
+    if (_pkMobileLocal(_phoneDigits(v)) == null) {
+      return 'فون نمبر درست نہیں — 03 سے شروع ہونے والا 11 ہندسوں کا پاکستانی موبائل نمبر لکھیں (مثلاً 03001234567)';
+    }
+    return null;
+  }
+
+  /// Reduces a phone string to Western digits only: Urdu/Persian digits
+  /// (۰۱۲۳۴۵۶۷۸۹) are converted; everything else non-digit is dropped
+  /// (spaces, dashes, '+', parentheses, ...).
+  static String _phoneDigits(String input) {
+    final sb = StringBuffer();
+    for (var i = 0; i < input.length; i++) {
+      final c = input[i];
+      final code = c.codeUnitAt(0);
+      if (code >= 0x30 && code <= 0x39) {
+        sb.write(c);
+      } else {
+        final idx = _urduDigits.indexOf(c);
+        if (idx >= 0) sb.write(String.fromCharCode(0x30 + idx));
+      }
+    }
+    return sb.toString();
+  }
+
+  /// Reduces [digits] (Western digits only) to the local 11-digit
+  /// 03xx-xxxxxxx form; null when the shape doesn't match a Pakistani
+  /// mobile number.
+  static String? _pkMobileLocal(String digits) {
+    final String local;
+    if (digits.length == 11) {
+      local = digits;
+    } else if (digits.length == 12 && digits.startsWith('923')) {
+      local = '0${digits.substring(2)}';
+    } else if (digits.length == 14 && digits.startsWith('00923')) {
+      local = '0${digits.substring(4)}';
+    } else {
+      return null;
+    }
+    if (local.length != 11 || !local.startsWith('03')) return null;
+    return local;
+  }
 }

@@ -10,6 +10,7 @@ import '../providers/crop_provider.dart';
 import '../providers/harvest_provider.dart';
 import '../widgets/empty_state_widget.dart';
 import '../widgets/batai_status_chip.dart';
+import '../widgets/field_validators.dart';
 import 'batai_detail_screen.dart';
 import '../l10n/strings.dart';
 
@@ -157,11 +158,18 @@ class _BataiScreenState extends State<BataiScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      s.partyName ?? 'نامعلوم فریق',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    // Long party names are truncated with an ellipsis; the
+                    // full name is one long-press away via the tooltip.
+                    child: Tooltip(
+                      message: s.partyName ?? 'نامعلوم فریق',
+                      child: Text(
+                        s.partyName ?? 'نامعلوم فریق',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
@@ -175,9 +183,14 @@ class _BataiScreenState extends State<BataiScreen> {
               ),
               if (place.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(
-                  place,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                Tooltip(
+                  message: place,
+                  child: Text(
+                    place,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
               const SizedBox(height: 8),
@@ -322,47 +335,69 @@ class BataiAgreementDialogState extends State<BataiAgreementDialog> {
   Future<void> _addPartyFlow() async {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
+    String? phoneError;
     final data = await showDialog<Map<String, String>>(
       context: context,
       builder:
-          (ctx) => AlertDialog(
-            title: const Text('نیا فریق'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'نام *',
-                    hintText: 'مثلاً چوہدری صاحب',
-                    border: OutlineInputBorder(),
+          (ctx) => StatefulBuilder(
+            builder:
+                (dialogCtx, setDialogState) => AlertDialog(
+                  title: const Text('نیا فریق'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: nameCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'نام *',
+                            hintText: 'مثلاً چوہدری صاحب',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: phoneCtrl,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: 'فون نمبر (اختیاری)',
+                            hintText: 'مثلاً 03001234567',
+                            border: const OutlineInputBorder(),
+                            errorText: phoneError,
+                          ),
+                          onChanged: (_) {
+                            // Clear the error as soon as the farmer edits.
+                            if (phoneError != null) {
+                              setDialogState(() => phoneError = null);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      child: const Text('منسوخ کریں'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final msg = FieldValidators.phonePkOptional(
+                          phoneCtrl.text,
+                        );
+                        if (msg != null) {
+                          setDialogState(() => phoneError = msg);
+                          return;
+                        }
+                        Navigator.pop(dialogCtx, {
+                          'name': nameCtrl.text,
+                          'phone': phoneCtrl.text,
+                        });
+                      },
+                      child: const Text('شامل کریں'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'فون نمبر (اختیاری)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('منسوخ کریں'),
-              ),
-              ElevatedButton(
-                onPressed:
-                    () => Navigator.pop(ctx, {
-                      'name': nameCtrl.text,
-                      'phone': phoneCtrl.text,
-                    }),
-                child: const Text('شامل کریں'),
-              ),
-            ],
           ),
     );
     if (data == null || !mounted) return;
