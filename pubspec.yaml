@@ -21,6 +21,12 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   timezone: ^0.9.4
   crypto: ^3.0.7
+  encrypt: ^5.0.3
+  # Backup encryption KDF (owner decision #6): package:crypto exposes no
+  # KDF and package:encrypt does not re-export PointyCastle's, so the
+  # vetted PBKDF2-HMAC-SHA256 comes from here directly. Kept on the 3.x
+  # line that encrypt ^5.0.3 requires — never hand-roll the KDF.
+  pointycastle: ^3.6.2
   share_plus: ^12.0.2
   file_picker: ^11.0.3
   package_info_plus: ^8.0.0

@@ -69,6 +69,80 @@ class _BackupScreenState extends State<BackupScreen> {
     );
   }
 
+  /// خفیہ بیک اپ کے لیے پاس فریز مانگنے والا ڈائیلاگ۔ [hint] ہو تو یاد
+  /// دہانی دکھاتا ہے۔ منسوخ کرنے پر null۔
+  Future<String?> _promptPassphrase({String hint = ''}) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              'پاس فریز درج کریں',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'یہ خفیہ بیک اپ ہے — اسے کھولنے کے لیے وہی پاس فریز درکار ہے جو بناتے وقت رکھا تھا۔',
+                  style: TextStyle(fontSize: 15, height: 1.5),
+                ),
+                if (hint.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'یاد دہانی: $hint',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  obscureText: true,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'پاس فریز',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'منسوخ کریں',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple.shade600,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(ctx, controller.text),
+                child: const Text(
+                  'جاری رکھیں',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+    );
+    controller.dispose();
+    return result;
+  }
+
   /// تمام پرووائیڈرز کو دوبارہ لوڈ کریں (بحالی کے بعد)۔
   Future<void> _reloadAllProviders() async {
     if (!mounted) return;
@@ -83,12 +157,222 @@ class _BackupScreenState extends State<BackupScreen> {
     context.read<UshrProvider>().fetchUshrRecords();
   }
 
-  Future<void> _createBackup() async {
+  /// نیا بیک اپ بنانے کا ڈائیلاگ: خفیہ (پاس فریز) یا سادہ بیک اپ کا واضح
+  /// انتخاب، پاس فریز + یاد دہانی، اور بھولنے کی صورت میں ناقابلِ بحالی
+  /// ہونے کی واضح تنبیہ۔
+  Future<void> _showCreateBackupDialog() async {
+    var useEncryption = true;
+    final passphraseCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    final hintCtrl = TextEditingController();
+    String? error;
+
+    final result = await showDialog<Map<String, String?>>(
+      context: context,
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (ctx, setDialogState) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  title: const Text(
+                    'نیا بیک اپ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        RadioGroup<bool>(
+                          groupValue: useEncryption,
+                          onChanged:
+                              (v) => setDialogState(
+                                () => useEncryption = v ?? true,
+                              ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              RadioListTile<bool>(
+                                value: true,
+                                activeColor: Colors.deepPurple,
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'خفیہ بیک اپ (تجویز کردہ)',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'پاس فریز کے بغیر کوئی بھی یہ فائل نہیں کھول سکے گا',
+                                ),
+                              ),
+                              RadioListTile<bool>(
+                                value: false,
+                                activeColor: Colors.deepPurple,
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text(
+                                  'سادہ بیک اپ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'بغیر پاس فریز — جو بھی فائل پائے گا، ڈیٹا پڑھ سکے گا',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (useEncryption) ...[
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: passphraseCtrl,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'پاس فریز',
+                              hintText: 'کم از کم 4 حروف',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: confirmCtrl,
+                            obscureText: true,
+                            decoration: const InputDecoration(
+                              labelText: 'پاس فریز دوبارہ لکھیں',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: hintCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'یاد دہانی (اختیاری)',
+                              hintText: 'مثلاً: میرے بیٹے کا نام',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'یاد دہانی سب کو نظر آئے گی — اس میں اصل پاس فریز نہ لکھیں',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: const Text(
+                              '⚠ خبردار: اگر آپ پاس فریز بھول گئے تو یہ بیک اپ ہمیشہ کے لیے ضائع ہو جائے گا — اسے کوئی بھی بحال نہیں کر سکے گا۔',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (error != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            error!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text(
+                        'منسوخ کریں',
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple.shade600,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (useEncryption) {
+                          final pw = passphraseCtrl.text;
+                          if (pw.isEmpty) {
+                            setDialogState(
+                              () => error = 'پاس فریز درج کریں',
+                            );
+                            return;
+                          }
+                          if (pw.length < 4) {
+                            setDialogState(
+                              () =>
+                                  error =
+                                      'پاس فریز کم از کم 4 حروف کا ہونا چاہیے',
+                            );
+                            return;
+                          }
+                          if (confirmCtrl.text != pw) {
+                            setDialogState(
+                              () =>
+                                  error =
+                                      'دونوں پاس فریز ایک جیسے نہیں ہیں',
+                            );
+                            return;
+                          }
+                        }
+                        Navigator.pop(ctx, {
+                          'passphrase':
+                              useEncryption ? passphraseCtrl.text : null,
+                          'hint': useEncryption ? hintCtrl.text : null,
+                        });
+                      },
+                      child: const Text(
+                        'بیک اپ بنائیں',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          ),
+    );
+
+    passphraseCtrl.dispose();
+    confirmCtrl.dispose();
+    hintCtrl.dispose();
+    if (result == null) return; // صارف نے منسوخ کر دیا
+
     setState(() => _isCreating = true);
     try {
-      final info = await _backupService.createBackup();
+      final info = await _backupService.createBackup(
+        passphrase: result['passphrase'],
+        hint: result['hint'],
+      );
       await _load();
-      _showSnack('بیک اپ کامیابی سے بن گیا: ${info.label}', Colors.green);
+      _showSnack(
+        info.isEncrypted
+            ? 'خفیہ بیک اپ کامیابی سے بن گیا — پاس فریز یاد رکھیں!'
+            : 'بیک اپ کامیابی سے بن گیا',
+        Colors.green,
+      );
     } on BackupException catch (e) {
       _showSnack(e.message, Colors.red);
     } catch (e) {
@@ -179,11 +463,18 @@ class _BackupScreenState extends State<BackupScreen> {
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['db'],
+        allowedExtensions: ['db', 'enc'],
       );
       if (result == null || result.files.single.path == null) return;
+      final pickedPath = result.files.single.path!;
+      String? passphrase;
+      if (pickedPath.endsWith('.enc')) {
+        passphrase = await _promptPassphrase();
+        if (passphrase == null || passphrase.isEmpty) return;
+      }
       final info = await _backupService.importBackupFile(
-        result.files.single.path!,
+        pickedPath,
+        passphrase: passphrase,
       );
       await _load();
       _showSnack('بیک اپ فائل درآمد ہو گئی: ${info.label}', Colors.green);
@@ -344,6 +635,13 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _doRestoreReplace(BackupInfo info) async {
+    // خفیہ بیک اپ ہو تو پہلے پاس فریز — بحالی سے پہلے۔
+    String? passphrase;
+    if (info.isEncrypted) {
+      passphrase = await _promptPassphrase(hint: info.hint);
+      if (passphrase == null || passphrase.isEmpty || !mounted) return;
+    }
+
     // تبدیل (Replace) سے پہلے واضح تصدیق — موجودہ ڈیٹا ضائع ہو جائے گا۔
     final confirmed = await showDialog<bool>(
       context: context,
@@ -390,7 +688,10 @@ class _BackupScreenState extends State<BackupScreen> {
     setState(() => _isRestoring = true);
     _showProgressDialog('بیک اپ بحال ہو رہا ہے…');
     try {
-      final summary = await _restoreService.restoreReplace(info.path);
+      final summary = await _restoreService.restoreReplace(
+        info.path,
+        passphrase: passphrase,
+      );
       if (!mounted) return;
       Navigator.of(context).pop(); // بند کریں پروگریس ڈائیلاگ
       await _finishRestore(summary);
@@ -408,10 +709,20 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _doRestoreMerge(BackupInfo info) async {
+    // خفیہ بیک اپ ہو تو پہلے پاس فریز — بحالی سے پہلے۔
+    String? passphrase;
+    if (info.isEncrypted) {
+      passphrase = await _promptPassphrase(hint: info.hint);
+      if (passphrase == null || passphrase.isEmpty || !mounted) return;
+    }
+
     setState(() => _isRestoring = true);
     _showProgressDialog('بیک اپ ضم ہو رہا ہے…');
     try {
-      final result = await _restoreService.restoreMerge(info.path);
+      final result = await _restoreService.restoreMerge(
+        info.path,
+        passphrase: passphrase,
+      );
       if (!mounted) return;
       Navigator.of(context).pop(); // بند کریں پروگریس ڈائیلاگ
       await _finishRestore(result.summaryUrdu());
@@ -464,7 +775,8 @@ class _BackupScreenState extends State<BackupScreen> {
                   children: [
                     // نیا بیک اپ بٹن
                     ElevatedButton.icon(
-                      onPressed: _isCreating ? null : _createBackup,
+                      onPressed:
+                          _isCreating ? null : _showCreateBackupDialog,
                       icon:
                           _isCreating
                               ? const SizedBox(
@@ -612,6 +924,37 @@ class _BackupScreenState extends State<BackupScreen> {
                                         ),
                                       ),
                                     ),
+                                    if (info.isEncrypted)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.lock,
+                                              size: 12,
+                                              color: Colors.green.shade700,
+                                            ),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              'خفیہ',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.green.shade700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     if (_isAutoBackup(info))
                                       Container(
                                         padding: const EdgeInsets.symmetric(
@@ -642,6 +985,17 @@ class _BackupScreenState extends State<BackupScreen> {
                                     color: Colors.grey,
                                   ),
                                 ),
+                                if (info.isEncrypted &&
+                                    info.hint.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'یاد دہانی: ${info.hint}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.deepPurple.shade400,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 8),
                                 Row(
                                   mainAxisAlignment:

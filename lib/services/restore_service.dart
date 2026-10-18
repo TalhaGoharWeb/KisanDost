@@ -107,49 +107,89 @@ class RestoreService {
     'audit_log',
   ];
 
+  /// Resolves the file to restore from. Plain backups restore straight
+  /// from [backupPath]; encrypted ones are decrypted to a temp file first
+  /// (passphrase required) and the temp file is returned alongside so the
+  /// caller can delete it in a `finally`.
+  Future<({String path, String? temp})> _workPath(
+    String backupPath,
+    String? passphrase,
+  ) async {
+    if (!await _backups.isEncryptedBackup(backupPath)) {
+      return (path: backupPath, temp: null);
+    }
+    if (passphrase == null || passphrase.isEmpty) {
+      throw const BackupException(
+        'یہ خفیہ بیک اپ ہے — اسے بحال کرنے کے لیے پاس فریز درکار ہے',
+      );
+    }
+    // decryptBackupToTemp throws the wrong-passphrase / tampered-file
+    // errors before anything else is touched.
+    final tmp = await _backups.decryptBackupToTemp(backupPath, passphrase);
+    return (path: tmp, temp: tmp);
+  }
+
+  Future<void> _cleanupTemp(String? temp) async {
+    if (temp == null) return;
+    final f = File(temp);
+    if (await f.exists()) await f.delete();
+  }
+
   /// Replaces the live database with [backupPath].
   ///
   /// 1. [BackupService.verifyBackup] — any validation failure throws here,
-  ///    BEFORE the safety backup or the live DB is touched.
-  /// 2. Safety backup (label 'pre-restore').
+  ///    BEFORE the safety backup or the live DB is touched. Encrypted
+  ///    backups require [passphrase] and are decrypted to a temp file
+  ///    first (deleted in `finally`).
+  /// 2. Safety backup (label 'pre-restore') — encrypted with the same
+  ///    passphrase when restoring an encrypted backup, so a plaintext
+  ///    safety copy never defeats the encryption.
   /// 3. Checkpoint + close, delete live -wal/-shm, copy the backup over
   ///    the live path.
   /// 4. Re-open via [DatabaseHelper] so [_onUpgrade] migrates older
   ///    backups forward, then `PRAGMA integrity_check` on the live DB.
   ///
   /// Returns an Urdu success message.
-  Future<String> restoreReplace(String backupPath) async {
-    await _backups.verifyBackup(backupPath);
-    await _backups.createBackup(label: 'pre-restore');
-
+  Future<String> restoreReplace(String backupPath, {String? passphrase}) async {
+    final work = await _workPath(backupPath, passphrase);
     final helper = DatabaseHelper.instance;
-    await helper.checkpoint();
-    await helper.close();
     try {
-      final livePath = await helper.databaseFilePath;
-      // Stale WAL frames from a different database image must not shadow
-      // the restored file.
-      for (final suffix in ['-wal', '-shm']) {
-        final f = File('$livePath$suffix');
-        if (await f.exists()) await f.delete();
-      }
-      // Atomic replace: copy to a temp file first, then rename over the live
-      // path. A crash or full disk halfway through the copy can no longer
-      // leave a truncated live database behind — rename is atomic on both
-      // ext4/f2fs, so the live file is either the old DB or the new one,
-      // never a half-written mix. (DB hardening 2026-10-04)
-      final tmpPath = '$livePath.restore_tmp';
+      await _backups.verifyBackup(work.path);
+      await _backups.createBackup(
+        label: 'pre-restore',
+        passphrase: work.temp != null ? passphrase : null,
+      );
+
+      await helper.checkpoint();
+      await helper.close();
       try {
-        await File(backupPath).copy(tmpPath);
-        await File(tmpPath).rename(livePath);
-      } catch (_) {
-        final tmp = File(tmpPath);
-        if (await tmp.exists()) await tmp.delete();
-        rethrow;
+        final livePath = await helper.databaseFilePath;
+        // Stale WAL frames from a different database image must not shadow
+        // the restored file.
+        for (final suffix in ['-wal', '-shm']) {
+          final f = File('$livePath$suffix');
+          if (await f.exists()) await f.delete();
+        }
+        // Atomic replace: copy to a temp file first, then rename over the live
+        // path. A crash or full disk halfway through the copy can no longer
+        // leave a truncated live database behind — rename is atomic on both
+        // ext4/f2fs, so the live file is either the old DB or the new one,
+        // never a half-written mix. (DB hardening 2026-10-04)
+        final tmpPath = '$livePath.restore_tmp';
+        try {
+          await File(work.path).copy(tmpPath);
+          await File(tmpPath).rename(livePath);
+        } catch (_) {
+          final tmp = File(tmpPath);
+          if (await tmp.exists()) await tmp.delete();
+          rethrow;
+        }
+      } finally {
+        // Re-open: _onUpgrade migrates older backups forward.
+        await helper.database;
       }
     } finally {
-      // Re-open: _onUpgrade migrates older backups forward.
-      await helper.database;
+      await _cleanupTemp(work.temp);
     }
 
     final db = await helper.database;
@@ -175,22 +215,34 @@ class RestoreService {
   /// error 787 — in that case the table falls back to row-by-row inserts,
   /// and orphans become honest skips instead of aborting the whole merge.
   /// DETACH runs in `finally`.
-  Future<MergeResult> restoreMerge(String backupPath) async {
-    await _backups.verifyBackup(backupPath);
-    await _backups.createBackup(label: 'pre-merge');
-
-    final db = await DatabaseHelper.instance.database;
-    await db.execute('ATTACH DATABASE ? AS bk', [backupPath]);
+  ///
+  /// Encrypted backups require [passphrase]: they are decrypted to a
+  /// temp file first (deleted in `finally`), and the pre-merge safety
+  /// backup is encrypted with the same passphrase.
+  Future<MergeResult> restoreMerge(String backupPath, {String? passphrase}) async {
+    final work = await _workPath(backupPath, passphrase);
     try {
-      final perTable = <String, TableMergeCount>{};
-      await db.transaction((txn) async {
-        for (final table in mergeTableOrder) {
-          perTable[table] = await _mergeTable(txn, table);
-        }
-      });
-      return MergeResult(perTable: perTable);
+      await _backups.verifyBackup(work.path);
+      await _backups.createBackup(
+        label: 'pre-merge',
+        passphrase: work.temp != null ? passphrase : null,
+      );
+
+      final db = await DatabaseHelper.instance.database;
+      await db.execute('ATTACH DATABASE ? AS bk', [work.path]);
+      try {
+        final perTable = <String, TableMergeCount>{};
+        await db.transaction((txn) async {
+          for (final table in mergeTableOrder) {
+            perTable[table] = await _mergeTable(txn, table);
+          }
+        });
+        return MergeResult(perTable: perTable);
+      } finally {
+        await db.execute('DETACH DATABASE bk');
+      }
     } finally {
-      await db.execute('DETACH DATABASE bk');
+      await _cleanupTemp(work.temp);
     }
   }
 
