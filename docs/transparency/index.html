@@ -64,13 +64,24 @@
 <p>یہ ویب سائٹ ایک معلوماتی سائٹ ہے۔ نیچے واضح ہے کہ پیمائش (analytics) کی کیا حدود ہیں۔</p>
 </div>
 <div class="feat-grid reveal">
-<div class="feat-card"><div class="feat-icon">📈</div><h3>کیا ناپا جا سکتا ہے</h3><p>صرف اس صورت میں جب پیمائش فعال ہو: صفحات کے مجموعی دورے، ڈاؤن لوڈ بٹن پر کلکس، اور دستاویز کے لنکس پر کلکس — صرف مجموعی تعداد، کسی فرد کی شناخت کے بغیر۔</p></div>
+<div class="feat-card"><div class="feat-icon">📈</div><h3>کیا ناپا جا سکتا ہے</h3><p>صرف اس صورت میں جب پیمائش فعال ہو: ہر صفحے کے مجموعی دورے (بشمول اسپانسر/تعاون/خدمات کے صفحات)، آنے کے ذرائع، ڈیوائس کی اقسام اور ممالک — صرف مجموعی تعداد، کسی فرد کی شناخت کے بغیر۔ انفرادی بٹن کلکس مفت درجے میں الگ سے نہیں ناپے جاتے۔</p></div>
 <div class="feat-card"><div class="feat-icon">🚫</div><h3>کیا کبھی جمع نہیں ہوتا</h3><p>ذاتی معلومات، فارم ریکارڈ، لوکیشن، رابطے (contacts)، یا فون کی کوئی تفصیل — یہ سب کبھی جمع نہیں کیے جاتے، چاہے پیمائش فعال ہو یا نہ ہو۔</p></div>
 </div>
 <div class="notice-box reveal">
-<h3>موجودہ حالت — پیمائش بند ہے</h3>
-<p>اس وقت <strong>کوئی analytics فراہم کنندہ مقرر نہیں</strong> کیا گیا۔ گنتی ڈیفالٹ طور پر <strong>بند</strong> ہے، اور <code dir="ltr">KD_CONFIG.analyticsEnabled</code> کی قدر <code dir="ltr">false</code> ہے۔</p>
-<p>تکنیکی تفصیل: سائٹ میں کوئی localStorage، کوئی cookies اور کوئی fingerprinting استعمال نہیں ہوتی۔ <code dir="ltr">KD.track()</code> فنکشن پیمائش فعال ہونے تک کچھ نہیں کرتا۔</p>
+<h3>منتخب فراہم کنندہ — Cloudflare Web Analytics</h3>
+<p>ویب سائٹ کی پیمائش کے لیے <strong>Cloudflare Web Analytics</strong> منتخب کیا گیا ہے — مفت، پرائیویسی دوست، کوئی cookies نہیں، کوئی fingerprinting نہیں۔ یہ ہر صفحے کے مجموعی دورے (page views)، آنے کے ذرائع (referrers)، ڈیوائس کی اقسام، ممالک اور صفحہ لوڈ کی رفتار ناپتا ہے — سب کچھ مجموعی شکل میں، کسی فرد کی شناخت کے بغیر۔</p>
+<p><strong>موجودہ حالت:</strong> سائٹ ٹوکن ابھی درج نہیں ہوا، اس لیے پیمائش <strong>بند</strong> ہے (<code dir="ltr">KD_CONFIG.analyticsEnabled = false</code>)۔ سائٹ میں کوئی localStorage، کوئی cookies اور کوئی fingerprinting استعمال نہیں ہوتی۔</p>
+<p><strong>ایماندارانہ حد:</strong> مفت درجے میں انفرادی بٹن کلکس (مثلاً APK ڈاؤن لوڈ بٹن) الگ سے نہیں گنے جاتے — البتہ ہر صفحے کے دورے الگ الگ نظر آتے ہیں، جن میں <code dir="ltr">/sponsor/</code>، <code dir="ltr">/support/</code> اور <code dir="ltr">/services/</code> بھی شامل ہیں۔ ڈاؤن لوڈ بٹن کا کلک انسٹال کے برابر نہیں سمجھا جاتا۔</p>
+</div>
+<div class="notice-box reveal">
+<h3>پیمائش فعال کرنے کے مراحل (صرف سائٹ مالک کے لیے)</h3>
+<ol>
+<li><span dir="ltr">dash.cloudflare.com</span> پر مفت اکاؤنٹ بنائیں۔</li>
+<li><strong>Web Analytics</strong> میں جا کر <strong>Add a site</strong> دبائیں اور <code dir="ltr">talhagoharweb.github.io</code> درج کریں۔</li>
+<li>دیے گئے JS snippet سے سائٹ ٹوکن کاپی کریں۔</li>
+<li><code dir="ltr">docs/config.js</code> میں <code dir="ltr">cloudflareToken</code> میں ٹوکن لگائیں اور <code dir="ltr">analyticsEnabled</code> کو <code dir="ltr">true</code> کریں، پھر سائٹ push کریں۔</li>
+</ol>
+<p>ٹوکن ایک عوامی سائٹ شناخت کنندہ ہے — اسے <code dir="ltr">config.js</code> میں رکھنا محفوظ ہے۔</p>
 </div>
 </div></section>
 

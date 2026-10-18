@@ -132,7 +132,8 @@
        No-ops unless KD_CONFIG.analyticsEnabled === true.
        Wires [data-track] attributes (download buttons, doc links,
        nav CTAs) as click trackers. No localStorage, no cookies,
-       no fingerprinting.
+       no fingerprinting. Page-view analytics (Cloudflare beacon)
+       is injected separately — see initAnalytics below.
    ============================================================ */
 (function () {
   'use strict';
@@ -160,6 +161,24 @@
       window.KD.track(el.getAttribute('data-track'));
     });
   });
+
+
+  /* Cloudflare Web Analytics beacon. Injected only when the owner has
+     enabled analytics AND pasted a real token into KD_CONFIG.
+     Free tier measures page views (per URL), referrers, device types,
+     countries and Core Web Vitals — aggregated, no cookies, no IP stored.
+     It does not support custom events, so data-track clicks (e.g. APK
+     downloads) are intentionally not sent anywhere on this tier. */
+  (function initAnalytics() {
+    var token = (cfg.cloudflareToken || '').trim();
+    if (cfg.analyticsEnabled !== true || !token) return;
+    if (document.querySelector('script[data-cf-beacon]')) return;
+    var beacon = document.createElement('script');
+    beacon.defer = true;
+    beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    beacon.setAttribute('data-cf-beacon', JSON.stringify({ token: token }));
+    document.head.appendChild(beacon);
+  })();
 
   /* ---------- (a) Contact / inquiry forms ---------- */
   var REQUIRED_MSG = {
