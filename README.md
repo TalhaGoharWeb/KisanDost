@@ -26,15 +26,30 @@
 
 ## 📱 Screenshots
 
-> *Real device screenshots coming soon — slots reserved below.*
-
 | Dashboard | Today's Work | Expenses |
 | :---: | :---: | :---: |
-| <!-- screenshot: dashboard --> | <!-- screenshot: todays-work --> | <!-- screenshot: expenses --> |
+| <img src="docs/screenshots/dashboard.jpg" width="250" alt="Dashboard"> | <img src="docs/screenshots/activities.jpg" width="250" alt="Today's work"> | <img src="docs/screenshots/expenses.jpg" width="250" alt="Expenses"> |
 
 | Profit & Loss | Tasks & Alarms | Inventory |
 | :---: | :---: | :---: |
-| <!-- screenshot: profit-loss --> | <!-- screenshot: tasks --> | <!-- screenshot: inventory --> |
+| <img src="docs/screenshots/profit-loss.jpg" width="250" alt="Profit and loss"> | <img src="docs/screenshots/tasks.jpg" width="250" alt="Tasks and alarms"> | <img src="docs/screenshots/inventory.jpg" width="250" alt="Inventory"> |
+
+<details>
+<summary>More screens</summary>
+
+| Crops | Harvest & Sales | Party Ledger |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/crops.jpg" width="250" alt="My crops"> | <img src="docs/screenshots/harvest.jpg" width="250" alt="Harvest and sales"> | <img src="docs/screenshots/party-ledger.jpg" width="250" alt="Party ledger"> |
+
+| Ushr | Theka | Batai |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/ushr.jpg" width="250" alt="Ushr"> | <img src="docs/screenshots/theka.jpg" width="250" alt="Theka"> | <img src="docs/screenshots/batai.jpg" width="250" alt="Batai"> |
+
+| Farms | Reports | Settings |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/farms.jpg" width="250" alt="My farms"> | <img src="docs/screenshots/reports.jpg" width="250" alt="Reports"> | <img src="docs/screenshots/settings.jpg" width="250" alt="Settings"> |
+
+</details>
 
 ---
 
