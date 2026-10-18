@@ -1156,6 +1156,27 @@ class _UshrScreenState extends State<UshrScreen> {
                         );
                       }
                       }
+                    } catch (e) {
+                      // D2/S7: the provider's business-rule guards throw
+                      // plain Exceptions carrying farmer-friendly Urdu
+                      // messages (overpayment, in-kind harvest adjustment)
+                      // — show the reason and keep the dialog open so the
+                      // farmer can fix the entry instead of losing it.
+                      // Anything else is a real failure: friendly message.
+                      if (ctx.mounted) {
+                        final String text = e.toString();
+                        const String prefix = 'Exception: ';
+                        if (text.startsWith(prefix)) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(
+                              content: Text(text.substring(prefix.length)),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        } else {
+                          showFriendlyError(ctx, e, FailureKind.database);
+                        }
+                      }
                     } finally {
                       if (ctx.mounted) setState(() => isSaving = false);
                     }

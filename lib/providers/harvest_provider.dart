@@ -694,9 +694,63 @@ class HarvestProvider extends ChangeNotifier {
   }
 
   /// Restores a soft-deleted sale (recycle bin only).
+  ///
+  /// S11: [deleteSale] zeroes the parent harvest's rate/buyer/status so the
+  /// sale can be re-recorded. Restoring the sale row alone would leave the
+  /// harvest card (rate 0) disagreeing with the sale — so the harvest's
+  /// rate and buyer are restored from the sale's own pre-delete values
+  /// (gross/total are computed from the rate, so they follow).
+  ///
+  /// If the harvest was re-sold after the delete (another live sale
+  /// exists), the current live sale wins: the harvest keeps its present
+  /// rate and the restored row comes back as history only, never clobbering
+  /// the newer sale's values.
   Future<void> restoreSale(int id) async {
     await _txn((txn) async {
+      final List<Map<String, dynamic>> sMaps = await txn.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (sMaps.isEmpty) return;
+      final sale = sMaps.first;
+      final int harvestId = sale['harvest_id'] as int;
+
       await _restoreRow(txn, 'sales', id, 'فروخت بحال');
+
+      final List<Map<String, dynamic>> liveSales = await txn.query(
+        'sales',
+        columns: ['id'],
+        where: 'harvest_id = ? AND deleted_at IS NULL AND id != ?',
+        whereArgs: [harvestId, id],
+      );
+      if (liveSales.isEmpty) {
+        await txn.update(
+          'harvests',
+          {
+            'rate_per_unit_paisa':
+                (sale['price_per_unit_paisa'] as num).toInt(),
+            'buyer_name': sale['buyer_name'],
+          },
+          where: 'id = ?',
+          whereArgs: [harvestId],
+        );
+        await AuditService.log(
+          txn,
+          table: 'harvests',
+          rowId: harvestId,
+          action: AuditService.update,
+          details: 'فروخت بحالی پر ریٹ بحال',
+        );
+      } else {
+        await AuditService.log(
+          txn,
+          table: 'harvests',
+          rowId: harvestId,
+          action: AuditService.update,
+          details: 'فروخت بحال — موجودہ فروخت کا ریٹ برقرار',
+        );
+      }
     });
     await fetchHarvests();
   }

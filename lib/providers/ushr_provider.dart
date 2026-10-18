@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../services/audit_service.dart';
 import '../services/money.dart';
 import '../services/quantity.dart';
+import '../services/unit_display.dart';
 
 class UshrWithDetails {
   final UshrRecord ushrRecord;
@@ -53,6 +54,163 @@ class UshrProvider extends ChangeNotifier {
   /// No behavior change — the screen calls this now.
   static int computeUshrAmountPaisa(int marketValuePaisa, double percentage) =>
       (marketValuePaisa * percentage / 100.0).round();
+
+  /// D2: a payment must never exceed the ushr due — blocks accidental
+  /// double-payment at the provider boundary. Also rejects negative
+  /// payments. Throws a plain [Exception] with a Urdu message (the theka
+  /// overpayment guard follows the same convention) so the screen can show
+  /// it directly and keep the dialog open.
+  ///
+  /// Pure and static, so it is unit-testable without a database.
+  static void validatePaymentWithinDue({
+    required int ushrAmountPaisa,
+    required int cashPaidPaisa,
+    required double qtyPaid,
+    required int ratePerUnitPaisa,
+  }) {
+    if (cashPaidPaisa < 0 || qtyPaid < 0) {
+      throw Exception('ادائیگی کی رقم منفی نہیں ہو سکتی۔');
+    }
+    final int totalPaidPaisa =
+        cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
+    if (totalPaidPaisa > ushrAmountPaisa) {
+      throw Exception(
+        'ادا شدہ رقم (${Money(totalPaidPaisa).format()}) واجب الادا عشر '
+        '(${Money(ushrAmountPaisa).format()}) سے زیادہ ہے۔ ادائیگی درست کر کے دوبارہ کوشش کریں۔',
+      );
+    }
+  }
+
+  /// Audit-details prefix marking that the S7 in-kind deduction logic has
+  /// managed an ushr record. Legacy records (created before the deduction
+  /// existed) carry no such entry, so deletes and edits can tell them apart
+  /// and never invent grain. The trailing ' —' keeps '#7' from matching
+  /// '#70' in the LIKE query in [_hasInKindMarker].
+  static String _inKindMarker(int ushrId) =>
+      'عشر جنس ایڈجسٹمنٹ — ریکارڈ #$ushrId —';
+
+  /// True when the S7 logic previously applied a harvest adjustment for
+  /// [ushrId] (see [_inKindMarker]). Best-effort on a missing audit_log
+  /// table, mirroring [AuditService.log].
+  Future<bool> _hasInKindMarker(DatabaseExecutor txn, int ushrId) async {
+    try {
+      final rows = await txn.query(
+        'audit_log',
+        columns: ['id'],
+        where: 'table_name = ? AND details LIKE ?',
+        whereArgs: ['harvests', '%${_inKindMarker(ushrId)}%'],
+        limit: 1,
+      );
+      return rows.isNotEmpty;
+    } on DatabaseException catch (e) {
+      if (e.toString().contains('no such table')) return false;
+      rethrow;
+    }
+  }
+
+  /// S7: adjusts the linked harvest's quantity for an in-kind ushr payment.
+  ///
+  /// Exactly one net adjustment is applied per call, inside the caller's
+  /// transaction: the previously deducted share is undone first, then the
+  /// new share is deducted. A no-op update (same values) therefore nets to
+  /// zero — this is what guarantees "never double-reduce".
+  ///
+  /// The deduction is proportional: harvest.quantity × (qtyPaid /
+  /// harvestQty). The ushr record is self-consistent (market value =
+  /// harvestQty × rate, in-kind value = qtyPaid × rate), so the ratio is
+  /// unit-agnostic — it equals a من→unit conversion whenever harvestQty is
+  /// the harvest's quantity in من, and it stays correct for units
+  /// [UnitConverter] cannot bridge (بوری، کسٹم، …) where a conversion
+  /// would have to throw.
+  ///
+  /// [oldQtyPaid]/[oldHarvestQty] describe the previous state (0.0/anything
+  /// when nothing was deducted before — e.g. a new record, or a legacy
+  /// record being managed for the first time); [newQtyPaid]/[newHarvestQty]
+  /// the new state. Throws a Urdu error when the harvest row is missing
+  /// or the deduction would drive its quantity negative.
+  Future<void> _adjustHarvestInKind(
+    DatabaseExecutor txn, {
+    required int ushrId,
+    required int harvestId,
+    required double oldQtyPaid,
+    required double oldHarvestQty,
+    required double newQtyPaid,
+    required double newHarvestQty,
+  }) async {
+    final double oldRatio = oldHarvestQty > 0 ? oldQtyPaid / oldHarvestQty : 0.0;
+    final double newRatio;
+    if (newQtyPaid <= 0) {
+      newRatio = 0.0;
+    } else if (newHarvestQty <= 0) {
+      throw Exception('عشر کی جنس درج کرنے کے لیے فصل کی مقدار ضروری ہے۔');
+    } else {
+      newRatio = newQtyPaid / newHarvestQty;
+    }
+    if (oldRatio == 0.0 && newRatio == 0.0) return;
+
+    final List<Map<String, dynamic>> hMaps = await txn.query(
+      'harvests',
+      where: 'id = ?',
+      whereArgs: [harvestId],
+    );
+    if (hMaps.isEmpty) {
+      throw Exception(
+        'منسلک فصل کا ریکارڈ نہیں ملا — عشر کی جنس ایڈجسٹ نہیں ہو سکی۔',
+      );
+    }
+    final double currentQty = (hMaps.first['quantity'] as num).toDouble();
+    final String unit = (hMaps.first['unit'] as String?) ?? 'من';
+
+    // Undo exactly what was deducted before, then deduct the new share.
+    // The undo is derived from the current quantity, so it is exact as long
+    // as the harvest quantity wasn't hand-edited between the two ushr
+    // operations (hand-edits make it best-effort — documented, not silent:
+    // every adjustment is audit-logged below).
+    final double undone =
+        oldRatio <= 0
+            ? 0.0
+            : oldRatio >= 1
+            ? currentQty // Degenerate (fully deducted before); best effort.
+            : currentQty * oldRatio / (1.0 - oldRatio);
+    final double preQty = currentQty + undone;
+    final double deduct = preQty * newRatio;
+    if (deduct - preQty > 1e-9) {
+      throw Exception(
+        'عشر میں دی گئی جنس فصل کی دستیاب مقدار '
+        '(${UnitDisplay.format(currentQty, unit)}) سے زیادہ ہے۔',
+      );
+    }
+    double updatedQty = preQty - deduct;
+    if (updatedQty < 0 && updatedQty > -1e-9) updatedQty = 0.0; // float dust
+
+    await txn.update(
+      'harvests',
+      {'quantity': updatedQty},
+      where: 'id = ?',
+      whereArgs: [harvestId],
+    );
+
+    final double net = updatedQty - currentQty;
+    if (net < -1e-9) {
+      await AuditService.log(
+        txn,
+        table: 'harvests',
+        rowId: harvestId,
+        action: AuditService.update,
+        details:
+            '${_inKindMarker(ushrId)} فصل سے ${UnitDisplay.format(-net, unit)} منہا',
+      );
+    } else if (net > 1e-9) {
+      await AuditService.log(
+        txn,
+        table: 'harvests',
+        rowId: harvestId,
+        action: AuditService.update,
+        details:
+            '${_inKindMarker(ushrId)} فصل میں ${UnitDisplay.format(net, unit)} واپس',
+      );
+    }
+  }
 
   Future<void> fetchUshrRecords() async {
     // Keep the last good list on DB failure (main.dart calls this
@@ -135,6 +293,13 @@ class UshrProvider extends ChangeNotifier {
     Quantity.requireFinite(harvestQty);
     Quantity.requireFinite(ushrPercentage);
     Quantity.requireFinite(qtyPaid);
+    // D2: block overpayment (and negative payments) before touching the DB.
+    validatePaymentWithinDue(
+      ushrAmountPaisa: ushrAmountPaisa,
+      cashPaidPaisa: cashPaidPaisa,
+      qtyPaid: qtyPaid,
+      ratePerUnitPaisa: ratePerUnitPaisa,
+    );
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 
@@ -156,7 +321,7 @@ class UshrProvider extends ChangeNotifier {
         });
       }
 
-      await txn.insert('ushr_records', {
+      final int ushrId = await txn.insert('ushr_records', {
         'crop_season_id': cropSeasonId,
         'harvest_id': harvestId,
         'harvest_qty': harvestQty,
@@ -173,6 +338,21 @@ class UshrProvider extends ChangeNotifier {
         'cash_paid_paisa': cashPaidPaisa,
         'rate_per_unit_paisa': ratePerUnitPaisa,
       });
+
+      // S7: an in-kind payment reduces the linked harvest's quantity —
+      // exactly once, inside this same transaction (rolls back with the
+      // ushr row when the deduction is impossible).
+      if (harvestId != null && qtyPaid > 0) {
+        await _adjustHarvestInKind(
+          txn,
+          ushrId: ushrId,
+          harvestId: harvestId,
+          oldQtyPaid: 0.0,
+          oldHarvestQty: harvestQty,
+          newQtyPaid: qtyPaid,
+          newHarvestQty: harvestQty,
+        );
+      }
     });
 
     await fetchUshrRecords();
@@ -198,6 +378,13 @@ class UshrProvider extends ChangeNotifier {
     Quantity.requireFinite(harvestQty);
     Quantity.requireFinite(ushrPercentage);
     Quantity.requireFinite(qtyPaid);
+    // D2: block overpayment (and negative payments) before touching the DB.
+    validatePaymentWithinDue(
+      ushrAmountPaisa: ushrAmountPaisa,
+      cashPaidPaisa: cashPaidPaisa,
+      qtyPaid: qtyPaid,
+      ratePerUnitPaisa: ratePerUnitPaisa,
+    );
     final int totalPaidPaisa =
         cashPaidPaisa + (qtyPaid * ratePerUnitPaisa).round();
 
@@ -208,6 +395,17 @@ class UshrProvider extends ChangeNotifier {
         whereArgs: [id],
       );
       if (existing.isEmpty) return;
+
+      // S7: previous in-kind state, for consistent re-adjustment below.
+      final int? oldHarvestId = existing.first['harvest_id'] as int?;
+      final double oldQtyPaid =
+          (existing.first['qty_paid'] as num?)?.toDouble() ?? 0.0;
+      final double oldHarvestQty =
+          (existing.first['harvest_qty'] as num?)?.toDouble() ?? 0.0;
+      // Whether the S7 logic ever deducted for this record. Legacy records
+      // (created before the deduction existed) never deducted, so their
+      // first managed edit deducts the full new share instead of a delta.
+      final bool managedBefore = await _hasInKindMarker(txn, id);
 
       int? expenseId = existing.first['expense_id'] as int?;
 
@@ -282,6 +480,39 @@ class UshrProvider extends ChangeNotifier {
         where: 'id = ?',
         whereArgs: [id],
       );
+
+      // S7: re-adjust the linked harvest(s) consistently, inside this same
+      // transaction. Link moved or removed -> restore the old harvest in
+      // full (only when the S7 logic had deducted from it); then deduct
+      // the new share from the (possibly same) new harvest. A no-op edit
+      // nets to zero — never double-reduces.
+      if (oldHarvestId != null && oldHarvestId != harvestId && oldQtyPaid > 0) {
+        await _adjustHarvestInKind(
+          txn,
+          ushrId: id,
+          harvestId: oldHarvestId,
+          oldQtyPaid: managedBefore ? oldQtyPaid : 0.0,
+          oldHarvestQty: oldHarvestQty,
+          newQtyPaid: 0.0,
+          newHarvestQty: oldHarvestQty,
+        );
+      }
+      if (harvestId != null &&
+          (qtyPaid > 0 ||
+              (managedBefore &&
+                  oldHarvestId == harvestId &&
+                  oldQtyPaid > 0))) {
+        await _adjustHarvestInKind(
+          txn,
+          ushrId: id,
+          harvestId: harvestId,
+          oldQtyPaid:
+              managedBefore && oldHarvestId == harvestId ? oldQtyPaid : 0.0,
+          oldHarvestQty: oldHarvestQty,
+          newQtyPaid: qtyPaid,
+          newHarvestQty: harvestQty,
+        );
+      }
     });
 
     await fetchUshrRecords();
@@ -295,6 +526,41 @@ class UshrProvider extends ChangeNotifier {
         whereArgs: [id],
       );
       if (existing.isNotEmpty) {
+        // S7: give the deducted grain back to the linked harvest — but only
+        // when the S7 logic actually deducted it (audit marker). Restoring
+        // for a legacy record would invent grain that never left the stock.
+        final int? linkedHarvestId = existing.first['harvest_id'] as int?;
+        final double paidQty =
+            (existing.first['qty_paid'] as num?)?.toDouble() ?? 0.0;
+        if (linkedHarvestId != null &&
+            paidQty > 0 &&
+            await _hasInKindMarker(txn, id)) {
+          final double recordHarvestQty =
+              (existing.first['harvest_qty'] as num?)?.toDouble() ?? 0.0;
+          try {
+            await _adjustHarvestInKind(
+              txn,
+              ushrId: id,
+              harvestId: linkedHarvestId,
+              oldQtyPaid: paidQty,
+              oldHarvestQty: recordHarvestQty,
+              newQtyPaid: 0.0,
+              newHarvestQty: recordHarvestQty,
+            );
+          } on Exception {
+            // Best-effort: the ushr record must stay deletable even if the
+            // harvest changed incompatibly after the deduction. The
+            // shortfall is audit-logged, never silent.
+            await AuditService.log(
+              txn,
+              table: 'harvests',
+              rowId: linkedHarvestId,
+              action: AuditService.update,
+              details: '${_inKindMarker(id)} واپسی ناکام — عشر ریکارڈ حذف',
+            );
+          }
+        }
+
         final int? expenseId = existing.first['expense_id'] as int?;
         if (expenseId != null) {
           // ushr_records has no soft-delete column, so the record and its

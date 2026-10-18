@@ -40,6 +40,12 @@ class BataiProvider extends ChangeNotifier {
 
   List<BataiAgreementSummary> get agreements => _agreements;
 
+  bool _isLoading = false;
+
+  /// True while the agreement list is loading, so list screens can tell
+  /// "still loading" apart from "empty". Purely internal — no UI strings.
+  bool get isLoading => _isLoading;
+
   /// Last load failure, if any. Sections show it as a retryable Urdu error.
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
@@ -56,8 +62,14 @@ class BataiProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchAgreements() async {
-    _agreements = await getAgreementSummaries();
+    _isLoading = true;
     notifyListeners();
+    try {
+      _agreements = await getAgreementSummaries();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   /// Agreements with resolved party/crop/farm/field names (LEFT JOINs),
