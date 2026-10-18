@@ -74,18 +74,10 @@ class _UshrScreenState extends State<UshrScreen> {
     final ushrProvider = Provider.of<UshrProvider>(context);
     final cropProvider = Provider.of<CropProvider>(context);
 
-    int totalUshrPaisa = 0;
-    int totalPaidPaisa = 0;
-    int totalPendingPaisa = 0;
-
-    for (final item in ushrProvider.ushrRecords) {
-      final u = item.ushrRecord;
-      totalUshrPaisa += u.ushrAmountPaisa;
-      final paidValuePaisa =
-          u.cashPaidPaisa + (u.qtyPaid * u.ratePerUnitPaisa).round();
-      totalPaidPaisa += paidValuePaisa;
-      totalPendingPaisa += u.remainingBalancePaisa;
-    }
+    // S8 / owner decision #4: due, paid and remaining come from the
+    // provider as three distinct aggregates — never re-derived here.
+    final UshrTotals totals = ushrProvider.totalsOverall;
+    final List<UshrCropTotals> cropTotals = ushrProvider.totalsByCrop;
 
     return Scaffold(
       appBar: AppBar(title: const Text('عشر مینجمنٹ')),
@@ -117,17 +109,16 @@ class _UshrScreenState extends State<UshrScreen> {
                 )
                 : ListView.builder(
                   padding: const EdgeInsets.all(12),
-                  itemCount: ushrProvider.ushrRecords.length + 1,
+                  itemCount: ushrProvider.ushrRecords.length + 2,
                   itemBuilder: (context, index) {
                     if (index == 0) {
-                      return _buildSummaryCards(
-                        totalUshrPaisa,
-                        totalPaidPaisa,
-                        totalPendingPaisa,
-                      );
+                      return _buildSummaryCards(totals);
+                    }
+                    if (index == 1) {
+                      return _buildCropTotalsSection(cropTotals, cropProvider);
                     }
 
-                    final item = ushrProvider.ushrRecords[index - 1];
+                    final item = ushrProvider.ushrRecords[index - 2];
                     final u = item.ushrRecord;
                     final cropNameUrdu =
                         cropProvider.predefinedCrops[item.cropName] ??
@@ -147,9 +138,10 @@ class _UshrScreenState extends State<UshrScreen> {
                       payMethodUrdu = 'مخلوط نقد+جنس (Mixed)';
                     }
 
-                    final paidValuePaisa =
-                        u.cashPaidPaisa +
-                        (u.qtyPaid * u.ratePerUnitPaisa).round();
+                    // S8 / owner decision #4: the record's paid value comes
+                    // from the provider — the same formula the D2 guard
+                    // validates.
+                    final paidValuePaisa = UshrProvider.paidValuePaisaOf(u);
 
                     return Card(
                       elevation: 2,
@@ -348,33 +340,37 @@ class _UshrScreenState extends State<UshrScreen> {
                                       ),
                                     ],
                                   ),
-                                  if (u.remainingBalancePaisa > 0) ...[
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text(
-                                          'باقی واجب الادا عشر:',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: Colors.red,
-                                          ),
+                                  // S8 / owner decision #4: the remaining is
+                                  // one of the three distinct figures — always
+                                  // shown (0 when fully paid), never hidden.
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'باقی واجب الادا عشر:',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: Colors.red,
                                         ),
-                                        DigitText(
-                                          Money(
-                                            u.remainingBalancePaisa,
-                                          ).format(),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: Colors.red,
-                                          ),
+                                      ),
+                                      DigitText(
+                                        Money(
+                                          u.remainingBalancePaisa,
+                                        ).format(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color:
+                                              u.remainingBalancePaisa > 0
+                                                  ? Colors.red
+                                                  : Colors.green.shade800,
                                         ),
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
@@ -445,7 +441,7 @@ class _UshrScreenState extends State<UshrScreen> {
     );
   }
 
-  Widget _buildSummaryCards(int totalPaisa, int paidPaisa, int pendingPaisa) {
+  Widget _buildSummaryCards(UshrTotals totals) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
@@ -453,7 +449,7 @@ class _UshrScreenState extends State<UshrScreen> {
           Expanded(
             child: _buildSummaryCard(
               title: 'کل واجب عشر',
-              value: Money(totalPaisa).format(),
+              value: Money(totals.totalDuePaisa).format(),
               color: Colors.green.shade800,
               bgColor: Colors.green.shade50,
             ),
@@ -462,7 +458,7 @@ class _UshrScreenState extends State<UshrScreen> {
           Expanded(
             child: _buildSummaryCard(
               title: 'کل ادا شدہ عشر',
-              value: Money(paidPaisa).format(),
+              value: Money(totals.totalPaidPaisa).format(),
               color: Colors.green.shade900,
               bgColor: Colors.teal.shade50,
             ),
@@ -471,13 +467,129 @@ class _UshrScreenState extends State<UshrScreen> {
           Expanded(
             child: _buildSummaryCard(
               title: 'کل باقی عشر',
-              value: Money(pendingPaisa).format(),
+              value: Money(totals.totalRemainingPaisa).format(),
               color: Colors.red.shade800,
               bgColor: Colors.red.shade50,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// S8 / owner decision #4: per-crop due/paid/remaining as three distinct
+  /// figures — the same three figures the overall summary shows, broken
+  /// down by crop across all its seasons.
+  Widget _buildCropTotalsSection(
+    List<UshrCropTotals> cropTotals,
+    CropProvider cropProvider,
+  ) {
+    if (cropTotals.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Card(
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'فصل کے حساب سے عشر کا خلاصہ',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (int i = 0; i < cropTotals.length; i++) ...[
+                if (i > 0) const Divider(height: 20),
+                _buildCropTotalsRow(cropTotals[i], cropProvider),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCropTotalsRow(
+    UshrCropTotals cropTotals,
+    CropProvider cropProvider,
+  ) {
+    final cropNameUrdu =
+        cropProvider.predefinedCrops[cropTotals.cropName] ??
+        cropTotals.cropName;
+    final UshrTotals t = cropTotals.totals;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          cropNameUrdu,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _buildCropFigure(
+                label: 'واجب الادا',
+                valuePaisa: t.totalDuePaisa,
+                color: Colors.green.shade800,
+              ),
+            ),
+            Expanded(
+              child: _buildCropFigure(
+                label: 'ادا شدہ',
+                valuePaisa: t.totalPaidPaisa,
+                color: Colors.teal.shade800,
+              ),
+            ),
+            Expanded(
+              child: _buildCropFigure(
+                label: 'باقی',
+                valuePaisa: t.totalRemainingPaisa,
+                color:
+                    t.totalRemainingPaisa > 0
+                        ? Colors.red.shade800
+                        : Colors.green.shade800,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCropFigure({
+    required String label,
+    required int valuePaisa,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.8)),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: DigitText(
+            Money(valuePaisa).format(),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

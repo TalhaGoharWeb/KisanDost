@@ -23,6 +23,63 @@ class UshrWithDetails {
   });
 }
 
+/// S8 / owner decision #4 (2026-10-18): ushr due, paid and remaining are
+/// THREE DISTINCT figures everywhere ushr appears — per crop-season, per
+/// crop and overall. All money in INTEGER paisa; the in-kind paid value is
+/// qtyPaid × ratePerUnitPaisa rounded to the nearest paisa — the same
+/// rounding as the D2 guard and [UshrRecord.remainingBalancePaisa].
+class UshrTotals {
+  /// Sum of ushrAmountPaisa — the obligation (واجب الادا).
+  final int totalDuePaisa;
+
+  /// Sum of paid value: cash + in-kind valued at qty × rate (ادا شدہ).
+  final int totalPaidPaisa;
+
+  /// Sum of remaining balance: due − paid (باقی). Never negative — the D2
+  /// overpayment guard blocks any payment that exceeds the due.
+  final int totalRemainingPaisa;
+
+  const UshrTotals({
+    this.totalDuePaisa = 0,
+    this.totalPaidPaisa = 0,
+    this.totalRemainingPaisa = 0,
+  });
+
+  /// Combines two roll-ups (used by the per-season / per-crop fold).
+  UshrTotals plus(UshrTotals other) => UshrTotals(
+        totalDuePaisa: totalDuePaisa + other.totalDuePaisa,
+        totalPaidPaisa: totalPaidPaisa + other.totalPaidPaisa,
+        totalRemainingPaisa: totalRemainingPaisa + other.totalRemainingPaisa,
+      );
+}
+
+/// Per crop-season due/paid/remaining (ushr records attach to crop
+/// seasons; one season may hold more than one ushr record).
+class UshrSeasonTotals {
+  final int cropSeasonId;
+  final String cropName; // raw crop key, e.g. 'گندم'
+  final UshrTotals totals;
+
+  const UshrSeasonTotals({
+    required this.cropSeasonId,
+    required this.cropName,
+    required this.totals,
+  });
+}
+
+/// Per-crop due/paid/remaining across all seasons of the same crop.
+class UshrCropTotals {
+  final String cropName; // raw crop key, e.g. 'گندم'
+  final int seasonCount;
+  final UshrTotals totals;
+
+  const UshrCropTotals({
+    required this.cropName,
+    required this.seasonCount,
+    required this.totals,
+  });
+}
+
 class UshrProvider extends ChangeNotifier {
   /// Test hook: when set, all DB access goes through this executor instead
   /// of the app singleton, so tests never touch the real database file.
@@ -54,6 +111,98 @@ class UshrProvider extends ChangeNotifier {
   /// No behavior change — the screen calls this now.
   static int computeUshrAmountPaisa(int marketValuePaisa, double percentage) =>
       (marketValuePaisa * percentage / 100.0).round();
+
+  /// S8 / owner decision #4: one record's paid value — cash paid plus the
+  /// in-kind paid value (qtyPaid × rate, rounded to the nearest paisa).
+  /// Pure/static so it is unit-testable, and so the screen never re-derives
+  /// the formula itself.
+  static int paidValuePaisaOf(UshrRecord record) =>
+      record.cashPaidPaisa + (record.qtyPaid * record.ratePerUnitPaisa).round();
+
+  /// S8 / owner decision #4: overall due/paid/remaining across [records].
+  /// Pure/static so it is unit-testable without a database.
+  static UshrTotals totalsOfRecords(Iterable<UshrRecord> records) {
+    int due = 0;
+    int paid = 0;
+    int remaining = 0;
+    for (final r in records) {
+      due += r.ushrAmountPaisa;
+      paid += paidValuePaisaOf(r);
+      remaining += r.remainingBalancePaisa;
+    }
+    return UshrTotals(
+      totalDuePaisa: due,
+      totalPaidPaisa: paid,
+      totalRemainingPaisa: remaining,
+    );
+  }
+
+  /// S8 / owner decision #4: per crop-season due/paid/remaining. Pure/static
+  /// for tests. Order follows [details] (fetchUshrRecords returns newest
+  /// first).
+  static List<UshrSeasonTotals> seasonTotalsOf(
+    List<UshrWithDetails> details,
+  ) {
+    final List<UshrSeasonTotals> out = [];
+    for (final d in details) {
+      final r = d.ushrRecord;
+      final idx = out.indexWhere((s) => s.cropSeasonId == r.cropSeasonId);
+      if (idx < 0) {
+        out.add(
+          UshrSeasonTotals(
+            cropSeasonId: r.cropSeasonId,
+            cropName: d.cropName,
+            totals: totalsOfRecords([r]),
+          ),
+        );
+      } else {
+        final prev = out[idx];
+        out[idx] = UshrSeasonTotals(
+          cropSeasonId: prev.cropSeasonId,
+          cropName: prev.cropName,
+          totals: prev.totals.plus(totalsOfRecords([r])),
+        );
+      }
+    }
+    return out;
+  }
+
+  /// S8 / owner decision #4: per-crop due/paid/remaining across all seasons
+  /// of the same crop. Pure/static for tests.
+  static List<UshrCropTotals> cropTotalsOf(List<UshrWithDetails> details) {
+    final List<UshrCropTotals> out = [];
+    for (final s in seasonTotalsOf(details)) {
+      final idx = out.indexWhere((c) => c.cropName == s.cropName);
+      if (idx < 0) {
+        out.add(
+          UshrCropTotals(
+            cropName: s.cropName,
+            seasonCount: 1,
+            totals: s.totals,
+          ),
+        );
+      } else {
+        final prev = out[idx];
+        out[idx] = UshrCropTotals(
+          cropName: prev.cropName,
+          seasonCount: prev.seasonCount + 1,
+          totals: prev.totals.plus(s.totals),
+        );
+      }
+    }
+    return out;
+  }
+
+  /// S8 / owner decision #4: overall due/paid/remaining across the loaded
+  /// records — three distinct figures, never re-derived by the screen.
+  UshrTotals get totalsOverall =>
+      totalsOfRecords(_ushrRecords.map((d) => d.ushrRecord));
+
+  /// Per crop-season due/paid/remaining across the loaded records.
+  List<UshrSeasonTotals> get totalsBySeason => seasonTotalsOf(_ushrRecords);
+
+  /// Per-crop due/paid/remaining across the loaded records.
+  List<UshrCropTotals> get totalsByCrop => cropTotalsOf(_ushrRecords);
 
   /// D2: a payment must never exceed the ushr due — blocks accidental
   /// double-payment at the provider boundary. Also rejects negative
