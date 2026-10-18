@@ -174,7 +174,7 @@
     if (cfg.analyticsEnabled !== true || !token) return;
     if (document.querySelector('script[data-cf-beacon]')) return;
     var beacon = document.createElement('script');
-    beacon.type = 'module'; /* modules defer by default — matches Cloudflare's snippet */
+    beacon.defer = true;
     beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
     beacon.setAttribute('data-cf-beacon', JSON.stringify({ token: token }));
     document.head.appendChild(beacon);

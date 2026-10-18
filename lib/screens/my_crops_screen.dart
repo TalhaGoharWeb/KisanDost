@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/crop_provider.dart';
-import '../providers/expense_provider.dart';
 import '../providers/farm_provider.dart';
 import '../providers/activity_provider.dart';
 import '../providers/harvest_provider.dart';
-import '../providers/ushr_provider.dart';
 import '../services/money.dart';
-import '../services/pnl_summary.dart';
 import '../widgets/empty_state_widget.dart';
 import '../l10n/strings.dart';
 import '../widgets/field_validators.dart';
@@ -102,8 +99,6 @@ class _MyCropsScreenState extends State<MyCropsScreen>
     final farmProvider = Provider.of<FarmProvider>(context, listen: false);
     final activityProvider = Provider.of<ActivityProvider>(context);
     final harvestProvider = Provider.of<HarvestProvider>(context);
-    final expenseProvider = Provider.of<ExpenseProvider>(context);
-    final ushrProvider = Provider.of<UshrProvider>(context);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -162,20 +157,13 @@ class _MyCropsScreenState extends State<MyCropsScreen>
                         cropActivities.map((e) => e.activity).toList(),
                       );
 
-                  // S1: single source of truth — the card uses the same
-                  // per-season P&L as profit_loss_screen.dart (activity +
-                  // direct expenses + harvest-bucket expenses + ushr due),
-                  // so the two «منافع» figures can never disagree.
-                  final seasonPnl = computeFarmPnl(
-                    harvests: harvestProvider.harvests,
-                    totalExpensesPaisa: expenseProvider.totalExpensesPaisa,
-                    seasons: [details],
-                    activities: activityProvider.activities,
-                    expenses: expenseProvider.expenses,
-                    ushrRecords: ushrProvider.ushrRecords,
-                  ).crops.single;
-                  final totalExpensePaisa = seasonPnl.expensesPaisa;
-                  final totalIncomePaisa = seasonPnl.incomePaisa;
+                  final totalExpensePaisa = cropActivities.fold<int>(
+                    0,
+                    (sum, act) => sum + (act.expenseAmountPaisa ?? 0),
+                  );
+                  final totalIncomePaisa = cropHarvests
+                      .where((h) => h.sale != null)
+                      .fold<int>(0, (sum, h) => sum + h.sale!.totalAmountPaisa);
                   final totalYield = cropHarvests.fold<double>(
                     0.0,
                     (sum, h) => sum + h.harvest.quantity,

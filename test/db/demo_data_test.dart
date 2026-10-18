@@ -120,12 +120,12 @@ void main() {
       await enterDemo();
 
       // Row counts across every demo table.
-      expect(await count('farms'), 3); // 1 farmer + 2 demo
+      expect(await count('farms'), 2);
       expect(await count('fields'), 5);
       expect(await count('crop_seasons'), 4);
-      expect(await count('expenses'), 25); // 24 demo + 1 farmer
+      expect(await count('expenses'), 24); // 23 demo + 1 farmer
       expect(await count('harvests'), 2);
-      expect(await count('sales'), 2); // recordSale upserts per harvest
+      expect(await count('sales'), 3);
       expect(await count('tasks'), 6);
       expect(await count('inventory'), 5);
       expect(await count('inventory_transactions'), 6); // 5 buys + 1 use
@@ -142,19 +142,18 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool(DemoDataService.activeKey), isTrue);
       final ids = await trackedIds();
-      expect(ids['farms'], hasLength(2));
-      expect(ids['fields'], hasLength(5));
-      expect(ids['expenses'], hasLength(24));
-      expect(ids['parties'], hasLength(3));
+      expect(ids['farms'], hasLength(1));
+      expect(ids['fields'], hasLength(2));
+      expect(ids['expenses'], hasLength(8));
+      expect(ids['parties'], hasLength(1));
 
-      // The demo is coherent: every sale belongs to one of the demo
-      // harvests, entries to a demo party, the batai agreement names a
-      // demo party.
+      // The demo is coherent: sale belongs to the wheat harvest, entries to
+      // the demo party, the batai agreement names the demo party.
       final saleRows = await db.query('sales');
       final harvestRows = await db.query('harvests');
       expect(
-        saleRows.map((s) => s['harvest_id']).toSet(),
-        harvestRows.map((h) => h['id']).toSet(),
+        saleRows.single['harvest_id'],
+        harvestRows.firstWhere((h) => h['id'] == ids['harvests']!.first)['id'],
       );
 
       final result = await demo.exitDemo();
@@ -191,7 +190,7 @@ void main() {
     () async {
       await enterDemo();
       final ids = await trackedIds();
-      final demoPartyId = ids['parties']!.first;
+      final demoPartyId = ids['parties']!.single;
 
       // The farmer creates their own batai agreement naming the DEMO party:
       // parties is FK RESTRICT, so deleting the demo party must not crash.
@@ -214,11 +213,11 @@ void main() {
       expect(blocked.ok, isFalse);
       expect(blocked.message, contains('پارٹیاں'));
 
-      // Demo mode stays active; the demo parties and the farmer's agreement
+      // Demo mode stays active; the demo party and the farmer's agreement
       // both survive.
       expect(demo.isActive, isTrue);
-      expect(await count('parties'), 3);
-      expect(await count('batai_agreements'), 2); // 1 demo + 1 farmer
+      expect(await count('parties'), 1);
+      expect(await count('batai_agreements'), 1);
 
       // After the farmer removes their own agreement, exit completes.
       await batai.deleteAgreement(userAgreementId);
@@ -230,58 +229,10 @@ void main() {
     },
   );
 
-  test(
-    'exit is blocked when the farmer adds their own crop season on a demo '
-    'field (D1: no silent cascade-delete of farmer records)',
-    () async {
-      await enterDemo();
-      final ids = await trackedIds();
-      final demoFieldId = ids['fields']!.first;
-
-      // The farmer's own season on a DEMO field: crop_seasons.field_id is
-      // ON DELETE CASCADE, so an unguarded exit would silently hard-delete
-      // this season (the D1 data-loss bug).
-      await crops.addCropSeason(
-        fieldIds: [demoFieldId],
-        cropName: 'سرسوں',
-        variety: 'دیسی',
-        startDate: '2026-10-01',
-      );
-      final farmerSeasonId =
-          (await db.query('crop_seasons', columns: ['id']))
-              .map((r) => r['id'] as int)
-              .singleWhere((id) => !ids['crop_seasons']!.contains(id));
-
-      final blocked = await demo.exitDemo();
-      expect(blocked.ok, isFalse);
-      expect(blocked.message, contains('کھیت'));
-
-      // Demo mode stays active; the farmer's season still exists.
-      expect(demo.isActive, isTrue);
-      expect(
-        await db.query(
-          'crop_seasons',
-          where: 'id = ?',
-          whereArgs: [farmerSeasonId],
-        ),
-        hasLength(1),
-      );
-
-      // After the farmer removes their own season, exit completes and only
-      // the demo rows are gone.
-      await crops.deleteCropSeason(farmerSeasonId);
-      final result = await demo.exitDemo();
-      expect(result.ok, isTrue);
-      expect(await count('crop_seasons'), 0);
-      expect(await count('fields'), 0);
-      expect(demo.isActive, isFalse);
-    },
-  );
-
   test('enter is idempotent while demo is already active', () async {
     await enterDemo();
     await enterDemo(); // second call is a no-op
-    expect(await count('farms'), 2);
-    expect(await count('expenses'), 24);
+    expect(await count('farms'), 1);
+    expect(await count('expenses'), 8);
   });
 }

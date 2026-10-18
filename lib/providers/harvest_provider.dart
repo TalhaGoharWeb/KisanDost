@@ -313,21 +313,6 @@ class HarvestProvider extends ChangeNotifier {
 
       int? expenseId = existing.first['expense_id'] as int?;
 
-      // S6: the linked expense row may have been soft-deleted from the
-      // Expenses screen. Writing the new total onto the invisible deleted
-      // row would leave the harvest card and the ledger permanently
-      // disagreeing — treat it as gone, insert a fresh live row below and
-      // repoint harvests.expense_id at it.
-      if (expenseId != null) {
-        final linked = await txn.query(
-          'expenses',
-          columns: ['id'],
-          where: 'id = ? AND deleted_at IS NULL',
-          whereArgs: [expenseId],
-        );
-        if (linked.isEmpty) expenseId = null;
-      }
-
       if (totalExpensePaisa > 0) {
         if (expenseId == null) {
           expenseId = await txn.insert('expenses', {

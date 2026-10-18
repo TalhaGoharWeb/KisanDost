@@ -8,7 +8,7 @@ window.KD_CONFIG = {
   contactEmail: "muhaqqiqcreates@gmail.com",  // verified by owner 2026-10-18
   contactPhone: "",        // PLACEHOLDER
   contactWhatsApp: "",     // PLACEHOLDER
-  analyticsEnabled: true,  // enabled 2026-10-18 — owner pasted token
-  cloudflareToken: "043b674c6fb2445fa52be7431f88af1c",  // owner-verified 2026-10-18
+  analyticsEnabled: false, // stays false until cloudflareToken is set
+  cloudflareToken: "",      // PLACEHOLDER — Cloudflare Web Analytics site token
   paymentMethods: []       // PLACEHOLDER — e.g. [{type:"jazzcash", label:"...", account:"..."}]
 };

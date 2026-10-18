@@ -12,8 +12,6 @@ import '../models/models.dart';
 import '../services/money.dart';
 import '../widgets/empty_state_widget.dart';
 import '../l10n/strings.dart';
-import '../services/unit_converter.dart';
-import '../utils/error_messages.dart';
 import '../widgets/field_validators.dart';
 
 class ExpensesScreen extends StatefulWidget {
@@ -728,30 +726,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         );
                       }
                     }
-                    } catch (e) {
-                      // SEC1: the three writes run in sequence — if
-                      // recordUsage or addActivity throws AFTER the expense
-                      // row is already committed, the raw exception must
-                      // never reach the farmer, and the dialog must show an
-                      // honest message: re-tapping Save blindly would
-                      // duplicate the expense, so the farmer must check the
-                      // list first to see what actually got saved.
-                      if (ctx.mounted) {
-                        final detail =
-                            e is InventoryException
-                                ? e.message
-                                : friendlyErrorMessage(e);
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '$detail دوبارہ محفوظ کرنے سے پہلے خرچے کی '
-                              'فہرست دیکھ لیں۔',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
                     } finally {
                       // The dialog is popped on success — only reset the
                       // guard while it is still in the tree.
