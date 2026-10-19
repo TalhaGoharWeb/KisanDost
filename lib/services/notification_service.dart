@@ -338,7 +338,10 @@ class NotificationService {
             .whereType<int>()
             .toList();
     if (offsets.isEmpty) {
-      offsets.add(0); // Default to at the event time
+      // No reminders set by the user — do NOT schedule any alarm.
+      // (Bug fix 2026-10-19: previously defaulted to offset 0, causing
+      // alarms for tasks where the user set no reminder.)
+      return;
     }
 
     // 3. For each offset, schedule a notification

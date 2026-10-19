@@ -58,7 +58,11 @@ object AlarmScheduler {
             .toMutableList()
 
         if (offsets.isEmpty()) {
-            offsets.add(0)
+            // No reminders set by the user — do NOT schedule any alarm.
+            // (Bug fix 2026-10-19: previously defaulted to offset 0, causing
+            // alarms for tasks where the user set no reminder.)
+            Log.d(TAG, "Task ${task.id} has no reminders. Skipping schedule.")
+            return
         }
 
         val baseTimeMs = parseIsoDateTime(task.date_time)
