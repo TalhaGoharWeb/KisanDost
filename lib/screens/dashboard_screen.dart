@@ -15,6 +15,7 @@ import '../providers/farm_provider.dart';
 import '../providers/party_provider.dart';
 import 'about_us_screen.dart';
 import 'settings_screen.dart';
+import 'sponsors_screen.dart';
 import 'my_farms_screen.dart';
 import 'my_crops_screen.dart';
 import 'todays_work_screen.dart';
@@ -107,6 +108,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
+              } else if (value == 'sponsors') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SponsorsScreen()),
+                );
               } else if (value == 'share') {
                 _shareApk();
               }
@@ -121,6 +127,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       SizedBox(width: 12),
                       Text(
                         'ایپ کے بارے میں',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'sponsors',
+                  child: Row(
+                    children: [
+                      Icon(Icons.handshake_outlined, color: Colors.black87),
+                      SizedBox(width: 12),
+                      Text(
+                        'ہمارے اسپانسرز',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

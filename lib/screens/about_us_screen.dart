@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'sponsors_screen.dart';
+
 class AboutUsScreen extends StatelessWidget {
   const AboutUsScreen({super.key});
 
@@ -185,6 +187,39 @@ class AboutUsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Sponsors link
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ListTile(
+                leading: const Icon(
+                  Icons.handshake,
+                  color: Colors.green,
+                  size: 32,
+                ),
+                title: const Text(
+                  'ہمارے اسپانسرز',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'ان شخصیات اور اداروں کا شکریہ جن کے تعاون سے یہ ایپ مفت رہتی ہے',
+                  style: TextStyle(fontSize: 14),
+                ),
+                trailing: const Icon(Icons.arrow_back_ios, size: 18),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SponsorsScreen(),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 24),

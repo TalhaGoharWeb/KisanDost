@@ -42,6 +42,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/sponsors/
 
   fonts:
     - family: Jameel Noori Nastaleeq
