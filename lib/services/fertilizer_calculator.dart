@@ -31,6 +31,15 @@ class Nutrients {
     k2o: k2o - other.k2o,
   );
 
+  /// Proportional scaling — the "balanced reduction" used when a
+  /// farmer's budget cannot cover the full dose: every nutrient is
+  /// reduced by the same fraction, never one at the expense of others.
+  Nutrients operator *(double factor) => Nutrients(
+    n: n * factor,
+    p2o5: p2o5 * factor,
+    k2o: k2o * factor,
+  );
+
   /// True when every nutrient is at or below [epsilon] kg.
   bool isNegligible([double epsilon = 0.05]) =>
       n.abs() <= epsilon && p2o5.abs() <= epsilon && k2o.abs() <= epsilon;
@@ -286,6 +295,88 @@ class FertilizerCalculator {
     return [...ranked, ...combinations.where((c) => !priced(c))];
   }
 
+  /// Fits combinations to a farmer's cash budget (the SFRI app's
+  /// "best dose within the cash in hand" idea):
+  /// * combinations whose FULL plan costs no more than the budget
+  ///   come first, cheapest first;
+  /// * for the rest, the largest proportionally-scaled plan that
+  ///   fits is computed (binary search over the scale; bag rounding
+  ///   makes cost a step function, and the search respects it);
+  /// * combinations with any unpriced product are excluded — their
+  ///   cost cannot be judged honestly;
+  /// * scaled options below 5% of the full dose are dropped as
+  ///   meaningless. Full-dose options always outrank scaled ones.
+  static List<BudgetPlanOption> fitCombinationsToBudget({
+    required Nutrients targetPerAcre,
+    required double areaAcres,
+    required List<FertilizerCombination> combinations,
+    required Map<String, int> pricePerBagPaisaById,
+    required int budgetPaisa,
+  }) {
+    bool fullyPriced(FertilizerCombination c) => c.result.products.every(
+      (a) => pricePerBagPaisaById.containsKey(a.product.id),
+    );
+    final full = <BudgetPlanOption>[];
+    final scaled = <BudgetPlanOption>[];
+    for (final combo in combinations) {
+      if (!fullyPriced(combo)) continue;
+      final fullCost = combo.result.totalCostPaisa(pricePerBagPaisaById);
+      if (fullCost <= budgetPaisa) {
+        full.add(
+          BudgetPlanOption(combination: combo, scale: 1.0, costPaisa: fullCost),
+        );
+        continue;
+      }
+      // Binary search the largest scale whose rounded-bag cost fits.
+      var lo = 0.0;
+      var hi = 1.0;
+      for (var i = 0; i < 24; i++) {
+        final mid = (lo + hi) / 2;
+        final plan = FertilizerCalculator.buildPlan(
+          targetPerAcre: targetPerAcre * mid,
+          areaAcres: areaAcres,
+          phosphorusSource: combo.phosphorusSource,
+          nitrogenSource: combo.nitrogenSource,
+          potashSource: combo.potashSource,
+        );
+        if (plan.products.isNotEmpty &&
+            plan.totalCostPaisa(pricePerBagPaisaById) <= budgetPaisa) {
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      }
+      if (lo < 0.05) continue;
+      final plan = FertilizerCalculator.buildPlan(
+        targetPerAcre: targetPerAcre * lo,
+        areaAcres: areaAcres,
+        phosphorusSource: combo.phosphorusSource,
+        nitrogenSource: combo.nitrogenSource,
+        potashSource: combo.potashSource,
+      );
+      final cost = plan.totalCostPaisa(pricePerBagPaisaById);
+      if (plan.products.isEmpty || cost > budgetPaisa) continue;
+      scaled.add(
+        BudgetPlanOption(
+          combination: FertilizerCombination(
+            phosphorusSource: combo.phosphorusSource,
+            nitrogenSource: combo.nitrogenSource,
+            potashSource: combo.potashSource,
+            result: plan,
+          ),
+          scale: lo,
+          costPaisa: cost,
+        ),
+      );
+    }
+    full.sort((a, b) => a.costPaisa.compareTo(b.costPaisa));
+    scaled.sort((a, b) {
+      final byScale = b.scale.compareTo(a.scale);
+      return byScale != 0 ? byScale : a.costPaisa.compareTo(b.costPaisa);
+    });
+    return [...full, ...scaled];
+  }
+
   /// Compares the standard combinations for the same target so the
   /// farmer can choose by cost and suitability — cheapest is NOT
   /// auto-picked; the UI presents all three with their assumptions.
@@ -307,6 +398,27 @@ class FertilizerCalculator {
         ),
     ];
   }
+}
+
+/// One budget-fitted option: a combination whose plan either meets
+/// the full target within budget ([scale] = 1.0) or is the largest
+/// balanced (proportionally reduced) plan that fits the budget.
+class BudgetPlanOption {
+  final FertilizerCombination combination;
+
+  /// 1.0 = full recommended dose; below 1.0 = proportionally reduced.
+  final double scale;
+
+  /// Total cost in paisa at the farmer's saved prices.
+  final int costPaisa;
+
+  const BudgetPlanOption({
+    required this.combination,
+    required this.scale,
+    required this.costPaisa,
+  });
+
+  FertilizerPlanResult get result => combination.result;
 }
 
 /// One named combination (phosphorus × nitrogen × potash) with its

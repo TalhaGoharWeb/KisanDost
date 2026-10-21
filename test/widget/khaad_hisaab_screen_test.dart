@@ -138,4 +138,54 @@ void main() {
 
     await tester.runAsync(() => db.close());
   });
+
+  testWidgets('budget section fits combinations to the farmer cash', (
+    tester,
+  ) async {
+    // Seed saved prices for every product (paisa per bag).
+    SharedPreferences.setMockInitialValues({
+      'khaad_price_paisa_dap': 1660000,
+      'khaad_price_paisa_np': 1050000,
+      'khaad_price_paisa_ssp': 460000,
+      'khaad_price_paisa_map': 1350000,
+      'khaad_price_paisa_tsp': 900000,
+      'khaad_price_paisa_npk': 1140000,
+      'khaad_price_paisa_urea': 470000,
+      'khaad_price_paisa_can': 400000,
+      'khaad_price_paisa_amsul': 460000,
+      'khaad_price_paisa_sop': 1460000,
+      'khaad_price_paisa_mop': 900000,
+    });
+    late Database db;
+    await tester.runAsync(() async {
+      final (d, plans, inventory) = await setupProviders();
+      db = d;
+      await tester.pumpWidget(app(plans, inventory));
+    });
+    await tester.pump();
+    // Let the saved prices load.
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    final budgetField = find.widgetWithText(
+      TextField,
+      'بجٹ (روپے — کل رقبے کے لیے)',
+    );
+    for (var i = 0; i < 12 && budgetField.evaluate().isEmpty; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
+    }
+    expect(budgetField, findsOneWidget);
+    await tester.ensureVisible(budgetField);
+    await tester.pump();
+    await tester.enterText(budgetField, '40000');
+    await tester.tap(find.text('بجٹ میں دکھائیں'));
+    await tester.pump();
+
+    expect(find.textContaining('بجٹ کے اندر بہترین امتزاج'), findsOneWidget);
+    expect(find.textContaining('مکمل مقدار — بجٹ کے اندر'), findsWidgets);
+
+    await tester.runAsync(() => db.close());
+  });
 }

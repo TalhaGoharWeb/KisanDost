@@ -56,6 +56,10 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
   List<FertilizerCombination>? _combinations;
   String? _error;
 
+  final _budgetController = TextEditingController();
+  List<BudgetPlanOption>? _budgetOptions;
+  String? _budgetNote;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +88,7 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
     _nController.dispose();
     _pController.dispose();
     _kController.dispose();
+    _budgetController.dispose();
     _omController.dispose();
     _soilPController.dispose();
     _soilKController.dispose();
@@ -295,6 +300,8 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
           _buildProductSection(),
           const SizedBox(height: 16),
           _buildPriceSection(),
+          const SizedBox(height: 16),
+          _buildBudgetSection(),
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: _calculate,
@@ -630,6 +637,228 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
               'حساب نہیں ہو گا۔',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _calculateBudget() {
+    final target = _target();
+    if (target == null || (target.n <= 0 && target.p2o5 <= 0 && target.k2o <= 0)) {
+      setState(() => _budgetNote = 'پہلے فصل اور غذائی مقدار درست منتخب کریں۔');
+      return;
+    }
+    double areaAcres;
+    int budgetPaisa;
+    try {
+      areaAcres = AreaConverter.toAcres(
+        Quantity.parsePositive(_areaController.text),
+        _areaUnit,
+      );
+      budgetPaisa = (Quantity.parsePositive(_budgetController.text) * 100).round();
+    } catch (_) {
+      setState(() => _budgetNote = 'رقبہ اور بجٹ درست لکھیں۔');
+      return;
+    }
+    if (_savedPrices.isEmpty) {
+      setState(
+        () => _budgetNote =
+            'بجٹ حساب کے لیے پہلے کھاد کی قیمتیں درج کریں (اوپر قیمتوں والا حصہ)۔',
+      );
+      return;
+    }
+    final grid = FertilizerCalculator.allCombinations(
+      targetPerAcre: target,
+      areaAcres: areaAcres,
+      phosphorusSources: [
+        for (final id in kPhosphorusSourceIds) productById(id),
+      ],
+      nitrogenSources: [for (final id in kNitrogenSourceIds) productById(id)],
+      potashOptions: target.k2o > 0
+          ? [for (final id in kPotashSourceIds) productById(id)]
+          : [null],
+    );
+    final options = FertilizerCalculator.fitCombinationsToBudget(
+      targetPerAcre: target,
+      areaAcres: areaAcres,
+      combinations: grid,
+      pricePerBagPaisaById: _savedPrices,
+      budgetPaisa: budgetPaisa,
+    );
+    setState(() {
+      _budgetOptions = options;
+      if (options.isEmpty) {
+        // Cheapest fully-priced full plan, for an honest explanation.
+        var cheapest = -1;
+        for (final c in grid) {
+          final priced = c.result.products.every(
+            (a) => _savedPrices.containsKey(a.product.id),
+          );
+          if (!priced) continue;
+          final cost = c.result.totalCostPaisa(_savedPrices);
+          if (cheapest < 0 || cost < cheapest) cheapest = cost;
+        }
+        _budgetNote = cheapest > 0
+            ? 'اس بجٹ میں کوئی مناسب امتزاج نہیں آتا۔ سب سے سستے مکمل '
+                  'منصوبے کی لاگت ${Money(cheapest).format()} ہے — بجٹ '
+                  'بڑھائیں یا کم مقدار کا منصوبہ خود منتخب کریں۔'
+            : 'اس بجٹ میں کوئی امتزاج نہیں آتا۔';
+      } else {
+        _budgetNote = null;
+      }
+    });
+  }
+
+  void _applyBudgetOption(BudgetPlanOption option) {
+    setState(() {
+      _phosphorusId = option.combination.phosphorusSource.id;
+      _nitrogenId = option.combination.nitrogenSource.id;
+      _potashId = option.combination.potashSource?.id ?? 'none';
+      _result = option.result;
+      _error = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('بجٹ والا منصوبہ اوپر منتخب ہو گیا — چاہیں تو محفوظ کر لیں')),
+    );
+  }
+
+  Widget _buildBudgetSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '5۔ بجٹ کے مطابق منصوبہ (اختیاری)',
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'آپ کل کتنے پیسے خرچ کر سکتے ہیں؟ ہم اس بجٹ کے اندر '
+              'بہترین متوازن کھاد کا حساب لگائیں گے — پہلے وہ امتزاج '
+              'جن کی مکمل مقدار بجٹ میں آتی ہے، پھر سب سے بڑا متوازن '
+              'کم منصوبہ۔',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _budgetController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'بجٹ (روپے — کل رقبے کے لیے)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _calculateBudget,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  child: const Text('بجٹ میں دکھائیں'),
+                ),
+              ],
+            ),
+            if (_budgetNote != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                _budgetNote!,
+                style: const TextStyle(fontSize: 14, color: Colors.orange),
+              ),
+            ],
+            if (_budgetOptions != null && _budgetOptions!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'بجٹ کے اندر بہترین امتزاج (${_budgetOptions!.length}):',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              for (final option in _budgetOptions!) ...[
+                const SizedBox(height: 6),
+                InkWell(
+                  onTap: () => _applyBudgetOption(option),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          option.combination.labelUr,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          option.scale >= 0.999
+                              ? 'مکمل مقدار — بجٹ کے اندر'
+                              : 'متوازن کم مقدار — ضرورت کا '
+                                    '${(option.scale * 100).round()} فیصد',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: option.scale >= 0.999
+                                ? Colors.green.shade800
+                                : Colors.orange.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          option.result.products
+                              .map(
+                                (a) =>
+                                    '${a.product.nameUr}: '
+                                    '${_fmt(a.totalKg(option.result.areaAcres))} کلو '
+                                    '= ${_fmt(a.bagsFor(option.result.areaAcres))} بوری',
+                              )
+                              .join('\n'),
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        if (option.scale < 0.999)
+                          Text(
+                            'ملنے والی غذائی مقدار فی ایکڑ: نائٹروجن '
+                            '${_fmt(option.result.suppliedPerAcre.n)}، فاسفورس '
+                            '${_fmt(option.result.suppliedPerAcre.p2o5)}، پوٹاش '
+                            '${_fmt(option.result.suppliedPerAcre.k2o)} کلو',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        Text(
+                          'لاگت: ${Money(option.costPaisa).format()}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'منتخب کرنے کے لیے ہاتھ رکھیں۔',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),

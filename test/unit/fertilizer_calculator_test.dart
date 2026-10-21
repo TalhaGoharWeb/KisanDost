@@ -442,4 +442,74 @@ void main() {
       expect(kCropsWithoutVerifiedDose, isEmpty);
     });
   });
+  group('Budget fitting (SFRI cash-in-hand model)', () {
+    final target = const Nutrients(n: 57, p2o5: 46, k2o: 25);
+    final prices = <String, int>{
+      'dap': 1660000, 'np': 1050000, 'ssp': 460000, 'map': 1350000,
+      'tsp': 900000, 'npk': 1140000, 'urea': 470000, 'can': 400000,
+      'amsul': 460000, 'sop': 1460000, 'mop': 900000,
+    };
+    List<FertilizerCombination> grid() =>
+        FertilizerCalculator.allCombinations(
+          targetPerAcre: target,
+          areaAcres: 1,
+          phosphorusSources: [
+            for (final id in kPhosphorusSourceIds) productById(id),
+          ],
+          nitrogenSources: [
+            for (final id in kNitrogenSourceIds) productById(id),
+          ],
+          potashOptions: [for (final id in kPotashSourceIds) productById(id)],
+        );
+    List<BudgetPlanOption> fit(int budgetPaisa) =>
+        FertilizerCalculator.fitCombinationsToBudget(
+          targetPerAcre: target,
+          areaAcres: 1,
+          combinations: grid(),
+          pricePerBagPaisaById: prices,
+          budgetPaisa: budgetPaisa,
+        );
+
+    test('generous budget: all options full-dose, cheapest first', () {
+      final options = fit(100000 * 100);
+      expect(options.length, 36);
+      expect(options.every((o) => o.scale == 1.0), isTrue);
+      for (var i = 1; i < options.length; i++) {
+        expect(options[i].costPaisa, greaterThanOrEqualTo(options[i - 1].costPaisa));
+      }
+    });
+
+    test('tight budget: best option is scaled, within budget, balanced', () {
+      final cheapestFull = fit(100000 * 100).first.costPaisa;
+      final budget = (cheapestFull * 0.6).round();
+      final options = fit(budget);
+      expect(options, isNotEmpty);
+      final best = options.first;
+      expect(best.scale, lessThan(1.0));
+      expect(best.scale, greaterThan(0.4));
+      expect(best.costPaisa, lessThanOrEqualTo(budget));
+      // Balanced: nitrogen and phosphorus are delivered at the same
+      // fraction of the full target (bag rounding aside).
+      final s = best.result.suppliedPerAcre;
+      expect(s.n / 57, closeTo(s.p2o5 / 46, 0.03));
+      expect(s.n / 57, closeTo(best.scale, 0.03));
+    });
+
+    test('unpriced products exclude their combinations', () {
+      final partial = Map<String, int>.from(prices)..remove('npk');
+      final options = FertilizerCalculator.fitCombinationsToBudget(
+        targetPerAcre: target,
+        areaAcres: 1,
+        combinations: grid(),
+        pricePerBagPaisaById: partial,
+        budgetPaisa: 100000 * 100,
+      );
+      expect(options.any((o) => o.combination.phosphorusSource.id == 'npk'), isFalse);
+      expect(options.length, 30);
+    });
+
+    test('hopeless budget: no options', () {
+      expect(fit(100 * 100), isEmpty);
+    });
+  });
 }
