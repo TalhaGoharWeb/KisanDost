@@ -17,6 +17,7 @@ import 'providers/theka_provider.dart';
 import 'providers/ushr_provider.dart';
 import 'providers/party_provider.dart';
 import 'providers/batai_provider.dart';
+import 'providers/fertilizer_plan_provider.dart';
 import 'services/notification_service.dart';
 import 'services/backup_service.dart';
 import 'services/demo_data_service.dart';
@@ -70,6 +71,9 @@ class KisanDostApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PartyProvider()..fetchParties()),
         ChangeNotifierProvider(
           create: (_) => BataiProvider()..fetchAgreements(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => FertilizerPlanProvider()..fetchPlans(),
         ),
         // Demo mode state (banner + settings tile watch this).
         ChangeNotifierProvider(create: (_) => DemoDataService()..load()),

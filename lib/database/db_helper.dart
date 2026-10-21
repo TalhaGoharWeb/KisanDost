@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static const _databaseName = "kisan_dost.db";
-  static const _databaseVersion = 17;
+  static const _databaseVersion = 18;
 
   // Make this a singleton class
   DatabaseHelper._privateConstructor();
@@ -446,6 +446,48 @@ class DatabaseHelper {
       CREATE INDEX IF NOT EXISTS idx_audit_log_table_row
         ON audit_log (table_name, row_id)
     ''');
+
+    await _createFertilizerPlanTables(db);
+  }
+
+  /// Khaad Hisaab saved plans (v18). A plan is a SNAPSHOT: nutrient
+  /// target, chosen products, quantities and prices at save time, so
+  /// later edits to reference data never rewrite a farmer's history.
+  /// Plan items carry [applied_kg] for planned-vs-actual tracking.
+  static Future<void> _createFertilizerPlanTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS fertilizer_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        crop_season_id INTEGER REFERENCES crop_seasons (id) ON DELETE SET NULL,
+        field_id INTEGER REFERENCES fields (id) ON DELETE SET NULL,
+        crop_name TEXT NOT NULL,
+        variant_name TEXT,
+        area_acres REAL NOT NULL,
+        target_n_kg REAL NOT NULL,
+        target_p_kg REAL NOT NULL,
+        target_k_kg REAL NOT NULL,
+        source TEXT,
+        is_official INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        deleted_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS fertilizer_plan_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plan_id INTEGER NOT NULL REFERENCES fertilizer_plans (id) ON DELETE CASCADE,
+        product_id TEXT NOT NULL,
+        product_name TEXT NOT NULL,
+        kg_per_acre REAL NOT NULL,
+        total_kg REAL NOT NULL,
+        price_per_bag_paisa INTEGER,
+        applied_kg REAL NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_fertilizer_plan_items_plan
+        ON fertilizer_plan_items (plan_id)
+    ''');
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -633,6 +675,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 17) {
       await migrateV16ToV17(db);
+    }
+    if (oldVersion < 18) {
+      await migrateV17ToV18(db);
     }
   }
 
@@ -1276,6 +1321,16 @@ class DatabaseHelper {
     } catch (_) {
       // Column might already exist on partially migrated devices.
     }
+  }
+
+  /// v17 -> v18 migration, exposed for tests: Khaad Hisaab saved plans.
+  ///
+  /// Additive only — two new tables, no changes to existing tables, so
+  /// every existing record is preserved untouched. Idempotent via
+  /// CREATE TABLE IF NOT EXISTS (partially migrated devices).
+  @visibleForTesting
+  static Future<void> migrateV17ToV18(Database db) async {
+    await _createFertilizerPlanTables(db);
   }
 
   /// v15 -> v16 migration, exposed for tests: party-ledger source links

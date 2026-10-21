@@ -16,6 +16,7 @@ import '../providers/party_provider.dart';
 import 'about_us_screen.dart';
 import 'settings_screen.dart';
 import 'sponsors_screen.dart';
+import 'khaad_hisaab_screen.dart';
 import 'my_farms_screen.dart';
 import 'my_crops_screen.dart';
 import 'todays_work_screen.dart';
@@ -883,6 +884,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'گودام (اسٹاک)',
         Colors.blueGrey.shade600,
         () => _push(const InventoryScreen()),
+      ),
+      _FeatureTile(
+        Icons.calculate_outlined,
+        'کھاد حساب',
+        Colors.green.shade700,
+        () => _push(const KhaadHisaabScreen()),
       ),
       _FeatureTile(
         Icons.account_balance_wallet,
