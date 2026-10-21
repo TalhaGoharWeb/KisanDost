@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'legal_pages_screen.dart';
 import 'sponsors_screen.dart';
 
 class AboutUsScreen extends StatelessWidget {
@@ -222,10 +223,72 @@ class AboutUsScreen extends StatelessWidget {
                 },
               ),
             ),
+            const SizedBox(height: 16),
+
+            // Legal pages: privacy policy, terms, disclaimer
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  _buildLegalTile(
+                    context,
+                    icon: Icons.privacy_tip_outlined,
+                    title: 'رازداری کی پالیسی',
+                    subtitle: 'آپ کا ڈیٹا کہاں رہتا ہے اور ہم کیا نہیں کرتے',
+                    sections: kPrivacyPolicySections,
+                  ),
+                  const Divider(height: 1),
+                  _buildLegalTile(
+                    context,
+                    icon: Icons.description_outlined,
+                    title: 'شرائطِ استعمال',
+                    subtitle: 'ایپ استعمال کرنے کی سادہ شرائط',
+                    sections: kTermsSections,
+                  ),
+                  const Divider(height: 1),
+                  _buildLegalTile(
+                    context,
+                    icon: Icons.info_outline,
+                    title: 'دستبرداری',
+                    subtitle: 'کھاد حساب اور تخمینوں کے بارے میں ضروری وضاحت',
+                    sections: kDisclaimerSections,
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLegalTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<LegalSection> sections,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.deepPurple, size: 30),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+      ),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 13.5)),
+      trailing: const Icon(Icons.arrow_back_ios, size: 18),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LegalPageScreen(title: title, sections: sections),
+          ),
+        );
+      },
     );
   }
 
