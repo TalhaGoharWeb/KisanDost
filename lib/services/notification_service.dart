@@ -295,6 +295,10 @@ class NotificationService {
 
     // Double-safe backup: Reschedule all active alarms on launch
     await rescheduleAllPendingAlarms();
+
+    // Ghost-alarm cleanup: cancel plugin notifications orphaned by
+    // older builds (see sweepOrphanedPluginNotifications).
+    await sweepOrphanedPluginNotifications();
   }
 
   Future<void> scheduleTaskNotifications(TaskItem task) async {
@@ -497,20 +501,51 @@ class NotificationService {
   /// notification plugin is unavailable (or throws), the task operation
   /// still succeeds — the farmer's data matters more than the reminder.
   Future<void> cancelTaskNotifications(int taskId) async {
+    // Plugin entries FIRST, on every platform. Older Android builds
+    // scheduled reminders through the plugin; those entries (including
+    // daily/weekly repeats) survive in the plugin's own store, and the
+    // previous Android branch returned after the native cancel without
+    // ever cancelling them — so deleted tasks kept notifying forever
+    // (ghost-alarm bug, owner report 2026-10-21).
     try {
-      if (Platform.isAndroid) {
-        try {
-          await _nativeChannel.invokeMethod('cancelAlarm', {'taskId': taskId});
-        } catch (e) {
-          debugPrint('Error cancelling native alarm: $e');
-        }
-        return;
-      }
       for (int i = 0; i < 10; i++) {
         await flutterLocalNotificationsPlugin.cancel(taskId * 10 + i);
       }
     } catch (e) {
-      debugPrint('Error cancelling task notifications: $e');
+      debugPrint('Error cancelling plugin notifications: $e');
+    }
+    if (Platform.isAndroid) {
+      try {
+        await _nativeChannel.invokeMethod('cancelAlarm', {'taskId': taskId});
+      } catch (e) {
+        debugPrint('Error cancelling native alarm: $e');
+      }
+    }
+  }
+
+  /// One-time-per-launch sweep for orphaned plugin notifications.
+  ///
+  /// Android scheduling is native-only (AlarmManager) since the native
+  /// alarm rewrite, so ANY notification still pending in the plugin on
+  /// Android is an orphan from an older build: its task may be deleted
+  /// or completed, and task CRUD can no longer reach it by id in the
+  /// general case (unknown legacy ids). Cancel them all; live tasks are
+  /// unaffected because their alarms live in AlarmManager, not here.
+  Future<void> sweepOrphanedPluginNotifications() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final pending =
+          await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+      for (final request in pending) {
+        await flutterLocalNotificationsPlugin.cancel(request.id);
+      }
+      if (pending.isNotEmpty) {
+        debugPrint(
+          'Swept ${pending.length} orphaned plugin notifications (legacy builds).',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error sweeping orphaned plugin notifications: $e');
     }
   }
 

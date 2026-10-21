@@ -36,6 +36,18 @@ class AlarmReceiver : BroadcastReceiver() {
 
             when (action) {
                 ACTION_ALARM -> {
+                    // Ghost-alarm guard (owner report 2026-10-21): an
+                    // AlarmManager entry can outlive its task (legacy
+                    // builds, interrupted cancels). Never ring for a
+                    // task that is deleted, completed, or gone — cancel
+                    // the task's remaining alarms and stop here.
+                    val guardDb = DatabaseHelper(context)
+                    val guardTask = guardDb.getTask(taskId)
+                    if (guardTask == null || guardTask.is_completed == 1) {
+                        Log.w(TAG, "Alarm fired for missing/completed task $taskId; cancelling its alarms and ignoring.")
+                        AlarmScheduler.cancelAlarmsForTask(context, taskId)
+                        return
+                    }
                     val serviceIntent = Intent(context, AlarmService::class.java).apply {
                         putExtra("taskId", taskId)
                         putExtra("alarmId", alarmId)
