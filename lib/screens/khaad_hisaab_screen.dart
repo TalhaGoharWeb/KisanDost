@@ -7,6 +7,8 @@ import '../providers/fertilizer_plan_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../services/area_unit.dart';
 import '../services/fertilizer_calculator.dart';
+import '../services/fertilizer_price_store.dart';
+import 'fertilizer_prices_screen.dart';
 import '../services/money.dart';
 import '../services/quantity.dart';
 import '../services/unit_converter.dart';
@@ -37,14 +39,44 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
   final _pController = TextEditingController();
   final _kController = TextEditingController();
 
+  // Soil-test (SFRI formula) mode: _recIndex == -2.
+  int _soilCropIndex = 0;
+  final _omController = TextEditingController();
+  final _soilPController = TextEditingController();
+  final _soilKController = TextEditingController();
+
   String _phosphorusId = 'dap';
+  String _nitrogenId = 'urea';
   String _potashId = 'sop'; // 'none' allowed
 
-  final Map<String, TextEditingController> _priceControllers = {};
+  final FertilizerPriceStore _priceStore = const FertilizerPriceStore();
+  Map<String, int> _savedPrices = {};
 
   FertilizerPlanResult? _result;
-  List<FertilizerPlanResult>? _comparison;
+  List<FertilizerCombination>? _combinations;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrices();
+  }
+
+  Future<void> _loadPrices() async {
+    final prices = await _priceStore.loadPrices();
+    if (mounted) setState(() => _savedPrices = prices);
+  }
+
+  Future<void> _openPrices() async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const FertilizerPricesScreen()),
+    );
+    if (saved == true) {
+      await _loadPrices();
+      if (_result != null) _calculate();
+    }
+  }
 
   @override
   void dispose() {
@@ -52,25 +84,42 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
     _nController.dispose();
     _pController.dispose();
     _kController.dispose();
-    for (final c in _priceControllers.values) {
-      c.dispose();
-    }
+    _omController.dispose();
+    _soilPController.dispose();
+    _soilKController.dispose();
     super.dispose();
   }
 
   CropRecommendation? get _rec =>
       _recIndex >= 0 ? kCropRecommendations[_recIndex] : null;
 
-  TextEditingController _priceFor(String productId) =>
-      _priceControllers.putIfAbsent(productId, () => TextEditingController());
-
   String _fmt(double v) {
     final s = v.toStringAsFixed(1);
     return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
   }
 
+  bool get _soilMode => _recIndex == -2;
+
+  List<FertilizerStage>? _activeStages() {
+    if (_rec != null) return _rec!.stages;
+    if (_soilMode) return kSfriSoilTestCrops[_soilCropIndex].stages;
+    return null;
+  }
+
   Nutrients? _target() {
     if (_rec != null) return _rec!.targetPerAcre;
+    if (_soilMode) {
+      try {
+        return sfriSoilTestTarget(
+          kSfriSoilTestCrops[_soilCropIndex].id,
+          organicMatterPct: Quantity.parse(_omController.text),
+          phosphorusPpm: Quantity.parse(_soilPController.text),
+          potassiumPpm: Quantity.parse(_soilKController.text),
+        );
+      } catch (_) {
+        return null;
+      }
+    }
     try {
       return Nutrients(
         n: Quantity.parse(_nController.text),
@@ -86,7 +135,7 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
     setState(() {
       _error = null;
       _result = null;
-      _comparison = null;
+      _combinations = null;
     });
     final target = _target();
     if (target == null || (target.n <= 0 && target.p2o5 <= 0 && target.k2o <= 0)) {
@@ -110,44 +159,39 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
         targetPerAcre: target,
         areaAcres: areaAcres,
         phosphorusSource: productById(_phosphorusId),
-        nitrogenSource: productById('urea'),
+        nitrogenSource: productById(_nitrogenId),
         potashSource: potash,
       );
-      // Compare all three phosphorus sources for the same target.
-      final comparison = FertilizerCalculator.compareCombinations(
-        targetPerAcre: target,
-        areaAcres: areaAcres,
-        phosphorusSources: [
-          productById('dap'),
-          productById('np'),
-          productById('ssp'),
-        ],
-        nitrogenSource: productById('urea'),
-        potashSource: potash,
+      // The full combination grid (phosphorus × nitrogen × potash),
+      // ranked cheapest first wherever prices are known.
+      final combinations = FertilizerCalculator.rankByCost(
+        FertilizerCalculator.allCombinations(
+          targetPerAcre: target,
+          areaAcres: areaAcres,
+          phosphorusSources: [
+            for (final id in kPhosphorusSourceIds) productById(id),
+          ],
+          nitrogenSources: [
+            for (final id in kNitrogenSourceIds) productById(id),
+          ],
+          potashOptions: target.k2o > 0
+              ? [for (final id in kPotashSourceIds) productById(id)]
+              : [null],
+        ),
+        _prices(),
       );
       setState(() {
         _result = result;
-        _comparison = comparison;
+        _combinations = combinations;
       });
     } on ArgumentError catch (e) {
       setState(() => _error = e.message.toString());
     }
   }
 
-  Map<String, int> _prices() {
-    final prices = <String, int>{};
-    for (final entry in _priceControllers.entries) {
-      final text = entry.value.text.trim();
-      if (text.isEmpty) continue;
-      try {
-        final rupees = Quantity.parsePositive(text);
-        prices[entry.key] = (rupees * 100).round();
-      } catch (_) {
-        // Unparseable price: treated as unknown, never as zero.
-      }
-    }
-    return prices;
-  }
+  /// The farmer's saved per-bag prices (paisa), from the prices
+  /// screen. Products without a saved price stay unknown — never 0.
+  Map<String, int> _prices() => _savedPrices;
 
   /// Stock of a product in kg, matched tolerantly against the farmer's
   /// own inventory names (e.g. «یوریا», 'Urea', 'DAP'). Null = not stocked.
@@ -188,14 +232,18 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
     if (result == null) return;
     final prices = _prices();
     final plan = FertilizerPlan(
-      cropName: _rec?.cropUr ?? _customCropName ?? 'اپنی فصل',
-      variantName: _rec?.variantUr,
+      cropName: _soilMode
+          ? kSfriSoilTestCrops[_soilCropIndex].cropUr
+          : (_rec?.cropUr ?? _customCropName ?? 'اپنی فصل'),
+      variantName: _soilMode ? 'مٹی ٹیسٹ (SFRI فارمولا)' : _rec?.variantUr,
       areaAcres: result.areaAcres,
       targetNKg: result.targetPerAcre.n,
       targetPKg: result.targetPerAcre.p2o5,
       targetKKg: result.targetPerAcre.k2o,
-      source: _rec?.sourceUr ?? 'کسان کی اپنی درج کردہ مقدار (مٹی ٹیسٹ / مشورہ)',
-      isOfficial: _rec?.isOfficial ?? false,
+      source: _soilMode
+          ? 'SFRI فارمولا — مٹی کے تجزیے (نامیاتی مادہ، فاسفورس، پوٹاش) سے حسابی مقدار'
+          : (_rec?.sourceUr ?? 'کسان کی اپنی درج کردہ مقدار (مشورہ)'),
+      isOfficial: _soilMode || (_rec?.isOfficial ?? false),
       createdAt: DateTime.now().toIso8601String(),
       items: [
         for (final a in result.products)
@@ -229,6 +277,13 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
         ),
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sell_outlined),
+            tooltip: 'کھاد کی قیمتیں',
+            onPressed: _openPrices,
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -299,9 +354,16 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
                     ),
                   ),
                 const DropdownMenuItem(
+                  value: -2,
+                  child: Text(
+                    'مٹی کے ٹیسٹ کے مطابق (SFRI فارمولا)',
+                    style: TextStyle(fontSize: 15),
+                  ),
+                ),
+                const DropdownMenuItem(
                   value: -1,
                   child: Text(
-                    'اپنی مقدار خود لکھیں (مٹی ٹیسٹ / مشورے کے مطابق)',
+                    'اپنی مقدار خود لکھیں (مشورے کے مطابق)',
                     style: TextStyle(fontSize: 15),
                   ),
                 ),
@@ -324,6 +386,83 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
                 'ماخذ: ${_rec!.sourceUr}',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
               ),
+              if (kMicroNoteByCrop[_rec!.cropUr] != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  kMicroNoteByCrop[_rec!.cropUr]!,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
+              ],
+            ] else if (_soilMode) ...[
+              const SizedBox(height: 12),
+              const Text('فصل:', style: TextStyle(fontSize: 16)),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (var i = 0; i < kSfriSoilTestCrops.length; i++)
+                    ChoiceChip(
+                      label: Text(kSfriSoilTestCrops[i].cropUr),
+                      selected: _soilCropIndex == i,
+                      onSelected: (_) => setState(() {
+                        _soilCropIndex = i;
+                        _result = null;
+                      }),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _omController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'نامیاتی مادہ (فیصد)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _soilPController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'فاسفورس (ppm)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _soilKController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'پوٹاش (ppm)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'یہ تینوں اعداد آپ کی مٹی کے تجزیے کی رپورٹ میں ہوتے '
+                'ہیں۔ مقدار SFRI (محکمہ زراعت پنجاب) کے شائع شدہ '
+                'فارمولے سے بنے گی۔',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
+              if (kMicroNoteByCrop[kSfriSoilTestCrops[_soilCropIndex].cropUr] !=
+                  null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  kMicroNoteByCrop[
+                      kSfriSoilTestCrops[_soilCropIndex].cropUr]!,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
+              ],
             ] else ...[
               const SizedBox(height: 12),
               TextField(
@@ -370,13 +509,15 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'ان فصلوں کی تصدیق شدہ سرکاری مقدار ابھی دستیاب نہیں: '
-                '${kCropsWithoutVerifiedDose.join('، ')} — ان کے لیے مٹی ٹیسٹ یا '
-                'محکمہ زراعت کے مقامی عملے کی مقدار یہاں لکھیں۔',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-              ),
+              if (kCropsWithoutVerifiedDose.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'ان فصلوں کی تصدیق شدہ سرکاری مقدار ابھی دستیاب نہیں: '
+                  '${kCropsWithoutVerifiedDose.join('، ')} — ان کے لیے مٹی ٹیسٹ یا '
+                  'محکمہ زراعت کے مقامی عملے کی مقدار یہاں لکھیں۔',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                ),
+              ],
             ],
           ],
         ),
@@ -448,11 +589,24 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
             Wrap(
               spacing: 8,
               children: [
-                for (final id in ['dap', 'np', 'ssp'])
+                for (final id in kPhosphorusSourceIds)
                   ChoiceChip(
                     label: Text(productById(id).nameUr),
                     selected: _phosphorusId == id,
                     onSelected: (_) => setState(() => _phosphorusId = id),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text('نائٹروجن کے لیے:', style: TextStyle(fontSize: 16)),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final id in kNitrogenSourceIds)
+                  ChoiceChip(
+                    label: Text(productById(id).nameUr),
+                    selected: _nitrogenId == id,
+                    onSelected: (_) => setState(() => _nitrogenId = id),
                   ),
               ],
             ),
@@ -471,8 +625,9 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'نائٹروجن کی باقی مقدار یوریا سے پوری ہو گی۔ ڈی اے پی اور این پی '
-              'میں موجود نائٹروجن پہلے گنی جائے گی — دوہرا حساب نہیں ہو گا۔',
+              'ڈی اے پی، این پی اور MAP میں موجود نائٹروجن پہلے گنی جائے '
+              'گی، باقی مقدار منتخب نائٹروجن کھاد سے پوری ہو گی — دوہرا '
+              'حساب نہیں ہو گا۔',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
             ),
           ],
@@ -482,7 +637,6 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
   }
 
   Widget _buildPriceSection() {
-    final ids = <String>{_phosphorusId, 'urea', if (_potashId != 'none') _potashId};
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -490,23 +644,32 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '4۔ قیمتیں (اختیاری — فی بوری روپے)',
+              '4۔ قیمتیں (فی بوری — آپ کے بازار کی)',
               style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 12),
-            for (final id in ids) ...[
-              TextField(
-                controller: _priceFor(id),
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: '${productById(id).nameUr} — فی بوری قیمت (روپے)',
-                  border: const OutlineInputBorder(),
+            const SizedBox(height: 10),
+            for (final product in kFertilizerProducts)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  '${product.nameUr}: '
+                  '${_savedPrices[product.id] != null ? Money(_savedPrices[product.id]!).format() : 'درج نہیں'}',
+                  style: const TextStyle(fontSize: 15),
                 ),
               ),
-              const SizedBox(height: 10),
-            ],
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openPrices,
+                icon: const Icon(Icons.edit),
+                label: const Text('قیمتیں لکھیں / بدلیں'),
+              ),
+            ),
+            const SizedBox(height: 6),
             Text(
-              'قیمت نہ لکھیں تو لاگت کا اندازہ نہیں لگے گا — اندازہ آپ کی لکھی '
+              'قیمتیں فون میں محفوظ رہتی ہیں۔ جس کھاد کی قیمت درج نہ ہو، '
+              'اس والے امتزاج کی لاگت نہیں لگے گی — اندازہ آپ کی لکھی '
               'قیمت پر ہے، بازار کا دعویٰ نہیں۔',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
             ),
@@ -570,8 +733,8 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
                 ),
               ),
             ],
-            if (_comparison != null) _buildComparison(_comparison!, prices),
-            if (_rec != null) _buildStages(_rec!, result),
+            if (_combinations != null) _buildCombinations(_combinations!, prices),
+            if (_activeStages() != null) _buildStages(_activeStages()!, result),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -635,36 +798,129 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
     );
   }
 
-  Widget _buildComparison(
-    List<FertilizerPlanResult> comparison,
+  bool _isSelectedCombo(FertilizerCombination combo) =>
+      combo.phosphorusSource.id == _phosphorusId &&
+      combo.nitrogenSource.id == _nitrogenId &&
+      (combo.potashSource?.id ?? 'none') == _potashId;
+
+  /// Plain-words check of whether a plan fulfils the crop's need,
+  /// and if not, exactly what is short or extra (per acre).
+  String _fulfillmentText(FertilizerPlanResult result) {
+    final r = result.remainingPerAcre;
+    if (r.isNegligible()) {
+      return '✓ یہ امتزاج فصل کی پوری غذائی ضرورت پوری کرتا ہے '
+          '(نائٹروجن ${_fmt(result.targetPerAcre.n)}، فاسفورس '
+          '${_fmt(result.targetPerAcre.p2o5)}، پوٹاش '
+          '${_fmt(result.targetPerAcre.k2o)} کلو فی ایکڑ)';
+    }
+    final parts = <String>[];
+    void add(String name, double v) {
+      if (v > 0.05) parts.add('$name ${_fmt(v)} کلو فی ایکڑ کم');
+      if (v < -0.05) parts.add('$name ${_fmt(-v)} کلو فی ایکڑ زیادہ');
+    }
+
+    add('نائٹروجن', r.n);
+    add('فاسفورس', r.p2o5);
+    add('پوٹاش', r.k2o);
+    return 'فرق: ${parts.join('، ')}';
+  }
+
+  String _comboCostText(
+    FertilizerCombination combo,
     Map<String, int> prices,
   ) {
+    final allPriced = combo.result.products.every(
+      (a) => prices.containsKey(a.product.id),
+    );
+    if (!allPriced) return 'لاگت: قیمت درکار ہے';
+    return 'لاگت: ${Money(combo.result.totalCostPaisa(prices)).format()}';
+  }
+
+  Widget _buildCombinations(
+    List<FertilizerCombination> combinations,
+    Map<String, int> prices,
+  ) {
+    final anyPriced = combinations.any(
+      (c) => c.result.products.every((a) => prices.containsKey(a.product.id)),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
-        const Text(
-          'متبادل امتزاج کا موازنہ (ایک ہی مقصد کے لیے):',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        Text(
+          'تمام امتزاج (${combinations.length})'
+          '${anyPriced ? ' — سستے سے مہنگے ترتیب میں' : ''}:',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        for (final plan in comparison) ...[
+        const SizedBox(height: 4),
+        Text(
+          'کسی امتزاج پر ہاتھ رکھیں تو اسی کا تفصیلی منصوبہ اوپر بن '
+          'جائے گا۔',
+          style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+        ),
+        for (final combo in combinations) ...[
           const SizedBox(height: 6),
-          Text(
-            plan.products
-                .map(
-                  (a) =>
-                      '${a.product.nameUr} ${_fmt(a.bagsFor(plan.areaAcres))} بوری',
-                )
-                .join(' + '),
-            style: const TextStyle(fontSize: 14),
-          ),
-          Text(
-            plan.totalCostPaisa(prices) > 0
-                ? 'لاگت: ${Money(plan.totalCostPaisa(prices)).format()}'
-                : 'لاگت: قیمت درکار ہے',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _phosphorusId = combo.phosphorusSource.id;
+                _nitrogenId = combo.nitrogenSource.id;
+                _potashId = combo.potashSource?.id ?? 'none';
+              });
+              _calculate();
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _isSelectedCombo(combo)
+                      ? AppTheme.primaryColor
+                      : Colors.grey.shade300,
+                  width: _isSelectedCombo(combo) ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    combo.labelUr + (_isSelectedCombo(combo) ? ' ✓' : ''),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    combo.result.products
+                        .map(
+                          (a) =>
+                              '${a.product.nameUr}: '
+                              '${_fmt(a.totalKg(combo.result.areaAcres))} کلو '
+                              '= ${_fmt(a.bagsFor(combo.result.areaAcres))} بوری',
+                        )
+                        .join('\n'),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  Text(
+                    _fulfillmentText(combo.result),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: combo.result.remainingPerAcre.isNegligible()
+                          ? Colors.green.shade800
+                          : Colors.orange.shade800,
+                    ),
+                  ),
+                  Text(
+                    _comboCostText(combo, prices),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
+        const SizedBox(height: 6),
         Text(
           'سب سے سستا ہمیشہ بہترین نہیں — اپنی زمین اور فصل کے لیے موزوں '
           'امتزاج چنیں۔',
@@ -674,12 +930,12 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
     );
   }
 
-  Widget _buildStages(CropRecommendation rec, FertilizerPlanResult result) {
+  Widget _buildStages(List<FertilizerStage> stages, FertilizerPlanResult result) {
     // Map each product to its nutrient role for stage fractions.
     ProductAmount? pAmount, nAmount, kAmount;
     for (final a in result.products) {
       if (a.product.id == _phosphorusId) pAmount = a;
-      if (a.product.id == 'urea') nAmount = a;
+      if (a.product.id == _nitrogenId) nAmount = a;
       if (a.product.id == _potashId) kAmount = a;
     }
     return Column(
@@ -690,7 +946,7 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
           'کھاد کب ڈالیں (اقساط):',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        for (final stage in rec.stages) ...[
+        for (final stage in stages) ...[
           const SizedBox(height: 8),
           Text(
             stage.nameUr,
@@ -742,7 +998,7 @@ class _KhaadHisaabScreenState extends State<KhaadHisaabScreen> {
                   ),
                   subtitle: Text(
                     '${_fmt(plan.areaAcres)} ایکڑ • '
-                    '${plan.items.map((i) => '${i.productName} ${_fmt(i.totalKg / 50)} بوری').join('، ')}\n'
+                    '${plan.items.map((i) => '${i.productName} ${_fmt(i.totalKg)} کلو (${_fmt(i.totalKg / 50)} بوری)').join('، ')}\n'
                     'غذائی مقصد: نائٹروجن ${_fmt(plan.targetNKg)}، فاسفورس '
                     '${_fmt(plan.targetPKg)}، پوٹاش ${_fmt(plan.targetKKg)} کلو فی ایکڑ'
                     '${plan.estimatedCostPaisa > 0 ? '\nاندازاً لاگت: ${Money(plan.estimatedCostPaisa).format()}' : ''}',

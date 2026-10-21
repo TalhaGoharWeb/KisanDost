@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:kisan_dost/database/db_helper.dart';
@@ -13,6 +14,7 @@ import 'package:kisan_dost/screens/khaad_hisaab_screen.dart';
 /// save-flow run inside tester.runAsync(). The screen is one long
 /// ListView that builds lazily, so buttons are revealed by dragging.
 void main() {
+  SharedPreferences.setMockInitialValues({});
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
@@ -80,6 +82,23 @@ void main() {
     expect(find.textContaining('اقساط'), findsOneWidget);
     // Plan-only note: a plan must never deduct stock by itself.
     expect(find.textContaining('اسٹاک سے کھاد تب ہی کٹے گی'), findsOneWidget);
+
+    // The full combination grid (36) is offered below the result.
+    final combos = find.textContaining('تمام امتزاج (36)');
+    for (var i = 0; i < 14 && combos.evaluate().isEmpty; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
+    }
+    expect(combos, findsOneWidget);
+    // Each combination states the exact kilos/bags per fertilizer and
+    // whether it fulfils the crop's full nutrient need.
+    final fulfil = find.textContaining('پوری غذائی ضرورت پوری کرتا ہے');
+    for (var i = 0; i < 10 && fulfil.evaluate().isEmpty; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pump();
+    }
+    expect(fulfil, findsWidgets);
+    expect(find.textContaining('کلو ='), findsWidgets);
 
     await tester.runAsync(() => db.close());
   });

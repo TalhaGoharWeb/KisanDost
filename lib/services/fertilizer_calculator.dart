@@ -211,10 +211,13 @@ class FertilizerCalculator {
       supplied = supplied + n;
     }
 
-    // 3. Potash.
-    if (targetPerAcre.k2o > 0 && potashSource != null) {
+    // 3. Remaining potash. A compound phosphorus source (NPK
+    // 17-17-17) may already supply part of the potash — only the
+    // remainder is topped up, so potash is never double-counted.
+    final remainingK = targetPerAcre.k2o - supplied.k2o;
+    if (remainingK > 0.05 && potashSource != null) {
       final kg = FertilizerProduct.kgForNutrient(
-        targetPerAcre.k2o,
+        remainingK,
         potashSource.k2oPct,
       );
       final n = potashSource.nutrientsIn(kg);
@@ -231,6 +234,56 @@ class FertilizerCalculator {
       remainingPerAcre: targetPerAcre - supplied,
       areaAcres: areaAcres,
     );
+  }
+
+  /// Every combination of the given sources for the same target —
+  /// the full grid a farmer may choose from (5 phosphorus ×
+  /// 3 nitrogen × 2 potash = 30). [potashOptions] may contain null
+  /// for "no potash" (used when the target carries no potash).
+  static List<FertilizerCombination> allCombinations({
+    required Nutrients targetPerAcre,
+    required double areaAcres,
+    required List<FertilizerProduct> phosphorusSources,
+    required List<FertilizerProduct> nitrogenSources,
+    required List<FertilizerProduct?> potashOptions,
+  }) {
+    return [
+      for (final p in phosphorusSources)
+        for (final n in nitrogenSources)
+          for (final k in potashOptions)
+            FertilizerCombination(
+              phosphorusSource: p,
+              nitrogenSource: n,
+              potashSource: k,
+              result: buildPlan(
+                targetPerAcre: targetPerAcre,
+                areaAcres: areaAcres,
+                phosphorusSource: p,
+                nitrogenSource: n,
+                potashSource: k,
+              ),
+            ),
+    ];
+  }
+
+  /// Ranks combinations cheapest first — but ONLY combinations whose
+  /// every product has a known price can be ranked; the rest keep
+  /// their grid order after them. Mirrors the SFRI app's
+  /// lowest-to-highest presentation without inventing any prices.
+  static List<FertilizerCombination> rankByCost(
+    List<FertilizerCombination> combinations,
+    Map<String, int> pricePerBagPaisaById,
+  ) {
+    bool priced(FertilizerCombination c) => c.result.products.every(
+      (a) => pricePerBagPaisaById.containsKey(a.product.id),
+    );
+    final ranked = combinations.where(priced).toList()
+      ..sort(
+        (a, b) => a.result
+            .totalCostPaisa(pricePerBagPaisaById)
+            .compareTo(b.result.totalCostPaisa(pricePerBagPaisaById)),
+      );
+    return [...ranked, ...combinations.where((c) => !priced(c))];
   }
 
   /// Compares the standard combinations for the same target so the
@@ -254,4 +307,27 @@ class FertilizerCalculator {
         ),
     ];
   }
+}
+
+/// One named combination (phosphorus × nitrogen × potash) with its
+/// computed plan, so the UI can list, rank and select combinations.
+class FertilizerCombination {
+  final FertilizerProduct phosphorusSource;
+  final FertilizerProduct nitrogenSource;
+  final FertilizerProduct? potashSource;
+  final FertilizerPlanResult result;
+
+  const FertilizerCombination({
+    required this.phosphorusSource,
+    required this.nitrogenSource,
+    required this.potashSource,
+    required this.result,
+  });
+
+  /// Display label, e.g. «ڈی اے پی + یوریا + ایس او پی (پوٹاش)».
+  String get labelUr => [
+    phosphorusSource.nameUr,
+    nitrogenSource.nameUr,
+    if (potashSource != null) potashSource!.nameUr,
+  ].join(' + ');
 }
