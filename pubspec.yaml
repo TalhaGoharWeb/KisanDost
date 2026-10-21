@@ -1,7 +1,7 @@
 name: kisan_dost
 description: "A simple digital farming diary for Pakistani farmers."
 publish_to: 'none'
-version: 1.0.10+11
+version: 1.0.11+12
 
 environment:
   sdk: ^3.7.2
